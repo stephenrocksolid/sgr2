@@ -88,26 +88,13 @@ TEMPLATES = [
 WSGI_APPLICATION = 'sgr_manager.wsgi.application'
 
 
-# --- Database ---
-DATABASE_URL = os.environ.get("DATABASE_URL")
-
-if DATABASE_URL:
-    # Use Postgres (or whatever DATABASE_URL points to)
-    DATABASES = {
-        "default": dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=False,   # set True if you need SSL to PG
-        )
-    }
-else:
-    # Local/dev fallback: SQLite
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+DATABASES = {
+    "default": dj_database_url.config(
+        env="DATABASE_URL",           # must be provided
+        conn_max_age=600,             # good for prod
+        ssl_require=False,            # flip to True if you later enable SSL in PG
+    )
+}
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
