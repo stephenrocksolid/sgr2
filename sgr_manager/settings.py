@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+@r1$)fv(rc5+q@dy3se7gjtqx66qyjyv_=f=^d)^o@$g&&w)8')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = os.getenv("DEBUG", "false").lower() in ("1","true","yes")
 
 # ---- Hosts & security ----
 # Comma-separated in .env on the server; sensible defaults for local + prod
@@ -90,25 +91,22 @@ WSGI_APPLICATION = 'sgr_manager.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
 
-# Use SQLite for development, PostgreSQL for production
-if os.environ.get('USE_SQLITE', 'True').lower() == 'true':
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'sgr_manager'),
-            'USER': os.environ.get('DB_USER', 'postgres'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
-        }
-    }
+}
+
+db_url = os.getenv("DATABASE_URL")  # e.g. postgres://user:pass@host:5432/dbname
+if db_url:
+    DATABASES["default"] = dj_database_url.parse(
+        db_url,
+        conn_max_age=600,
+        ssl_require=os.getenv("DB_SSL_REQUIRE", "false").lower() in ("1","true","yes"),
+    )
+
+DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 
 # Password validation
