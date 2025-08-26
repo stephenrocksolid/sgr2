@@ -26,7 +26,19 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+@r1$)fv(rc5+q@dy3se7
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1', 'sgr.rocksoliddata.solutions').split(',')
+# ---- Hosts & security ----
+# Comma-separated in .env on the server; sensible defaults for local + prod
+ALLOWED_HOSTS = os.getenv(
+    "ALLOWED_HOSTS",
+    "sgr.rocksoliddata.solutions,167.71.249.156,localhost,127.0.0.1"
+).split(",")
+
+# If you're using HTTPS on the domain, set CSRF trusted origins
+# (Django requires full scheme here)
+CSRF_TRUSTED_ORIGINS = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "https://sgr.rocksoliddata.solutions"
+).split(",")
 
 
 # Application definition
