@@ -24,56 +24,68 @@
     <link rel="stylesheet" href="{% static 'core/styles.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
-<body class="sidebar-layout">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h1 class="sidebar-title">SGR Part Manager</h1>
-        </div>
-        <nav class="sidebar-nav">
-            <ul class="sidebar-nav-list">
-                <li class="sidebar-nav-item">
-                    <a href="{% url 'inventory:machines_list' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Machines</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item">
-                    <a href="{% url 'inventory:engines_list' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Engines</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item">
-                    <a href="{% url 'inventory:parts_list' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Parts</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item sidebar-divider">
-                    <a href="{% url 'inventory:sg_engines_list' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">SG Engines</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item">
-                    <a href="{% url 'inventory:vendor_index' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Vendors</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item sidebar-divider">
-                    <a href="{% url 'imports:index' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Imports</span>
-                    </a>
-                </li>
-                <li class="sidebar-nav-item">
-                    <a href="{% url 'imports:unmatched_index' %}" class="sidebar-nav-link">
-                        <span class="sidebar-nav-text">Unmatched</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-    </aside>
+<body class="{% if not request.user.is_authenticated %}login-body{% else %}app-body{% endif %}">
+    {% if request.user.is_authenticated %}
+        <!-- Sidebar for authenticated users -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1 class="sidebar-title">SGR Part Manager</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <ul class="sidebar-nav-list">
+                    <li class="sidebar-nav-item">
+                        <a href="{% url 'inventory:machines_list' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Machines</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="{% url 'inventory:engines_list' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Engines</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="{% url 'inventory:parts_list' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Parts</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item sidebar-divider">
+                        <a href="{% url 'inventory:sg_engines_list' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">SG Engines</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="{% url 'inventory:vendor_index' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Vendors</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item sidebar-divider">
+                        <a href="{% url 'imports:index' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Imports</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-nav-item">
+                        <a href="{% url 'imports:unmatched_index' %}" class="sidebar-nav-link">
+                            <span class="sidebar-nav-text">Unmatched</span>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            <div class="mt-auto">
+                <div class="sidebar-nav-item sidebar-divider">
+                    <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                        {% csrf_token %}
+                        <button type="submit" class="sidebar-nav-link" style="width: 100%; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; font-size: inherit; font-weight: inherit;">
+                            <span class="sidebar-nav-text">Logout</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </aside>
+    {% endif %}
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <div class="main-content-container">
+    <!-- Main Content Area -->
+    <main class="{% if request.user.is_authenticated %}main-content{% else %}login-main{% endif %}">
+        <div class="{% if request.user.is_authenticated %}main-content-container{% else %}login-container{% endif %}">
             {% if messages %}
                 <div class="messages">
                     {% for message in messages %}
@@ -88,8 +100,6 @@
             {% endblock %}
         </div>
     </main>
-
-
 
     <!-- Scripts -->
     {% block extra_js %}{% endblock %}

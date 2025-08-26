@@ -1,0 +1,3 @@
+# Ignore SQLite dev DB
+db.sqlite3
+*.sqlite3

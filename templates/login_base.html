@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Spring Garden Repair Part Manager{% endblock %}</title>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- CSRF Token for HTMX -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+        // Configure HTMX to include CSRF token
+        document.addEventListener('DOMContentLoaded', function() {
+            htmx.on('htmx:configRequest', function(evt) {
+                evt.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            });
+        });
+    </script>
+    
+    {% load static %}
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Full-screen centered login layout -->
+    <main class="min-h-screen w-full flex items-center justify-center p-4" style="min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 1rem; background-color: white;">
+        {% block content %}
+        {% endblock %}
+    </main>
+
+    <!-- Scripts -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

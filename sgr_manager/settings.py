@@ -161,7 +161,7 @@ AUTH_USER_MODEL = 'auth.User'
 
 # Authentication settings
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/inventory/'
+LOGIN_REDIRECT_URL = '/inventory/machines/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Celery Configuration

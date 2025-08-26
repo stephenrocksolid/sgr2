@@ -18,6 +18,7 @@ from django.http import HttpResponseBadRequest, HttpResponse
 from django.template.loader import render_to_string
 
 
+@login_required
 def index(request):
     return HttpResponse("""
     <h1>Inventory Management</h1>
@@ -140,6 +141,7 @@ def machine_detail(request, machine_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def machine_edit(request, pk):
     """Display the machine edit form."""
     machine = get_object_or_404(Machine, pk=pk)
@@ -149,6 +151,7 @@ def machine_edit(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def machine_update(request, pk):
     """Handle machine update form submission."""
     machine = get_object_or_404(Machine, pk=pk)
@@ -284,6 +287,7 @@ def engine_detail(request, engine_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def engine_edit(request, pk):
     """Display the engine edit form."""
     engine = get_object_or_404(Engine, pk=pk)
@@ -293,6 +297,7 @@ def engine_edit(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_update(request, pk):
     """Handle engine update form submission."""
     engine = get_object_or_404(Engine, pk=pk)
@@ -437,6 +442,7 @@ def part_detail(request, part_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def part_edit(request, pk):
     """Display the part edit form with basic info and specifications."""
     part = get_object_or_404(Part, pk=pk)
@@ -448,6 +454,7 @@ def part_edit(request, pk):
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
+@login_required
 def part_update(request, pk):
     """Handle part update form submission with basic info and specifications."""
     part = get_object_or_404(Part, pk=pk)
@@ -536,6 +543,7 @@ def _values_by_code(part):
     return by_code
 
 
+@login_required
 def part_category_preview(request, pk):
     """Preview the impact of changing a part's category."""
     part = get_object_or_404(Part, pk=pk)
@@ -609,6 +617,7 @@ def part_specs_form(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_specs_save(request, part_id):
     """HTMX endpoint to save part specifications."""
     part = get_object_or_404(Part, pk=part_id)
@@ -718,6 +727,7 @@ def machine_engines_list(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_machine_engine(request, machine_id):
     """HTMX endpoint to add an engine to a machine."""
     machine = get_object_or_404(Machine, pk=machine_id)
@@ -751,6 +761,7 @@ def add_machine_engine(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_machine_engine(request, machine_id, engine_id):
     """HTMX endpoint to remove an engine from a machine."""
     machine = get_object_or_404(Machine, pk=machine_id)
@@ -802,6 +813,7 @@ def machine_engines_partial(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def machine_engine_add(request, machine_id):
     """HTMX endpoint to add an engine to a machine."""
     machine = get_object_or_404(Machine, pk=machine_id)
@@ -835,6 +847,7 @@ def machine_engine_add(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def machine_engine_remove(request, machine_id, link_id):
     """HTMX endpoint to remove an engine from a machine."""
     if request.method != "POST":
@@ -872,6 +885,7 @@ def machine_parts_list(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_machine_part(request, machine_id):
     """HTMX endpoint to add a part to a machine."""
     machine = get_object_or_404(Machine, pk=machine_id)
@@ -905,6 +919,7 @@ def add_machine_part(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_machine_part(request, machine_id, part_id):
     """HTMX endpoint to remove a part from a machine."""
     machine = get_object_or_404(Machine, pk=machine_id)
@@ -954,6 +969,7 @@ def machine_parts_partial(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def machine_part_add(request, machine_id):
     """HTMX endpoint to add a part to a machine."""
     if request.method != "POST":
@@ -986,6 +1002,7 @@ def machine_part_add(request, machine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def machine_part_remove(request, machine_id, link_id):
     """HTMX endpoint to remove a part from a machine."""
     if request.method != "POST":
@@ -1022,6 +1039,7 @@ def engine_machines_list(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_machine(request, engine_id):
     """HTMX endpoint to add a machine to an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1055,6 +1073,7 @@ def add_engine_machine(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_engine_machine(request, engine_id, machine_engine_id):
     """HTMX endpoint to remove a machine from an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1100,6 +1119,7 @@ def engine_machines_partial(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_machine_add(request, engine_id):
     """HTMX endpoint to add a machine to an engine."""
     if request.method != "POST":
@@ -1132,6 +1152,7 @@ def engine_machine_add(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_machine_remove(request, engine_id, link_id):
     """HTMX endpoint to remove a machine from an engine."""
     if request.method != "POST":
@@ -1152,6 +1173,7 @@ def engine_machine_remove(request, engine_id, link_id):
 # ----- Add Machine Form Views -----
 
 @require_http_methods(["GET"])
+@login_required
 def engine_machine_add_form(request, engine_id):
     engine = get_object_or_404(Engine, pk=engine_id)
     # machines NOT already linked to this engine
@@ -1163,6 +1185,7 @@ def engine_machine_add_form(request, engine_id):
 
 @require_POST
 @transaction.atomic
+@login_required
 def engine_machine_add(request, engine_id):
     engine = get_object_or_404(Engine, pk=engine_id)
     machine_id = request.POST.get("machine_id")
@@ -1206,6 +1229,7 @@ def engine_parts_list(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_part(request, engine_id):
     """HTMX endpoint to add a part to an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1237,6 +1261,7 @@ def add_engine_part(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_engine_part(request, engine_id, engine_part_id):
     """HTMX endpoint to remove a part from an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1285,6 +1310,7 @@ def engine_parts_partial(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_part_remove(request, engine_id, link_id):
     """HTMX endpoint to remove a part from an engine."""
     if request.method != "POST":
@@ -1305,6 +1331,7 @@ def engine_part_remove(request, engine_id, link_id):
 # ----- Add Part Form Views -----
 
 @require_http_methods(["GET"])
+@login_required
 def engine_part_add_form(request, engine_id):
     engine = get_object_or_404(Engine, pk=engine_id)
     linked_ids = EnginePart.objects.filter(engine=engine).values_list("part_id", flat=True)
@@ -1316,6 +1343,7 @@ def engine_part_add_form(request, engine_id):
 @login_required
 @require_POST
 @transaction.atomic
+@login_required
 def engine_part_add(request, engine_id):
     engine = get_object_or_404(Engine, pk=engine_id)
     part_id = request.POST.get("part_id")
@@ -1362,6 +1390,7 @@ def part_engines_partial(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_engine_add(request, part_id):
     """HTMX endpoint to add an engine to a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -1394,6 +1423,7 @@ def part_engine_add(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_engine_remove(request, part_id, link_id):
     """HTMX endpoint to remove an engine from a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -1428,6 +1458,7 @@ def part_machines_partial(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_machine_add(request, part_id):
     """HTMX endpoint to add a machine to a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -1460,6 +1491,7 @@ def part_machine_add(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_machine_remove(request, part_id, link_id):
     """HTMX endpoint to remove a machine from a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -1487,6 +1519,7 @@ def engine_interchanges_list(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_interchange(request, engine_id):
     """HTMX endpoint to add an interchange to an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1512,6 +1545,7 @@ def add_engine_interchange(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_engine_interchange(request, engine_id, interchange_id):
     """HTMX endpoint to remove an interchange from an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1556,6 +1590,7 @@ def engine_compatibles_list(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_compatible(request, engine_id):
     """HTMX endpoint to add a compatible to an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1581,6 +1616,7 @@ def add_engine_compatible(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_engine_compatible(request, engine_id, compatible_id):
     """HTMX endpoint to remove a compatible from an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1627,6 +1663,7 @@ def engine_supercession_list(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_supercession_from(request, engine_id):
     """HTMX endpoint to add an engine that this engine supersedes (older predecessor)."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1663,6 +1700,7 @@ def add_engine_supercession_from(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def add_engine_supercession_to(request, engine_id):
     """HTMX endpoint to add an engine that supersedes this one (newer replacement)."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1699,6 +1737,7 @@ def add_engine_supercession_to(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def remove_engine_supercession(request, engine_id, supercession_id):
     """HTMX endpoint to remove a supercession."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -1745,6 +1784,7 @@ def engine_add_supercession_to_form(request, engine_id):
 
 
 # SG Engine Catalog Views
+@login_required
 def sg_engines_list(request):
     """SG Engines catalog page with filtering, sorting, and pagination."""
     sg_engines = SGEngine.objects.all()
@@ -1797,6 +1837,7 @@ def sg_engines_list(request):
     return render(request, 'inventory/sg_engines_list.html', context)
 
 
+@login_required
 def sg_engine_create(request):
     """Create a new SG Engine."""
     if request.method == 'POST':
@@ -1819,6 +1860,7 @@ def sg_engine_create(request):
     return render(request, 'inventory/sg_engine_form.html', context)
 
 
+@login_required
 def sg_engine_detail(request, pk):
     """SG Engine detail page."""
     sg_engine = get_object_or_404(SGEngine, pk=pk)
@@ -1834,6 +1876,7 @@ def sg_engine_detail(request, pk):
     return render(request, 'inventory/sg_engine_detail.html', context)
 
 
+@login_required
 def sg_engine_edit(request, pk):
     """Edit an SG Engine."""
     sg_engine = get_object_or_404(SGEngine, pk=pk)
@@ -1859,6 +1902,7 @@ def sg_engine_edit(request, pk):
     return render(request, 'inventory/sg_engine_form.html', context)
 
 
+@login_required
 def sg_engine_delete(request, pk):
     """Delete an SG Engine."""
     sg_engine = get_object_or_404(SGEngine, pk=pk)
@@ -1881,6 +1925,7 @@ def sg_engine_delete(request, pk):
     return render(request, 'inventory/sg_engine_confirm_delete.html', context)
 
 
+@login_required
 def sg_engine_quick_create(request):
     """Quick create modal for SG Engine from Engine detail page."""
     if request.method == 'POST':
@@ -2214,6 +2259,7 @@ def part_specs_table(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_specs_add(request, part_id):
     """HTMX endpoint to add a new specification row."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2284,6 +2330,7 @@ def part_specs_add(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_specs_edit(request, part_id, pav_id):
     """HTMX endpoint to edit an existing specification value."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2343,6 +2390,7 @@ def part_specs_edit(request, part_id, pav_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_specs_remove(request, part_id, pav_id):
     """HTMX endpoint to remove a specification row."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2364,6 +2412,7 @@ def part_specs_remove(request, part_id, pav_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_category_change(request, part_id):
     """HTMX endpoint to handle category change and reconcile specifications."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2490,6 +2539,7 @@ def part_specs_edit_form(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_specs_save_all(request, part_id):
     """HTMX endpoint to save all part specifications."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2584,6 +2634,7 @@ def part_specs_save_all(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_category_confirm_change(request, part_id):
     """HTMX endpoint to show category change confirmation modal."""
     part = get_object_or_404(Part, pk=part_id)
@@ -2727,6 +2778,7 @@ def part_category_edit(request, category_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_category_delete(request, category_id):
     """Delete a part category."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2742,6 +2794,7 @@ def part_category_delete(request, category_id):
 # Settings HTMX endpoints
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_add(request, category_id):
     """HTMX endpoint to add a new attribute to a category."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2790,6 +2843,7 @@ def part_attribute_add(request, category_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_edit(request, category_id, attribute_id):
     """HTMX endpoint to edit an attribute."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2837,6 +2891,7 @@ def part_attribute_edit(request, category_id, attribute_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_delete(request, category_id, attribute_id):
     """HTMX endpoint to delete an attribute."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2854,6 +2909,7 @@ def part_attribute_delete(request, category_id, attribute_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_choice_add(request, category_id, attribute_id):
     """HTMX endpoint to add a choice to a CHOICE attribute."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2894,6 +2950,7 @@ def part_attribute_choice_add(request, category_id, attribute_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_choice_edit(request, category_id, attribute_id, choice_id):
     """HTMX endpoint to edit a choice."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2930,6 +2987,7 @@ def part_attribute_choice_edit(request, category_id, attribute_id, choice_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_attribute_choice_delete(request, category_id, attribute_id, choice_id):
     """HTMX endpoint to delete a choice."""
     category = get_object_or_404(PartCategory, pk=category_id)
@@ -2966,6 +3024,7 @@ def part_vendor_add_form(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_vendor_add(request, part_id):
     """HTMX endpoint to add a vendor to a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -3013,6 +3072,7 @@ def part_vendor_add(request, part_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_vendor_edit(request, part_id, part_vendor_id):
     """HTMX endpoint to edit a part vendor."""
     part = get_object_or_404(Part, pk=part_id)
@@ -3045,6 +3105,7 @@ def part_vendor_edit(request, part_id, part_vendor_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_vendor_delete(request, part_id, part_vendor_id):
     """HTMX endpoint to delete a part vendor."""
     part = get_object_or_404(Part, pk=part_id)
@@ -3058,6 +3119,7 @@ def part_vendor_delete(request, part_id, part_vendor_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def part_vendor_set_primary(request, part_id, part_vendor_id):
     """HTMX endpoint to set a vendor as the primary vendor for a part."""
     part = get_object_or_404(Part, pk=part_id)
@@ -3140,6 +3202,7 @@ def engine_kits_section(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_kit_create(request, engine_id):
     """HTMX endpoint to create a new kit for an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -3186,6 +3249,7 @@ def engine_kit_add_form(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def build_list_create(request, engine_id):
     """HTMX endpoint to create a new build list."""
     engine = get_object_or_404(Engine, pk=engine_id)
@@ -3212,6 +3276,7 @@ def build_list_create(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def build_list_rename(request, build_list_id):
     """HTMX endpoint to rename a build list."""
     build_list = get_object_or_404(BuildList, pk=build_list_id)
@@ -3234,6 +3299,7 @@ def build_list_rename(request, build_list_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def build_list_delete(request, build_list_id):
     """HTMX endpoint to delete a build list."""
     build_list = get_object_or_404(BuildList, pk=build_list_id)
@@ -3278,6 +3344,7 @@ def build_list_redirect(request, build_list_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_create(request, build_list_id):
     """HTMX endpoint to create a new kit."""
     build_list = get_object_or_404(BuildList, pk=build_list_id)
@@ -3311,6 +3378,7 @@ def kit_create(request, build_list_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_rename(request, kit_id):
     """HTMX endpoint to rename/edit a kit."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3345,6 +3413,7 @@ def kit_rename(request, kit_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_delete(request, kit_id):
     """HTMX endpoint to delete a kit."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3358,6 +3427,7 @@ def kit_delete(request, kit_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_duplicate(request, kit_id):
     """HTMX endpoint to duplicate a kit."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3430,6 +3500,7 @@ def kit_detail(request, kit_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_set_margin(request, kit_id):
     """HTMX endpoint to set kit margin and recalculate totals."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3453,6 +3524,7 @@ def kit_set_margin(request, kit_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_item_add(request, kit_id):
     """HTMX endpoint to add an item to a kit."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3494,6 +3566,7 @@ def kit_item_add(request, kit_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_item_edit(request, kit_id, item_id):
     """HTMX endpoint to edit a kit item."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3529,6 +3602,7 @@ def kit_item_edit(request, kit_id, item_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def kit_item_remove(request, kit_id, item_id):
     """HTMX endpoint to remove an item from a kit."""
     kit = get_object_or_404(Kit, pk=kit_id)
@@ -3635,6 +3709,7 @@ def engine_interchanges_partial(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_interchange_add(request, engine_id):
     """HTMX endpoint to add an interchange to an engine."""
     if request.method != "POST":
@@ -3688,6 +3763,7 @@ def engine_interchange_add(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_interchange_remove(request, engine_id, interchange_id):
     """HTMX endpoint to remove an interchange from an engine."""
     if request.method != "POST":
@@ -3728,6 +3804,7 @@ def engine_compatibles_partial(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_compatible_add(request, engine_id):
     """HTMX endpoint to add a compatible to an engine."""
     if request.method != "POST":
@@ -3781,6 +3858,7 @@ def engine_compatible_add(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_compatible_remove(request, engine_id, compatible_id):
     """HTMX endpoint to remove a compatible from an engine."""
     if request.method != "POST":
@@ -3831,6 +3909,7 @@ def engine_supercessions_partial(request, engine_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_supercession_add(request, engine_id, direction):
     """HTMX endpoint to add a supercession to an engine."""
     if request.method != "POST":
@@ -3880,6 +3959,7 @@ def engine_supercession_add(request, engine_id, direction):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def engine_supercession_remove(request, engine_id, superseded_id):
     """HTMX endpoint to remove a supercession from an engine."""
     if request.method != "POST":
@@ -3967,6 +4047,7 @@ def vendor_index(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@login_required
 def vendor_create(request):
     """Create a new vendor."""
     form = VendorForm(request.POST or None)
@@ -3979,6 +4060,7 @@ def vendor_create(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
+@login_required
 def vendor_edit(request, vendor_id):
     """Edit an existing vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -3992,6 +4074,7 @@ def vendor_edit(request, vendor_id):
 
 @login_required
 @require_http_methods(["POST"])
+@login_required
 def vendor_delete(request, vendor_id):
     """Delete a vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4048,6 +4131,7 @@ def vendor_parts_partial(request, vendor_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def vendor_part_add_form(request, vendor_id):
     """HTMX endpoint to render add part form."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4063,6 +4147,7 @@ def vendor_part_add_form(request, vendor_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def vendor_part_options(request, vendor_id):
     """Return <option> list for the select based on q; include already-linked state."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4081,6 +4166,7 @@ def vendor_part_options(request, vendor_id):
 @login_required
 @require_POST
 @transaction.atomic
+@login_required
 def vendor_part_add(request, vendor_id):
     """Create or update Vendor↔Part link; never fails if already exists."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4102,6 +4188,7 @@ def vendor_part_add(request, vendor_id):
 
 @login_required
 @require_http_methods(["GET"])
+@login_required
 def vendor_part_edit_form(request, vendor_id, link_id):
     """HTMX endpoint to render edit part form."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4112,6 +4199,7 @@ def vendor_part_edit_form(request, vendor_id, link_id):
 
 @login_required
 @require_POST
+@login_required
 def vendor_part_edit(request, vendor_id, link_id):
     """HTMX endpoint to edit a part vendor link."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4125,6 +4213,7 @@ def vendor_part_edit(request, vendor_id, link_id):
 
 @login_required
 @require_POST
+@login_required
 def vendor_part_remove(request, vendor_id, link_id):
     """HTMX endpoint to remove a part from a vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
@@ -4139,6 +4228,7 @@ def vendor_part_remove(request, vendor_id, link_id):
 @login_required
 @require_POST
 @transaction.atomic
+@login_required
 def part_set_primary_vendor(request, part_id, vendor_id):
     """Set a vendor as the primary vendor for a part."""
     part = get_object_or_404(Part, pk=part_id)

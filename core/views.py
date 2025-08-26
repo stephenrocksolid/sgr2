@@ -1,9 +1,11 @@
 from django.shortcuts import render
 from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
 from imports.tasks import test_task
 
 # Create your views here.
 
+@login_required
 def home(request):
     # Test Celery task (disabled for now to avoid Redis connection issues)
     # result = test_task.delay()

@@ -3,6 +3,7 @@ import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.views.decorators.http import require_http_methods
 from django.template.loader import render_to_string
@@ -20,6 +21,7 @@ from .utils import (
 from .tasks import process_import_batch
 from inventory.models import PartAttribute, PartCategory
 
+@login_required
 def index(request):
     """Import management index page."""
     batches = ImportBatch.objects.all()
@@ -37,6 +39,7 @@ def index(request):
     }
     return render(request, 'imports/index.html', context)
 
+@login_required
 def upload_step(request):
     """Step 1: File upload and preview."""
     if request.method == 'POST':
@@ -96,6 +99,7 @@ def upload_step(request):
     }
     return render(request, 'imports/upload_step.html', context)
 
+@login_required
 def options_step(request, batch_id):
     """Step 1.5: File options (encoding, delimiter, worksheet)."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -156,6 +160,7 @@ def options_step(request, batch_id):
     }
     return render(request, 'imports/options_step.html', context)
 
+@login_required
 def mapping_step(request, batch_id):
     """Step 2: Field mapping configuration."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -241,6 +246,7 @@ def mapping_step(request, batch_id):
     }
     return render(request, 'imports/mapping_step.html', context)
 
+@login_required
 def processing_step(request, batch_id):
     """Step 3: Processing options and commit."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -284,6 +290,7 @@ def processing_step(request, batch_id):
     }
     return render(request, 'imports/processing_step.html', context)
 
+@login_required
 def batch_status(request, batch_id):
     """HTMX endpoint for polling import status."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -326,6 +333,7 @@ def batch_status(request, batch_id):
         'rows_stats': rows_stats
     })
 
+@login_required
 def batch_detail(request, batch_id):
     """View import batch details and logs."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -359,6 +367,7 @@ def batch_detail(request, batch_id):
     }
     return render(request, 'imports/batch_detail.html', context)
 
+@login_required
 def batch_rows(request, batch_id):
     """View import rows with filtering options."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
@@ -419,6 +428,7 @@ def batch_rows(request, batch_id):
     }
     return render(request, 'imports/batch_rows.html', context)
 
+@login_required
 def load_saved_mapping(request, mapping_id):
     """HTMX endpoint to load a saved mapping."""
     mapping = get_object_or_404(SavedImportMapping, id=mapping_id)
@@ -429,6 +439,7 @@ def load_saved_mapping(request, mapping_id):
         'part_mapping': mapping.part_mapping,
     })
 
+@login_required
 def saved_mappings_list(request):
     """List of saved import mappings."""
     mappings = SavedImportMapping.objects.all()
@@ -439,6 +450,7 @@ def saved_mappings_list(request):
     return render(request, 'imports/saved_mappings_list.html', context)
 
 # Unmatched Items Views
+@login_required
 def unmatched_index(request):
     """Main unmatched items dashboard."""
     from inventory.models import Engine, Machine, Part
@@ -459,6 +471,7 @@ def unmatched_index(request):
     }
     return render(request, 'imports/unmatched_index.html', context)
 
+@login_required
 def unmatched_engines(request):
     """Show engines that need SG Engine matching."""
     from inventory.models import Engine
@@ -476,6 +489,7 @@ def unmatched_engines(request):
     }
     return render(request, 'imports/unmatched_engines.html', context)
 
+@login_required
 def unmatched_machines(request):
     """Show machines that need engine relationships."""
     from inventory.models import Machine
@@ -493,6 +507,7 @@ def unmatched_machines(request):
     }
     return render(request, 'imports/unmatched_machines.html', context)
 
+@login_required
 def unmatched_parts(request):
     """Show parts that need engine relationships."""
     from inventory.models import Part
@@ -510,6 +525,7 @@ def unmatched_parts(request):
     }
     return render(request, 'imports/unmatched_parts.html', context)
 
+@login_required
 def models_for_make(request):
     """AJAX endpoint to get models for a given make."""
     from inventory.models import SGEngine
@@ -520,6 +536,7 @@ def models_for_make(request):
         return JsonResponse({'models': list(models)})
     return JsonResponse({'models': []})
 
+@login_required
 def match_single(request):
     """HTMX endpoint to match a single engine to SG Engine."""
     from inventory.models import Engine, SGEngine
@@ -567,6 +584,7 @@ def match_single(request):
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
 
+@login_required
 def engine_identifiers(request):
     """HTMX endpoint to get SG Engine identifiers for a selected model."""
     from inventory.models import SGEngine
@@ -596,6 +614,7 @@ def engine_identifiers(request):
     except Exception as e:
         return HttpResponse('<option value="">Error loading identifiers</option>')
 
+@login_required
 def sg_models_by_letter(request):
     """AJAX endpoint to get SG models that start with a specific letter."""
     from inventory.models import SGEngine
@@ -606,6 +625,7 @@ def sg_models_by_letter(request):
         return JsonResponse({'models': list(models)})
     return JsonResponse({'models': []})
 
+@login_required
 def sg_make_for_model(request):
     """AJAX endpoint to get SG make for a given model."""
     from inventory.models import SGEngine
@@ -620,6 +640,7 @@ def sg_make_for_model(request):
             pass
     return JsonResponse({'sg_make': None})
 
+@login_required
 def search_sg_engines(request):
     """AJAX endpoint to search SG engines by name."""
     from inventory.models import SGEngine
@@ -634,6 +655,7 @@ def search_sg_engines(request):
         return JsonResponse({'engines': list(engines)})
     return JsonResponse({'engines': []})
 
+@login_required
 def create_sg_engine(request):
     """AJAX endpoint to create a new SG Engine."""
     from inventory.models import SGEngine

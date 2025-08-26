@@ -18,16 +18,21 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth.views import LogoutView
 
 from django.shortcuts import redirect
+from django.contrib.auth.decorators import login_required
 
-def redirect_to_imports(request):
-    return redirect('imports:index')
+@login_required
+def redirect_to_machines(request):
+    return redirect('inventory:machines_list')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),  # Add authentication URLs
-    path('', redirect_to_imports),  # Redirect root to imports
+    path("accounts/logout/", LogoutView.as_view(next_page="login"), name="logout"),
+    path('', redirect_to_machines),  # Redirect root to machines
+    path('core/', include('core.urls')),  # Core app URLs
     path('inventory/', include('inventory.urls')),  # Add back for sidebar navigation
     path('imports/', include('imports.urls')),
 ]

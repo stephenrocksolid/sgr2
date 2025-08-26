@@ -4,6 +4,9 @@ from . import views
 app_name = 'inventory'
 
 urlpatterns = [
+    # Index view
+    path('', views.index, name='index'),
+    
     # Machine views
     path('machines/', views.machines_list, name='machines_list'),
     path('machines/<int:machine_id>/', views.machine_detail, name='machine_detail'),

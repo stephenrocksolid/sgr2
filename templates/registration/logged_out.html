@@ -1,129 +1,37 @@
-{% extends 'base.html' %}
+{% extends "logout_base.html" %}
+{% load static %}
 
 {% block title %}Logged Out - SGR Part Manager{% endblock %}
 
 {% block content %}
-<div class="login-container">
-    <div class="login-card">
-        <div class="login-header">
-            <h1>SGR Part Manager</h1>
-            <p>You have been successfully logged out</p>
-        </div>
-        
-        <div class="alert alert-success">
-            <p>Thank you for using SGR Part Manager. You have been successfully logged out.</p>
-        </div>
-        
-        <div class="login-actions">
-            <a href="{% url 'login' %}" class="btn btn-primary btn-block">Sign In Again</a>
-        </div>
-        
-        <div class="login-footer">
-            <p><a href="{% url 'admin:login' %}">Admin Login</a></p>
-        </div>
+<div class="w-full max-w-sm" style="width: 100%; max-width: 24rem;">
+  <div class="bg-white rounded-2xl shadow-xl overflow-hidden" style="background-color: white; border-radius: 1rem; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); border: 1px solid var(--gray-200); overflow: hidden;">
+    <div class="px-6 pt-6 pb-4 text-center" style="padding: 1.5rem 1.5rem 1rem 1.5rem; text-align: center;">
+      <h1 class="text-xl font-semibold text-gray-900" style="font-size: 1.25rem; font-weight: 600; color: var(--gray-900); margin: 0 0 0.25rem 0;">SGR Part Manager</h1>
+      <p class="text-gray-500 mt-1" style="color: var(--gray-500); margin: 0.25rem 0 0 0; font-size: 0.875rem;">You have been successfully logged out</p>
+      
+      <div class="mt-3 rounded-md p-2 text-sm" style="margin-top: 0.75rem; border-radius: 0.375rem; padding: 0.5rem; font-size: 0.875rem; background-color: #f0fdf4; color: #166534; border: 1px solid #bbf7d0;">
+        Thank you for using SGR Part Manager. You have been successfully logged out.
+      </div>
     </div>
+
+    <div class="px-6 pb-6 space-y-3" style="padding: 0 1.5rem 1.5rem 1.5rem;">
+      <a href="{% url 'login' %}"
+         class="w-full bg-red-600 text-white font-medium rounded-md py-2 hover:bg-red-700 transition"
+         style="width: 100%; background-color: var(--brand-red); color: white; font-weight: 500; border-radius: 0.375rem; padding: 0.5rem 0; text-decoration: none; font-size: 1rem; transition: all 0.2s ease; display: inline-flex; justify-content: center; align-items: center;"
+         onmouseover="this.style.backgroundColor='var(--brand-red-dark)'"
+         onmouseout="this.style.backgroundColor='var(--brand-red)'">
+        Sign In Again
+      </a>
+
+      <a href="{% url 'admin:login' %}"
+         class="w-full inline-flex justify-center border border-red-600 text-red-700 font-medium rounded-md py-2 hover:bg-red-50 transition"
+         style="width: 100%; display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--brand-red); color: var(--brand-red); font-weight: 500; border-radius: 0.375rem; padding: 0.5rem 0; text-decoration: none; font-size: 1rem; transition: all 0.2s ease; background-color: transparent;"
+         onmouseover="this.style.backgroundColor='#fef2f2'"
+         onmouseout="this.style.backgroundColor='transparent'">
+        Admin Login
+      </a>
+    </div>
+  </div>
 </div>
-
-<style>
-.login-container {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
-    padding: 2rem;
-}
-
-.login-card {
-    background: white;
-    border-radius: var(--border-radius);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-    padding: 2rem;
-    width: 100%;
-    max-width: 400px;
-}
-
-.login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.login-header h1 {
-    color: var(--gray-900);
-    margin-bottom: 0.5rem;
-    font-size: 1.75rem;
-}
-
-.login-header p {
-    color: var(--gray-600);
-    margin: 0;
-}
-
-.alert {
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: var(--border-radius);
-    font-size: 0.875rem;
-}
-
-.alert-success {
-    background-color: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    color: #166534;
-}
-
-.login-actions {
-    margin-bottom: 1.5rem;
-}
-
-.btn {
-    display: inline-block;
-    padding: 0.75rem 1.5rem;
-    border: none;
-    border-radius: var(--border-radius);
-    font-size: 1rem;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.btn-primary {
-    background-color: var(--red-600);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: var(--red-700);
-}
-
-.btn-block {
-    width: 100%;
-}
-
-.login-footer {
-    text-align: center;
-    padding-top: 1rem;
-    border-top: 1px solid var(--gray-200);
-}
-
-.login-footer a {
-    color: var(--red-600);
-    text-decoration: none;
-}
-
-.login-footer a:hover {
-    text-decoration: underline;
-}
-
-@media (max-width: 480px) {
-    .login-container {
-        padding: 1rem;
-    }
-    
-    .login-card {
-        padding: 1.5rem;
-    }
-}
-</style>
 {% endblock %}
