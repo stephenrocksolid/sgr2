@@ -1,0 +1,614 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ engine.engine_make }} {{ engine.engine_model }} - Engines - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
+        color: white;
+        padding: 2rem;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .detail-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .breadcrumb a {
+        color: white;
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--red-600);
+    }
+    
+    .field-grid {
+        display: grid;
+        gap: 1rem;
+    }
+    
+    .field-row {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    
+    .field-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+    }
+    
+    .field-value {
+        color: var(--gray-900);
+        font-size: 0.9rem;
+    }
+    
+    .field-value.empty {
+        color: var(--gray-400);
+        font-style: italic;
+    }
+    
+    .specs-section {
+        grid-column: 1 / -1;
+    }
+    
+    .components-section {
+        grid-column: 1 / -1;
+    }
+    
+    .geometry-section {
+        grid-column: 1 / -1;
+    }
+    
+    .overview-section {
+        grid-column: 1 / -1;
+    }
+    
+    .machines-section {
+        grid-column: 1 / -1;
+    }
+    
+    .parts-section {
+        grid-column: 1 / -1;
+    }
+    
+    .interchanges-section {
+        grid-column: 1 / -1;
+    }
+    
+    .compatibles-section {
+        grid-column: 1 / -1;
+    }
+    
+    .supercessions-section {
+        grid-column: 1 / -1;
+    }
+    
+    .record-info-section {
+        grid-column: 1 / -1;
+    }
+    
+    .basic-info-section {
+        grid-column: 1 / -1;
+    }
+    
+    .sg-engine-section {
+        grid-column: 1 / -1;
+    }
+    
+    .build-lists-section {
+        grid-column: 1 / -1;
+    }
+    
+    .supercession-section {
+        margin-bottom: 2rem;
+    }
+    
+    .supercession-section h5 {
+        color: var(--gray-700);
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .flex {
+        display: flex;
+    }
+    
+    .gap-2 {
+        gap: 0.5rem;
+    }
+    
+    .my-2 {
+        margin-top: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .mt-2 {
+        margin-top: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .field-row {
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
+        }
+        
+        .detail-header {
+            margin: -1rem -1rem 1rem -1rem;
+            padding: 1.5rem;
+        }
+        
+        .detail-title {
+            font-size: 1.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div class="breadcrumb">
+        <a href="{% url 'imports:index' %}">Home</a> → 
+        <a href="{% url 'inventory:engines_list' %}">Engines</a> → 
+        {{ engine.engine_make }} {{ engine.engine_model }}
+    </div>
+    
+    {% if engine.sg_engine %}
+        <h1 class="detail-title">{{ engine.sg_engine.sg_make }} {{ engine.sg_engine.sg_model }}</h1>
+        <p class="detail-subtitle">Engine: {{ engine.engine_make }} {{ engine.engine_model }}</p>
+    {% else %}
+        <h1 class="detail-title">{{ engine.engine_make }} {{ engine.engine_model }}</h1>
+        <p class="detail-subtitle">Engine Specifications</p>
+    {% endif %}
+</div>
+
+<div class="detail-grid">
+    <!-- Basic Information -->
+    <div class="detail-section basic-info-section">
+        <h2 class="section-title">Basic Information</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Engine Make:</span>
+                <span class="field-value">{{ engine.engine_make }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Engine Model:</span>
+                <span class="field-value">{{ engine.engine_model }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Status:</span>
+                <span class="field-value {% if not engine.status %}empty{% endif %}">
+                    {{ engine.status|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Price:</span>
+                <span class="field-value {% if not engine.price %}empty{% endif %}">
+                    {% if engine.price %}${{ engine.price }}{% else %}Not specified{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SG Engine Information -->
+    {% if engine.sg_engine %}
+    <div class="detail-section sg-engine-section">
+        <h2 class="section-title">Spring Garden Engine Information</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">SG Make:</span>
+                <span class="field-value">{{ engine.sg_engine.sg_make }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">SG Model:</span>
+                <span class="field-value">{{ engine.sg_engine.sg_model }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">SG Identifier:</span>
+                <span class="field-value {% if not engine.sg_engine.identifier %}empty{% endif %}">
+                    {{ engine.sg_engine.identifier|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">SG Engine Notes:</span>
+                <span class="field-value {% if not engine.sg_engine.notes %}empty{% endif %}">
+                    {{ engine.sg_engine.notes|default:"No notes" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Specifications -->
+    <div class="detail-section specs-section">
+        <h2 class="section-title">Specifications</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">CPL Number:</span>
+                <span class="field-value {% if not engine.cpl_number %}empty{% endif %}">
+                    {{ engine.cpl_number|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">AR Number:</span>
+                <span class="field-value {% if not engine.ar_number %}empty{% endif %}">
+                    {{ engine.ar_number|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Build List:</span>
+                <span class="field-value {% if not engine.build_list %}empty{% endif %}">
+                    {{ engine.build_list|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Engine Code:</span>
+                <span class="field-value {% if not engine.engine_code %}empty{% endif %}">
+                    {{ engine.engine_code|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Cylinders:</span>
+                <span class="field-value {% if not engine.cylinder %}empty{% endif %}">
+                    {{ engine.cylinder|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Valves per Cylinder:</span>
+                <span class="field-value {% if not engine.valves_per_cyl %}empty{% endif %}">
+                    {{ engine.valves_per_cyl|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Bore & Stroke:</span>
+                <span class="field-value {% if not engine.bore_stroke %}empty{% endif %}">
+                    {{ engine.bore_stroke|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Compression Ratio:</span>
+                <span class="field-value {% if not engine.compression_ratio %}empty{% endif %}">
+                    {{ engine.compression_ratio|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Firing Order:</span>
+                <span class="field-value {% if not engine.firing_order %}empty{% endif %}">
+                    {{ engine.firing_order|default:"Not specified" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Components -->
+    <div class="detail-section components-section">
+        <h2 class="section-title">Components</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Crankshaft Number:</span>
+                <span class="field-value {% if not engine.crankshaft_no %}empty{% endif %}">
+                    {{ engine.crankshaft_no|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Piston Number:</span>
+                <span class="field-value {% if not engine.piston_no %}empty{% endif %}">
+                    {{ engine.piston_no|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Piston Marked Number:</span>
+                <span class="field-value {% if not engine.piston_marked_no %}empty{% endif %}">
+                    {{ engine.piston_marked_no|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Overhaul Kit Number:</span>
+                <span class="field-value {% if not engine.oh_kit_no %}empty{% endif %}">
+                    {{ engine.oh_kit_no|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Piston Notes:</span>
+                <span class="field-value {% if not engine.piston_notes %}empty{% endif %}">
+                    {{ engine.piston_notes|default:"No notes" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Geometry -->
+    <div class="detail-section geometry-section">
+        <h2 class="section-title">Geometry</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Rod Journal Diameter:</span>
+                <span class="field-value {% if not engine.rod_journal_diameter %}empty{% endif %}">
+                    {{ engine.rod_journal_diameter|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Main Journal Diameter (Pos 1):</span>
+                <span class="field-value {% if not engine.main_journal_diameter_pos1 %}empty{% endif %}">
+                    {{ engine.main_journal_diameter_pos1|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Main Journal Diameter (1):</span>
+                <span class="field-value {% if not engine.main_journal_diameter_1 %}empty{% endif %}">
+                    {{ engine.main_journal_diameter_1|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Big End Housing Bore:</span>
+                <span class="field-value {% if not engine.big_end_housing_bore %}empty{% endif %}">
+                    {{ engine.big_end_housing_bore|default:"Not specified" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Overview -->
+    <div class="detail-section overview-section">
+        <h2 class="section-title">Overview</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Overview Comments:</span>
+                <span class="field-value {% if not engine.overview_comments %}empty{% endif %}">
+                    {{ engine.overview_comments|default:"No comments" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Interference:</span>
+                <span class="field-value {% if not engine.interference %}empty{% endif %}">
+                    {{ engine.interference|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Camshaft:</span>
+                <span class="field-value {% if not engine.camshaft %}empty{% endif %}">
+                    {{ engine.camshaft|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Valve Adjustment:</span>
+                <span class="field-value {% if not engine.valve_adjustment %}empty{% endif %}">
+                    {{ engine.valve_adjustment|default:"Not specified" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Used on Machines -->
+    <div class="detail-section machines-section">
+        <h2 class="section-title">Used on Machines</h2>
+        <div id="engine-machines-section"
+             hx-get="{% url 'inventory:engine_machines_partial' engine.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading machines...</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 my-2">
+            <button class="btn btn-secondary"
+                    hx-get="{% url 'inventory:engine_machine_add_form' engine.id %}"
+                    hx-target="#engine-machines-add"
+                    hx-swap="innerHTML">
+                Add Machine
+            </button>
+        </div>
+        <div id="engine-machines-add"></div>
+    </div>
+    
+    <!-- Parts for this Engine -->
+    <div class="detail-section parts-section">
+        <h2 class="section-title">Parts for this Engine</h2>
+        <div id="engine-parts-section"
+             hx-get="{% url 'inventory:engine_parts_partial' engine.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading parts...</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 my-2">
+            <button class="btn btn-secondary"
+                    hx-get="{% url 'inventory:engine_part_add_form' engine.id %}"
+                    hx-target="#engine-parts-add"
+                    hx-swap="innerHTML">
+                Add Part
+            </button>
+        </div>
+        <div id="engine-parts-add"></div>
+    </div>
+    
+    <!-- Engine Interchanges -->
+    <div class="detail-section interchanges-section">
+        <h2 class="section-title">Engine Interchanges</h2>
+        <div id="engine-interchanges-section"
+             hx-get="{% url 'inventory:engine_interchanges_partial' engine.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading interchanges...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Engine Compatibles -->
+    <div class="detail-section compatibles-section">
+        <h2 class="section-title">Engine Compatibles</h2>
+        <div id="engine-compatibles-section"
+             hx-get="{% url 'inventory:engine_compatibles_partial' engine.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading compatibles...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Engine Supercessions -->
+    <div class="detail-section supercessions-section">
+        <h2 class="section-title">Engine Supercessions</h2>
+        <div id="engine-supercessions-section"
+             hx-get="{% url 'inventory:engine_supercessions_partial' engine.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading supercessions...</p>
+            </div>
+        </div>
+        
+        <div class="flex gap-2 my-2">
+            <button class="btn btn-secondary"
+                    hx-get="{% url 'inventory:engine_supercession_form' engine.id 'older' %}"
+                    hx-target="#supercession-form-region"
+                    hx-swap="innerHTML">
+                Add Engine This Supersedes (Older)
+            </button>
+            <button class="btn btn-secondary"
+                    hx-get="{% url 'inventory:engine_supercession_form' engine.id 'newer' %}"
+                    hx-target="#supercession-form-region"
+                    hx-swap="innerHTML">
+                Add Engine That Supersedes This (Newer)
+            </button>
+        </div>
+        <div id="supercession-form-region"></div>
+    </div>
+    
+    <!-- Build List -->
+    <div class="detail-section build-lists-section" id="build-list-section">
+        {% include 'inventory/partials/_engine_kits.html' %}
+    </div>
+    
+    <!-- Audit Information -->
+    <div class="detail-section record-info-section">
+        <h2 class="section-title">Record Information</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Created:</span>
+                <span class="field-value">{{ engine.created_at|date:"F j, Y g:i A" }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Updated:</span>
+                <span class="field-value">{{ engine.updated_at|date:"F j, Y g:i A" }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Created By:</span>
+                <span class="field-value {% if not engine.created_by %}empty{% endif %}">
+                    {{ engine.created_by|default:"System" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Updated By:</span>
+                <span class="field-value {% if not engine.updated_by %}empty{% endif %}">
+                    {{ engine.updated_by|default:"System" }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+    <a href="{% url 'inventory:engines_list' %}" class="btn btn-secondary">
+        ← Back to Engines
+    </a>
+    <a href="{% url 'inventory:engine_edit' engine.pk %}" class="btn btn-primary">
+        Edit Engine
+    </a>
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add any interactive functionality here
+    document.addEventListener('DOMContentLoaded', function() {
+        // Example: Add click handlers for engine rows if needed
+        console.log('Engine detail page loaded');
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,328 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Wizard - Step 2: Configure Options{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="wizard-header">
+        <h1>Import Wizard</h1>
+        <div class="wizard-steps">
+            <div class="step completed">
+                <div class="step-number">✓</div>
+                <div class="step-label">Upload File</div>
+            </div>
+            <div class="step active">
+                <div class="step-number">2</div>
+                <div class="step-label">Configure Options</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-label">Map Fields</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-label">Process</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wizard-content">
+        <div class="options-section">
+            <h2>Step 2: Configure File Options</h2>
+            <p>Configure how your file should be processed.</p>
+            
+            <div class="file-info">
+                <h3>File Information</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>File Name:</label>
+                        <span>{{ batch.original_filename }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>File Type:</label>
+                        <span>{{ batch.file_type|upper }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>File Size:</label>
+                        <span>{{ batch.file_size|filesizeformat }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Total Rows:</label>
+                        <span>{{ batch.total_rows }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if batch.is_csv %}
+                <div class="csv-options">
+                    <h3>CSV Options</h3>
+                    <form method="post" class="options-form">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="{{ form.encoding.id_for_label }}">File Encoding</label>
+                            {{ form.encoding }}
+                            <div class="help-text">Select the character encoding used in your CSV file.</div>
+                            {% if form.encoding.errors %}
+                                <div class="field-error">
+                                    {% for error in form.encoding.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-group">
+                            <label for="{{ form.delimiter.id_for_label }}">Field Delimiter</label>
+                            {{ form.delimiter }}
+                            <div class="help-text">Select the character that separates fields in your CSV file.</div>
+                            {% if form.delimiter.errors %}
+                                <div class="field-error">
+                                    {% for error in form.delimiter.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Continue to Mapping</button>
+                            <a href="{% url 'imports:upload_step' %}" class="btn btn-secondary">Back</a>
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                <div class="xlsx-options">
+                    <h3>Excel Options</h3>
+                    <form method="post" class="options-form">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="{{ form.worksheet_name.id_for_label }}">Worksheet</label>
+                            {{ form.worksheet_name }}
+                            <div class="help-text">Select which worksheet to import from your Excel file.</div>
+                            {% if form.worksheet_name.errors %}
+                                <div class="field-error">
+                                    {% for error in form.worksheet_name.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Continue to Mapping</button>
+                            <a href="{% url 'imports:upload_step' %}" class="btn btn-secondary">Back</a>
+                        </div>
+                    </form>
+                </div>
+            {% endif %}
+
+            <div class="preview-section">
+                <h3>Data Preview</h3>
+                <p>First few rows of your data:</p>
+                
+                {% if batch.discovered_headers %}
+                    <div class="table-wrap">
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    {% for header in batch.discovered_headers %}
+                                        <th>{{ header }}</th>
+                                    {% endfor %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in batch.preview_data|slice:":5" %}
+                                    <tr>
+                                        {% for cell in row %}
+                                            <td>{{ cell|default:"—" }}</td>
+                                        {% endfor %}
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% if batch.preview_data|length > 5 %}
+                        <p class="preview-note">Showing first 5 rows of {{ batch.preview_data|length }} preview rows.</p>
+                    {% endif %}
+                {% else %}
+                    <p class="no-data">No data preview available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.wizard-header {
+    margin-bottom: var(--spacing-xl);
+}
+
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--spacing-lg);
+    max-width: 600px;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: var(--gray-300);
+    z-index: 1;
+}
+
+.step.active::after {
+    background-color: var(--primary);
+}
+
+.step.completed::after {
+    background-color: var(--success);
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--gray-300);
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    z-index: 2;
+}
+
+.step.active .step-number {
+    background-color: var(--primary);
+    color: white;
+}
+
+.step.completed .step-number {
+    background-color: var(--success);
+    color: white;
+}
+
+.step-label {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--gray-600);
+    text-align: center;
+}
+
+.step.active .step-label {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.step.completed .step-label {
+    color: var(--success);
+    font-weight: 500;
+}
+
+.wizard-content {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.options-section {
+    background: white;
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.file-info {
+    background: var(--gray-50);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    margin-bottom: var(--spacing-xl);
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item label {
+    font-weight: 500;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-xs);
+}
+
+.info-item span {
+    color: var(--gray-600);
+}
+
+.options-form {
+    margin-bottom: var(--spacing-xl);
+}
+
+.help-text {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    margin-top: var(--spacing-xs);
+}
+
+.preview-section {
+    border-top: 1px solid var(--gray-200);
+    padding-top: var(--spacing-xl);
+}
+
+.preview-table {
+    font-size: var(--font-size-sm);
+}
+
+.preview-table th {
+    background: var(--gray-100);
+    font-weight: 600;
+}
+
+.preview-note {
+    font-size: var(--font-size-sm);
+    color: var(--gray-500);
+    font-style: italic;
+    margin-top: var(--spacing-sm);
+}
+
+.no-data {
+    color: var(--gray-500);
+    font-style: italic;
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+}
+</style>
+{% endblock %}
+
+
+
+
+
+

@@ -1,0 +1,408 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Engines - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-section {
+        background: var(--gray-50);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--gray-200);
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--gray-700);
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .results-info {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .export-section {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .clickable-row {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .clickable-row:hover {
+        background-color: var(--gray-50);
+    }
+    
+    .sort-link {
+        color: var(--gray-900);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-weight: 600;
+    }
+    
+    .sort-link:hover {
+        color: var(--red-600);
+    }
+    
+    .sort-indicator {
+        font-size: 0.75rem;
+        color: var(--red-600);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        gap: 0.5rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .pagination a,
+    .pagination .current {
+        padding: 0.5rem 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        text-decoration: none;
+        color: var(--gray-700);
+        background: white;
+    }
+    
+    .pagination a:hover {
+        background: var(--gray-50);
+        color: var(--red-600);
+    }
+    
+    .pagination .current {
+        background: var(--red-600);
+        color: white;
+        border-color: var(--red-600);
+    }
+    
+    @media (max-width: 768px) {
+        .filter-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .results-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .export-section {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Engines</h1>
+    <p>Manage your engine inventory and specifications</p>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <form method="get" id="filter-form">
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="engine_make">Engine Make</label>
+                <select name="engine_make" id="engine_make">
+                    <option value="">All Engine Makes</option>
+                    {% for engine_make in engine_makes %}
+                        <option value="{{ engine_make }}" {% if current_filters.engine_make == engine_make %}selected{% endif %}>
+                            {{ engine_make }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="engine_model">Engine Model</label>
+                <input type="text" name="engine_model" id="engine_model" value="{{ current_filters.engine_model }}" 
+                       placeholder="Search engine model...">
+            </div>
+            
+            <div class="filter-group">
+                <label for="sg_make">SG Make</label>
+                <select name="sg_make" id="sg_make">
+                    <option value="">All SG Makes</option>
+                    {% for sg_make in sg_makes %}
+                        <option value="{{ sg_make }}" {% if current_filters.sg_make == sg_make %}selected{% endif %}>
+                            {{ sg_make }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="sg_model">SG Model</label>
+                <input type="text" name="sg_model" id="sg_model" value="{{ current_filters.sg_model }}" 
+                       placeholder="Search SG model...">
+            </div>
+            
+            <div class="filter-group">
+                <label for="status">Status</label>
+                <select name="status" id="status">
+                    <option value="">All Statuses</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if current_filters.status == status %}selected{% endif %}>
+                            {{ status }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="search">Search</label>
+                <input type="text" name="search" id="search" value="{{ current_filters.search }}" 
+                       placeholder="Search engines by make, model, CPL number, status, etc...">
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'inventory:engines_list' %}" class="btn btn-secondary">Clear Filters</a>
+        </div>
+        
+        <!-- Hidden fields to preserve sorting -->
+        <input type="hidden" name="sort" value="{{ current_sort }}">
+        <input type="hidden" name="order" value="{{ current_order }}">
+    </form>
+</div>
+
+<!-- Results Header -->
+<div class="results-header">
+    <div class="results-info">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} engines
+    </div>
+    
+
+</div>
+
+<!-- Engines Table -->
+<div class="table-wrap">
+    <table class="table sticky">
+        <thead>
+            <tr>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=engine_make&order={% if current_sort == 'engine_make' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        Engine Make
+                        {% if current_sort == 'engine_make' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=engine_model&order={% if current_sort == 'engine_model' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        Engine Model
+                        {% if current_sort == 'engine_model' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__sg_make&order={% if current_sort == 'sg_engine__sg_make' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        SG Make
+                        {% if current_sort == 'sg_engine__sg_make' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__sg_model&order={% if current_sort == 'sg_engine__sg_model' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        SG Model
+                        {% if current_sort == 'sg_engine__sg_model' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__identifier&order={% if current_sort == 'sg_engine__identifier' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        SG Identifier
+                        {% if current_sort == 'sg_engine__identifier' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>SG Notes</th>
+                <th>CPL Number</th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=status&order={% if current_sort == 'status' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        Status
+                        {% if current_sort == 'status' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=price&order={% if current_sort == 'price' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        Price
+                        {% if current_sort == 'price' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+                <th>
+                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=created_at&order={% if current_sort == 'created_at' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
+                       class="sort-link">
+                        Created
+                        {% if current_sort == 'created_at' %}
+                            <span class="sort-indicator">
+                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
+                            </span>
+                        {% endif %}
+                    </a>
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for engine in engines %}
+                <tr class="clickable-row" data-href="{% url 'inventory:engine_detail' engine.pk %}">
+                    <td>{{ engine.engine_make }}</td>
+                    <td>{{ engine.engine_model }}</td>
+                    <td>{{ engine.sg_engine.sg_make|default:"—" }}</td>
+                    <td>{{ engine.sg_engine.sg_model|default:"—" }}</td>
+                    <td>{{ engine.sg_engine.identifier|default:"—" }}</td>
+                    <td>{{ engine.sg_engine.notes|default:"—"|truncatewords:10 }}</td>
+                    <td>{{ engine.cpl_number|default:"—" }}</td>
+                    <td>{{ engine.status|default:"—" }}</td>
+                    <td>{% if engine.price %}${{ engine.price }}{% else %}—{% endif %}</td>
+                    <td>{{ engine.created_at|date:"M j, Y" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                        No engines found matching your criteria.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">First</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="current">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">Last</a>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when filters change
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('filter-form');
+        const selects = form.querySelectorAll('select');
+        
+        selects.forEach(select => {
+            select.addEventListener('change', function() {
+                form.submit();
+            });
+        });
+        
+        // Submit on Enter key for text inputs
+        const textInputs = form.querySelectorAll('input[type="text"], input[type="number"]');
+        textInputs.forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    form.submit();
+                }
+            });
+        });
+        
+        // Handle clickable rows
+        const clickableRows = document.querySelectorAll('.clickable-row');
+        clickableRows.forEach(row => {
+            row.addEventListener('click', function() {
+                const href = this.getAttribute('data-href');
+                if (href) {
+                    window.location.href = href;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

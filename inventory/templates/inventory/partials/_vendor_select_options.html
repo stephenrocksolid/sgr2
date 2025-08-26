@@ -1,0 +1,20 @@
+<option value="">Select a vendor...</option>
+
+<!-- Vendors that have this part (with cost) -->
+{% for part_vendor in part_vendors %}
+    <option value="{{ part_vendor.vendor.id }}" data-cost="{{ part_vendor.cost|default:'' }}">
+        {{ part_vendor.vendor.name }} {% if part_vendor.cost %}(${{ part_vendor.cost|floatformat:2 }}){% endif %}{% if part_vendor.vendor == primary_vendor %} (Primary){% endif %}
+    </option>
+{% endfor %}
+
+<!-- Separator if we have both types -->
+{% if part_vendors and all_vendors %}
+    <option disabled>──────────</option>
+{% endif %}
+
+<!-- All other vendors -->
+{% for vendor in other_vendors %}
+    <option value="{{ vendor.id }}" data-cost="">
+        {{ vendor.name }} (No cost data)
+    </option>
+{% endfor %}

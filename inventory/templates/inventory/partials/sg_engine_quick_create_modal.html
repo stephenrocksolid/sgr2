@@ -1,0 +1,371 @@
+<div class="modal-overlay" id="sg-engine-modal-overlay">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>{{ modal_title }}</h3>
+            <button type="button" class="modal-close" onclick="closeSGEngineModal()">&times;</button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="sg-engine-quick-create-form" hx-post="{% url 'inventory:sg_engine_quick_create' %}" hx-swap="outerHTML">
+                {% csrf_token %}
+                {% if engine_id %}
+                    <input type="hidden" name="engine_id" value="{{ engine_id }}">
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="{{ form.sg_model.id_for_label }}">SG Engine Model *</label>
+                    {{ form.sg_model }}
+                    <div class="field-error" id="sg_model_error" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.sg_make.id_for_label }}">SG Engine Make</label>
+                    {{ form.sg_make }}
+                    <div class="help-text">Automatically set based on the selected model</div>
+                    <div class="field-error" id="sg_make_error" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.identifier.id_for_label }}">SG Engine Identifier *</label>
+                    {{ form.identifier }}
+                    <div class="field-error" id="identifier_error" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.notes.id_for_label }}">Notes</label>
+                    {{ form.notes }}
+                    <div class="field-error" id="notes_error" style="display: none;"></div>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="submit" class="btn btn-primary">Create SG Engine</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSGEngineModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('sg-engine-quick-create-form').addEventListener('htmx:afterRequest', function(event) {
+    if (event.detail.xhr.status === 200) {
+        const response = JSON.parse(event.detail.xhr.responseText);
+        
+        if (response.success) {
+            // Close the modal
+            closeSGEngineModal();
+            
+            // Show success message
+            showMessage(response.message, 'success');
+            
+            // If the engine was updated, reload the page to show the new SG Engine
+            if (response.engine_updated) {
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                // Update the SG Engine dropdown in the parent form (if it exists)
+                const sgEngineSelect = document.getElementById('sg_engine');
+                if (sgEngineSelect) {
+                    const option = new Option(response.sg_engine_name, response.sg_engine_id);
+                    sgEngineSelect.add(option);
+                    sgEngineSelect.value = response.sg_engine_id;
+                }
+                
+                // Trigger change event to update any dependent fields
+                if (sgEngineSelect) {
+                    sgEngineSelect.dispatchEvent(new Event('change'));
+                }
+            }
+        } else {
+            // Show form errors
+            clearFieldErrors();
+            if (response.errors) {
+                Object.keys(response.errors).forEach(field => {
+                    const errorDiv = document.getElementById(field + '_error');
+                    if (errorDiv) {
+                        errorDiv.textContent = response.errors[field][0];
+                        errorDiv.style.display = 'block';
+                    }
+                });
+            }
+        }
+    }
+});
+
+function closeSGEngineModal() {
+    const modal = document.getElementById('sg-engine-modal-overlay');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+function clearFieldErrors() {
+    const errorDivs = document.querySelectorAll('.field-error');
+    errorDivs.forEach(div => {
+        div.style.display = 'none';
+        div.textContent = '';
+    });
+}
+
+// Model to Make mapping for modal
+const modelToMakeMapping = {
+    '8N': 'Ford',
+    '9N': 'Ford',
+    '2N': 'Ford',
+    '1066': 'International Harvester',
+    '1086': 'International Harvester',
+    '1486': 'International Harvester',
+    '1586': 'International Harvester',
+    '886': 'International Harvester',
+    '986': 'International Harvester',
+    'A': 'John Deere',
+    'B': 'John Deere',
+    'G': 'John Deere',
+    'H': 'John Deere',
+    'M': 'John Deere',
+    'R': 'John Deere',
+    '60': 'John Deere',
+    '70': 'John Deere',
+    '80': 'John Deere',
+    '4020': 'John Deere',
+    '4040': 'John Deere',
+    '4050': 'John Deere',
+    '4230': 'John Deere',
+    '4240': 'John Deere',
+    '4250': 'John Deere',
+    '4430': 'John Deere',
+    '4440': 'John Deere',
+    '4450': 'John Deere',
+    '4630': 'John Deere',
+    '4640': 'John Deere',
+    '4650': 'John Deere',
+    '4840': 'John Deere',
+    '4850': 'John Deere',
+    '4955': 'John Deere',
+    '4960': 'John Deere',
+    '5055': 'John Deere',
+    '5060': 'John Deere',
+    '5075': 'John Deere',
+    '5080': 'John Deere',
+    '5090': 'John Deere',
+    '5100': 'John Deere',
+    '5200': 'John Deere',
+    '5300': 'John Deere',
+    '5400': 'John Deere',
+    '5500': 'John Deere',
+    '5600': 'John Deere',
+    '5700': 'John Deere',
+    '5800': 'John Deere',
+    '5900': 'John Deere',
+    '6000': 'John Deere',
+    '6100': 'John Deere',
+    '6200': 'John Deere',
+    '6300': 'John Deere',
+    '6400': 'John Deere',
+    '6500': 'John Deere',
+    '6600': 'John Deere',
+    '6700': 'John Deere',
+    '6800': 'John Deere',
+    '6900': 'John Deere',
+    '7000': 'John Deere',
+    '7100': 'John Deere',
+    '7200': 'John Deere',
+    '7300': 'John Deere',
+    '7400': 'John Deere',
+    '7500': 'John Deere',
+    '7600': 'John Deere',
+    '7700': 'John Deere',
+    '7800': 'John Deere',
+    '7900': 'John Deere',
+    '8000': 'John Deere',
+    '8100': 'John Deere',
+    '8200': 'John Deere',
+    '8300': 'John Deere',
+    '8400': 'John Deere',
+    '8500': 'John Deere',
+    '8600': 'John Deere',
+    '8700': 'John Deere',
+    '8800': 'John Deere',
+    '8900': 'John Deere',
+    '9000': 'John Deere',
+    '9100': 'John Deere',
+    '9200': 'John Deere',
+    '9300': 'John Deere',
+    '9400': 'John Deere',
+    '9500': 'John Deere',
+    '9600': 'John Deere',
+    '9700': 'John Deere',
+    '9800': 'John Deere',
+    '9900': 'John Deere',
+};
+
+// Model to Identifier mapping for modal
+const modelToIdentifierMapping = {
+    '8N': ['FORD-8N-001', 'FORD-8N-002', 'FORD-8N-003', 'FORD-8N-004', 'FORD-8N-005'],
+    '9N': ['FORD-9N-001', 'FORD-9N-002', 'FORD-9N-003', 'FORD-9N-004', 'FORD-9N-005'],
+    '2N': ['FORD-2N-001', 'FORD-2N-002', 'FORD-2N-003', 'FORD-2N-004', 'FORD-2N-005'],
+    '1066': ['IH-1066-001', 'IH-1066-002', 'IH-1066-003', 'IH-1066-004', 'IH-1066-005'],
+    '1086': ['IH-1086-001', 'IH-1086-002', 'IH-1086-003', 'IH-1086-004', 'IH-1086-005'],
+    '1486': ['IH-1486-001', 'IH-1486-002', 'IH-1486-003', 'IH-1486-004', 'IH-1486-005'],
+    '1586': ['IH-1586-001', 'IH-1586-002', 'IH-1586-003', 'IH-1586-004', 'IH-1586-005'],
+    '886': ['IH-886-001', 'IH-886-002', 'IH-886-003', 'IH-886-004', 'IH-886-005'],
+    '986': ['IH-986-001', 'IH-986-002', 'IH-986-003', 'IH-986-004', 'IH-986-005'],
+    'A': ['JD-A-001', 'JD-A-002', 'JD-A-003', 'JD-A-004', 'JD-A-005'],
+    'B': ['JD-B-001', 'JD-B-002', 'JD-B-003', 'JD-B-004', 'JD-B-005'],
+    'G': ['JD-G-001', 'JD-G-002', 'JD-G-003', 'JD-G-004', 'JD-G-005'],
+    'H': ['JD-H-001', 'JD-H-002', 'JD-H-003', 'JD-H-004', 'JD-H-005'],
+    'M': ['JD-M-001', 'JD-M-002', 'JD-M-003', 'JD-M-004', 'JD-M-005'],
+    'R': ['JD-R-001', 'JD-R-002', 'JD-R-003', 'JD-R-004', 'JD-R-005'],
+    '60': ['JD-60-001', 'JD-60-002', 'JD-60-003', 'JD-60-004', 'JD-60-005'],
+    '70': ['JD-70-001', 'JD-70-002', 'JD-70-003', 'JD-70-004', 'JD-70-005'],
+    '80': ['JD-80-001', 'JD-80-002', 'JD-80-003', 'JD-80-004', 'JD-80-005'],
+    '4020': ['JD-4020-001', 'JD-4020-002', 'JD-4020-003', 'JD-4020-004', 'JD-4020-005'],
+    '4040': ['JD-4040-001', 'JD-4040-002', 'JD-4040-003', 'JD-4040-004', 'JD-4040-005'],
+    '4050': ['JD-4050-001', 'JD-4050-002', 'JD-4050-003', 'JD-4050-004', 'JD-4050-005'],
+    '4230': ['JD-4230-001', 'JD-4230-002', 'JD-4230-003', 'JD-4230-004', 'JD-4230-005'],
+    '4240': ['JD-4240-001', 'JD-4240-002', 'JD-4240-003', 'JD-4240-004', 'JD-4240-005'],
+    '4250': ['JD-4250-001', 'JD-4250-002', 'JD-4250-003', 'JD-4250-004', 'JD-4250-005'],
+    '4430': ['JD-4430-001', 'JD-4430-002', 'JD-4430-003', 'JD-4430-004', 'JD-4430-005'],
+    '4440': ['JD-4440-001', 'JD-4440-002', 'JD-4440-003', 'JD-4440-004', 'JD-4440-005'],
+    '4450': ['JD-4450-001', 'JD-4450-002', 'JD-4450-003', 'JD-4450-004', 'JD-4450-005'],
+    '4630': ['JD-4630-001', 'JD-4630-002', 'JD-4630-003', 'JD-4630-004', 'JD-4630-005'],
+    '4640': ['JD-4640-001', 'JD-4640-002', 'JD-4640-003', 'JD-4640-004', 'JD-4640-005'],
+    '4650': ['JD-4650-001', 'JD-4650-002', 'JD-4650-003', 'JD-4650-004', 'JD-4650-005'],
+    '4840': ['JD-4840-001', 'JD-4840-002', 'JD-4840-003', 'JD-4840-004', 'JD-4840-005'],
+    '4850': ['JD-4850-001', 'JD-4850-002', 'JD-4850-003', 'JD-4850-004', 'JD-4850-005'],
+    '4955': ['JD-4955-001', 'JD-4955-002', 'JD-4955-003', 'JD-4955-004', 'JD-4955-005'],
+    '4960': ['JD-4960-001', 'JD-4960-002', 'JD-4960-003', 'JD-4960-004', 'JD-4960-005'],
+    '5055': ['JD-5055-001', 'JD-5055-002', 'JD-5055-003', 'JD-5055-004', 'JD-5055-005'],
+    '5060': ['JD-5060-001', 'JD-5060-002', 'JD-5060-003', 'JD-5060-004', 'JD-5060-005'],
+    '5075': ['JD-5075-001', 'JD-5075-002', 'JD-5075-003', 'JD-5075-004', 'JD-5075-005'],
+    '5080': ['JD-5080-001', 'JD-5080-002', 'JD-5080-003', 'JD-5080-004', 'JD-5080-005'],
+    '5090': ['JD-5090-001', 'JD-5090-002', 'JD-5090-003', 'JD-5090-004', 'JD-5090-005'],
+    '5100': ['JD-5100-001', 'JD-5100-002', 'JD-5100-003', 'JD-5100-004', 'JD-5100-005'],
+    '5200': ['JD-5200-001', 'JD-5200-002', 'JD-5200-003', 'JD-5200-004', 'JD-5200-005'],
+    '5300': ['JD-5300-001', 'JD-5300-002', 'JD-5300-003', 'JD-5300-004', 'JD-5300-005'],
+    '5400': ['JD-5400-001', 'JD-5400-002', 'JD-5400-003', 'JD-5400-004', 'JD-5400-005'],
+    '5500': ['JD-5500-001', 'JD-5500-002', 'JD-5500-003', 'JD-5500-004', 'JD-5500-005'],
+    '5600': ['JD-5600-001', 'JD-5600-002', 'JD-5600-003', 'JD-5600-004', 'JD-5600-005'],
+    '5700': ['JD-5700-001', 'JD-5700-002', 'JD-5700-003', 'JD-5700-004', 'JD-5700-005'],
+    '5800': ['JD-5800-001', 'JD-5800-002', 'JD-5800-003', 'JD-5800-004', 'JD-5800-005'],
+    '5900': ['JD-5900-001', 'JD-5900-002', 'JD-5900-003', 'JD-5900-004', 'JD-5900-005'],
+    '6000': ['JD-6000-001', 'JD-6000-002', 'JD-6000-003', 'JD-6000-004', 'JD-6000-005'],
+    '6100': ['JD-6100-001', 'JD-6100-002', 'JD-6100-003', 'JD-6100-004', 'JD-6100-005'],
+    '6200': ['JD-6200-001', 'JD-6200-002', 'JD-6200-003', 'JD-6200-004', 'JD-6200-005'],
+    '6300': ['JD-6300-001', 'JD-6300-002', 'JD-6300-003', 'JD-6300-004', 'JD-6300-005'],
+    '6400': ['JD-6400-001', 'JD-6400-002', 'JD-6400-003', 'JD-6400-004', 'JD-6400-005'],
+    '6500': ['JD-6500-001', 'JD-6500-002', 'JD-6500-003', 'JD-6500-004', 'JD-6500-005'],
+    '6600': ['JD-6600-001', 'JD-6600-002', 'JD-6600-003', 'JD-6600-004', 'JD-6600-005'],
+    '6700': ['JD-6700-001', 'JD-6700-002', 'JD-6700-003', 'JD-6700-004', 'JD-6700-005'],
+    '6800': ['JD-6800-001', 'JD-6800-002', 'JD-6800-003', 'JD-6800-004', 'JD-6800-005'],
+    '6900': ['JD-6900-001', 'JD-6900-002', 'JD-6900-003', 'JD-6900-004', 'JD-6900-005'],
+    '7000': ['JD-7000-001', 'JD-7000-002', 'JD-7000-003', 'JD-7000-004', 'JD-7000-005'],
+    '7100': ['JD-7100-001', 'JD-7100-002', 'JD-7100-003', 'JD-7100-004', 'JD-7100-005'],
+    '7200': ['JD-7200-001', 'JD-7200-002', 'JD-7200-003', 'JD-7200-004', 'JD-7200-005'],
+    '7300': ['JD-7300-001', 'JD-7300-002', 'JD-7300-003', 'JD-7300-004', 'JD-7300-005'],
+    '7400': ['JD-7400-001', 'JD-7400-002', 'JD-7400-003', 'JD-7400-004', 'JD-7400-005'],
+    '7500': ['JD-7500-001', 'JD-7500-002', 'JD-7500-003', 'JD-7500-004', 'JD-7500-005'],
+    '7600': ['JD-7600-001', 'JD-7600-002', 'JD-7600-003', 'JD-7600-004', 'JD-7600-005'],
+    '7700': ['JD-7700-001', 'JD-7700-002', 'JD-7700-003', 'JD-7700-004', 'JD-7700-005'],
+    '7800': ['JD-7800-001', 'JD-7800-002', 'JD-7800-003', 'JD-7800-004', 'JD-7800-005'],
+    '7900': ['JD-7900-001', 'JD-7900-002', 'JD-7900-003', 'JD-7900-004', 'JD-7900-005'],
+    '8000': ['JD-8000-001', 'JD-8000-002', 'JD-8000-003', 'JD-8000-004', 'JD-8000-005'],
+    '8100': ['JD-8100-001', 'JD-8100-002', 'JD-8100-003', 'JD-8100-004', 'JD-8100-005'],
+    '8200': ['JD-8200-001', 'JD-8200-002', 'JD-8200-003', 'JD-8200-004', 'JD-8200-005'],
+    '8300': ['JD-8300-001', 'JD-8300-002', 'JD-8300-003', 'JD-8300-004', 'JD-8300-005'],
+    '8400': ['JD-8400-001', 'JD-8400-002', 'JD-8400-003', 'JD-8400-004', 'JD-8400-005'],
+    '8500': ['JD-8500-001', 'JD-8500-002', 'JD-8500-003', 'JD-8500-004', 'JD-8500-005'],
+    '8600': ['JD-8600-001', 'JD-8600-002', 'JD-8600-003', 'JD-8600-004', 'JD-8600-005'],
+    '8700': ['JD-8700-001', 'JD-8700-002', 'JD-8700-003', 'JD-8700-004', 'JD-8700-005'],
+    '8800': ['JD-8800-001', 'JD-8800-002', 'JD-8800-003', 'JD-8800-004', 'JD-8800-005'],
+    '8900': ['JD-8900-001', 'JD-8900-002', 'JD-8900-003', 'JD-8900-004', 'JD-8900-005'],
+    '9000': ['JD-9000-001', 'JD-9000-002', 'JD-9000-003', 'JD-9000-004', 'JD-9000-005'],
+    '9100': ['JD-9100-001', 'JD-9100-002', 'JD-9100-003', 'JD-9100-004', 'JD-9100-005'],
+    '9200': ['JD-9200-001', 'JD-9200-002', 'JD-9200-003', 'JD-9200-004', 'JD-9200-005'],
+    '9300': ['JD-9300-001', 'JD-9300-002', 'JD-9300-003', 'JD-9300-004', 'JD-9300-005'],
+    '9400': ['JD-9400-001', 'JD-9400-002', 'JD-9400-003', 'JD-9400-004', 'JD-9400-005'],
+    '9500': ['JD-9500-001', 'JD-9500-002', 'JD-9500-003', 'JD-9500-004', 'JD-9500-005'],
+    '9600': ['JD-9600-001', 'JD-9600-002', 'JD-9600-003', 'JD-9600-004', 'JD-9600-005'],
+    '9700': ['JD-9700-001', 'JD-9700-002', 'JD-9700-003', 'JD-9700-004', 'JD-9700-005'],
+    '9800': ['JD-9800-001', 'JD-9800-002', 'JD-9800-003', 'JD-9800-004', 'JD-9800-005'],
+    '9900': ['JD-9900-001', 'JD-9900-002', 'JD-9900-003', 'JD-9900-004', 'JD-9900-005'],
+};
+
+// Function to update make field when model is selected in modal
+function updateMakeFieldInModal() {
+    const modelSelect = document.querySelector('#sg-engine-quick-create-form #sg_model_select');
+    const makeField = document.querySelector('#sg-engine-quick-create-form #{{ form.sg_make.id_for_label }}');
+    
+    if (modelSelect && makeField) {
+        const selectedModel = modelSelect.value;
+        const make = modelToMakeMapping[selectedModel] || '';
+        makeField.value = make;
+    }
+}
+
+// Function to update identifier dropdown when model is selected in modal
+function updateIdentifierDropdownInModal() {
+    const modelSelect = document.querySelector('#sg-engine-quick-create-form #sg_model_select');
+    const identifierSelect = document.querySelector('#sg-engine-quick-create-form #identifier_select');
+    
+    if (modelSelect && identifierSelect) {
+        const selectedModel = modelSelect.value;
+        const identifiers = modelToIdentifierMapping[selectedModel] || [];
+        
+        // Clear existing options
+        identifierSelect.innerHTML = '';
+        
+        // Add default option
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = identifiers.length > 0 ? 'Select SG Engine Identifier' : 'Select SG Engine Model first';
+        identifierSelect.appendChild(defaultOption);
+        
+        // Add identifier options
+        identifiers.forEach(identifier => {
+            const option = document.createElement('option');
+            option.value = identifier;
+            option.textContent = identifier;
+            identifierSelect.appendChild(option);
+        });
+    }
+}
+
+// Add event listener for modal form
+document.addEventListener('DOMContentLoaded', function() {
+    const modelSelect = document.querySelector('#sg-engine-quick-create-form #sg_model_select');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', function() {
+            updateMakeFieldInModal();
+            updateIdentifierDropdownInModal();
+        });
+        // Also update on modal load if there's already a selected value
+        updateMakeFieldInModal();
+        updateIdentifierDropdownInModal();
+    }
+});
+
+function showMessage(message, type) {
+    // Create a temporary message element
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'}`;
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.zIndex = '9999';
+    messageDiv.style.padding = '1rem';
+    messageDiv.style.borderRadius = '4px';
+    messageDiv.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+    
+    document.body.appendChild(messageDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        if (messageDiv.parentNode) {
+            messageDiv.parentNode.removeChild(messageDiv);
+        }
+    }, 3000);
+}
+</script>

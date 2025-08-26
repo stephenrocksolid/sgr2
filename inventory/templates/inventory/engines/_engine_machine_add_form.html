@@ -1,0 +1,39 @@
+<form
+  hx-post="{% url 'inventory:engine_machine_add' engine.id %}"
+  hx-target="#engine-machines-section"
+  hx-swap="innerHTML"
+  hx-on::after-request="if(event.detail.successful) document.getElementById('engine-machines-add').innerHTML = ''"
+>
+  {% csrf_token %}
+  <div class="form-group">
+    <label for="machine_id">Select Machine:</label>
+    <select name="machine_id" class="form-control" required>
+      <option value="">Select a machine…</option>
+      {% for m in machines %}
+        <option value="{{ m.id }}">{{ m.make }} {{ m.model }}{% if m.year %} ({{ m.year }}){% endif %}</option>
+      {% endfor %}
+    </select>
+    {% if machines|length == 0 %}
+      <p class="text-sm text-gray-500 mt-1">All machines are already linked to this engine.</p>
+    {% endif %}
+  </div>
+  <div class="form-group">
+    <label>
+      <input type="checkbox" name="is_primary" id="is_primary" class="form-check-input">
+      Primary engine for this machine?
+    </label>
+  </div>
+  <div class="form-group">
+    <label for="notes">Notes:</label>
+    <textarea name="notes" class="form-control" rows="2" placeholder="Optional notes…"></textarea>
+  </div>
+  <div class="flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary">Add Machine</button>
+    <button type="button" class="btn btn-secondary"
+            hx-get="{% url 'inventory:engine_machines_partial' engine.id %}"
+            hx-target="#engine-machines-section"
+            hx-swap="innerHTML">
+      Cancel
+    </button>
+  </div>
+</form>

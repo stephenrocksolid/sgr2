@@ -1,0 +1,402 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Batch Details - {{ batch.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Import Batch Details</h1>
+        <div class="header-actions">
+            <a href="{% url 'imports:index' %}" class="btn btn-secondary">Back to Imports</a>
+        </div>
+    </div>
+
+    <div class="batch-details">
+        <div class="detail-card">
+            <h2>{{ batch.original_filename }}</h2>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Status</label>
+                    <span class="status-badge status-{{ batch.status }}">{{ batch.get_status_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>File Type</label>
+                    <span>{{ batch.file_type|upper }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>File Size</label>
+                    <span>{{ batch.file_size|filesizeformat }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Total Rows</label>
+                    <span>{{ batch.total_rows }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Processed Rows</label>
+                    <span>{{ batch.processed_rows }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Progress</label>
+                    <span>{{ batch.progress_percentage }}%</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Created</label>
+                    <span>{{ batch.created_at|date:"M j, Y g:i A" }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Created By</label>
+                    <span>{{ batch.created_by.username|default:"—" }}</span>
+                </div>
+            </div>
+
+            {% if batch.is_csv %}
+                <div class="csv-details">
+                    <h3>CSV Configuration</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Encoding</label>
+                            <span>{{ batch.encoding }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Delimiter</label>
+                            <span>{{ batch.delimiter }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if batch.is_xlsx %}
+                <div class="xlsx-details">
+                    <h3>Excel Configuration</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Worksheet</label>
+                            <span>{{ batch.worksheet_name }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Available Worksheets</label>
+                            <span>{{ batch.available_worksheets|join:", " }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if batch.mapping %}
+                <div class="mapping-details">
+                    <h3>Mapping Configuration</h3>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Mapping Name</label>
+                            <span>{{ batch.mapping.name }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Chunk Size</label>
+                            <span>{{ batch.mapping.chunk_size }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Skip Duplicates</label>
+                            <span>{{ batch.mapping.skip_duplicates|yesno:"Yes,No" }}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Update Existing</label>
+                            <span>{{ batch.mapping.update_existing|yesno:"Yes,No" }}</span>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            {% if batch.error_message %}
+                <div class="error-section">
+                    <h3>Error Details</h3>
+                    <div class="error-message">
+                        {{ batch.error_message }}
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Import Row Statistics -->
+        {% if rows_stats %}
+        <div class="detail-card">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h3>Processing Results</h3>
+                <a href="{% url 'imports:batch_rows' batch.id %}" class="btn btn-primary">
+                    <i class="fas fa-table"></i> View All Rows
+                </a>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-number">{{ rows_stats.total_rows }}</div>
+                    <div class="stat-label">Total Rows</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number {% if rows_stats.error_rows > 0 %}text-danger{% else %}text-success{% endif %}">
+                        {{ rows_stats.error_rows }}
+                    </div>
+                    <div class="stat-label">Errors</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number text-success">{{ rows_stats.machine_created }}</div>
+                    <div class="stat-label">Machines Created</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number text-success">{{ rows_stats.engine_created }}</div>
+                    <div class="stat-label">Engines Created</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number text-success">{{ rows_stats.part_created }}</div>
+                    <div class="stat-label">Parts Created</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number text-info">{{ rows_stats.relationships_created }}</div>
+                    <div class="stat-label">Relationships</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="logs-section">
+            <h3>Processing Logs</h3>
+            
+            {% if page_obj %}
+                <div class="logs-list">
+                    {% for log in page_obj %}
+                        <div class="log-entry log-{{ log.level }}">
+                            <div class="log-header">
+                                <span class="log-level">{{ log.level|title }}</span>
+                                <span class="log-time">{{ log.created_at|date:"M j, Y g:i:s A" }}</span>
+                                {% if log.row_number %}
+                                    <span class="log-row">Row {{ log.row_number }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="log-message">{{ log.message }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                {% if page_obj.has_other_pages %}
+                    <div class="pagination">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; Previous</a>
+                        {% endif %}
+                        
+                        <span class="page-info">
+                            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                        </span>
+                        
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next &raquo;</a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="no-logs">
+                    <p>No logs available for this import batch.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.batch-details {
+    display: grid;
+    gap: var(--spacing-xl);
+    grid-template-columns: 1fr;
+}
+
+.detail-card {
+    background: white;
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.detail-card h2 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-lg);
+    color: var(--gray-800);
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.detail-item span {
+    color: var(--gray-600);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-lg);
+}
+
+.stat-item {
+    text-align: center;
+    padding: var(--spacing-md);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    background: var(--gray-50);
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-label {
+    font-size: var(--font-size-sm);
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.csv-details,
+.xlsx-details,
+.mapping-details {
+    border-top: 1px solid var(--gray-200);
+    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.csv-details h3,
+.xlsx-details h3,
+.mapping-details h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-md);
+    color: var(--gray-700);
+    font-size: var(--font-size-lg);
+}
+
+.error-section {
+    border-top: 1px solid var(--gray-200);
+    padding-top: var(--spacing-lg);
+    margin-top: var(--spacing-lg);
+}
+
+.error-section h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-md);
+    color: var(--error);
+}
+
+.error-message {
+    background: var(--error);
+    color: white;
+    padding: var(--spacing-md);
+    border-radius: var(--border-radius);
+    font-family: monospace;
+    white-space: pre-wrap;
+}
+
+.logs-section {
+    background: white;
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.logs-section h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-lg);
+    color: var(--gray-800);
+}
+
+.logs-list {
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    background: white;
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.log-entry {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry.log-error {
+    background: var(--error);
+    color: white;
+}
+
+.log-entry.log-warning {
+    background: var(--warning);
+    color: var(--gray-800);
+}
+
+.log-entry.log-info {
+    background: var(--info);
+    color: var(--gray-800);
+}
+
+.log-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.log-level {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+}
+
+.log-time {
+    color: var(--gray-500);
+}
+
+.log-row {
+    background: var(--gray-200);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: var(--font-size-xs);
+}
+
+.log-message {
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.no-logs {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--gray-500);
+    font-style: italic;
+}
+</style>
+{% endblock %}

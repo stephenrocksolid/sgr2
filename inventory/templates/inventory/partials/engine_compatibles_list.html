@@ -1,0 +1,50 @@
+{% if compatibles %}
+    <table class="related-table">
+        <thead>
+            <tr>
+                <th>Engine</th>
+                <th>Make</th>
+                <th>Model</th>
+                <th>CPL Number</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for compatible in compatibles %}
+                <tr>
+                    <td>
+                        <strong>{{ compatible.engine_make }} {{ compatible.engine_model }}</strong>
+                    </td>
+                    <td>{{ compatible.engine_make }}</td>
+                    <td>{{ compatible.engine_model }}</td>
+                    <td>{{ compatible.cpl_number|default:"—" }}</td>
+                    <td>{{ compatible.status|default:"—" }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm"
+                                hx-post="{% url 'inventory:remove_engine_compatible' engine.pk compatible.pk %}"
+                                hx-target="#engine-compatibles-list"
+                                hx-confirm="Are you sure you want to remove this compatible relationship?"
+                                hx-swap="outerHTML"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="empty-message">
+        This engine has no compatible relationships.
+    </div>
+{% endif %}
+
+<div class="mt-3">
+    <button class="btn btn-primary"
+            hx-get="{% url 'inventory:engine_add_compatible_form' engine.pk %}"
+            hx-target="#add-compatible-form"
+            hx-swap="innerHTML">
+        Add Compatible
+    </button>
+</div>

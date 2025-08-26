@@ -1,0 +1,187 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Wizard - Step 1: Upload File{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="wizard-header">
+        <h1>Import Wizard</h1>
+        <div class="wizard-steps">
+            <div class="step active">
+                <div class="step-number">1</div>
+                <div class="step-label">Upload File</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-label">Configure Options</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-label">Map Fields</div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-label">Process</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="wizard-content">
+        <div class="upload-section">
+            <h2>Step 1: Upload Your File</h2>
+            <p>Upload a CSV or Excel file to import data into the system.</p>
+            
+            <div class="upload-requirements">
+                <h3>Requirements:</h3>
+                <ul>
+                    <li>File size: Maximum 50MB</li>
+                    <li>File types: CSV, XLSX, XLS</li>
+                    <li>Row limit: Maximum 100,000 rows</li>
+                    <li>First row should contain column headers</li>
+                </ul>
+            </div>
+
+            <form method="post" enctype="multipart/form-data" class="upload-form">
+                {% csrf_token %}
+                
+                <div class="form-group">
+                    <label for="{{ form.file.id_for_label }}">Select File</label>
+                    {{ form.file }}
+                    {% if form.file.errors %}
+                        <div class="field-error">
+                            {% for error in form.file.errors %}
+                                {{ error }}
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Upload & Continue</button>
+                    <a href="{% url 'imports:index' %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.wizard-header {
+    margin-bottom: var(--spacing-xl);
+}
+
+.wizard-steps {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--spacing-lg);
+    max-width: 600px;
+}
+
+.step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+}
+
+.step:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    width: 100%;
+    height: 2px;
+    background-color: var(--gray-300);
+    z-index: 1;
+}
+
+.step.active::after {
+    background-color: var(--primary);
+}
+
+.step-number {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--gray-300);
+    color: var(--gray-600);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    z-index: 2;
+}
+
+.step.active .step-number {
+    background-color: var(--primary);
+    color: white;
+}
+
+.step-label {
+    margin-top: var(--spacing-sm);
+    font-size: var(--font-size-sm);
+    color: var(--gray-600);
+    text-align: center;
+}
+
+.step.active .step-label {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.wizard-content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.upload-section {
+    background: white;
+    padding: var(--spacing-xl);
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow-sm);
+}
+
+.upload-requirements {
+    background: var(--gray-50);
+    padding: var(--spacing-lg);
+    border-radius: var(--border-radius);
+    margin: var(--spacing-lg) 0;
+}
+
+.upload-requirements h3 {
+    margin-top: 0;
+    margin-bottom: var(--spacing-md);
+    color: var(--gray-700);
+}
+
+.upload-requirements ul {
+    margin: 0;
+    padding-left: var(--spacing-lg);
+}
+
+.upload-requirements li {
+    margin-bottom: var(--spacing-sm);
+    color: var(--gray-600);
+}
+
+.upload-form {
+    margin-top: var(--spacing-xl);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-xl);
+}
+</style>
+{% endblock %}
+
+
+
+
+
+

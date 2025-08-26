@@ -1,0 +1,131 @@
+{% if supersedes or superseded_by %}
+    <div class="supercessions-container">
+        {% if supersedes %}
+            <div class="supersedes-section mb-4">
+                <h5>This Engine Supersedes:</h5>
+                <table class="related-table">
+                    <thead>
+                        <tr>
+                            <th>Engine</th>
+                            <th>SG Make</th>
+                            <th>SG Model</th>
+                            <th>SG Identifier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for superseded in supersedes %}
+                            <tr class="superseded-row" data-superseded-id="{{ superseded.id }}">
+                                <td>
+                                    <strong>
+                                        {% if superseded.sg_engine %}
+                                            {{ superseded.sg_engine.sg_make }} {{ superseded.sg_engine.sg_model }}
+                                        {% else %}
+                                            {{ superseded.engine_make }} {{ superseded.engine_model }}
+                                        {% endif %}
+                                    </strong>
+                                </td>
+                                <td>
+                                    {% if superseded.sg_engine %}
+                                        {{ superseded.sg_engine.sg_make }}
+                                    {% else %}
+                                        {{ superseded.engine_make }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if superseded.sg_engine %}
+                                        {{ superseded.sg_engine.sg_model }}
+                                    {% else %}
+                                        {{ superseded.engine_model }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if superseded.sg_engine_identifier %}
+                                        {{ superseded.sg_engine_identifier }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <form hx-post="{% url 'inventory:engine_supercession_remove' engine.pk superseded.pk %}"
+                                          hx-target="#engine-supercessions-section"
+                                          hx-swap="innerHTML"
+                                          hx-confirm="Are you sure you want to remove this supercession relationship?">
+                                        {% csrf_token %}
+                                        <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+        
+        {% if superseded_by %}
+            <div class="superseded-by-section">
+                <h5>This Engine is Superseded By:</h5>
+                <table class="related-table">
+                    <thead>
+                        <tr>
+                            <th>Engine</th>
+                            <th>SG Make</th>
+                            <th>SG Model</th>
+                            <th>SG Identifier</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for superseding in superseded_by %}
+                            <tr class="superseding-row" data-superseding-id="{{ superseding.id }}">
+                                <td>
+                                    <strong>
+                                        {% if superseding.sg_engine %}
+                                            {{ superseding.sg_engine.sg_make }} {{ superseding.sg_engine.sg_model }}
+                                        {% else %}
+                                            {{ superseding.engine_make }} {{ superseding.engine_model }}
+                                        {% endif %}
+                                    </strong>
+                                </td>
+                                <td>
+                                    {% if superseding.sg_engine %}
+                                        {{ superseding.sg_engine.sg_make }}
+                                    {% else %}
+                                        {{ superseding.engine_make }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if superseding.sg_engine %}
+                                        {{ superseding.sg_engine.sg_model }}
+                                    {% else %}
+                                        {{ superseding.engine_model }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if superseding.sg_engine_identifier %}
+                                        {{ superseding.sg_engine_identifier }}
+                                    {% else %}
+                                        —
+                                    {% endif %}
+                                </td>
+                                <td class="text-right">
+                                    <form hx-post="{% url 'inventory:engine_supercession_remove' superseding.pk engine.pk %}"
+                                          hx-target="#engine-supercessions-section"
+                                          hx-swap="innerHTML"
+                                          hx-confirm="Are you sure you want to remove this supercession relationship?">
+                                        {% csrf_token %}
+                                        <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="empty-message">
+        <p class="text-muted">This engine has no supercession relationships yet.</p>
+    </div>
+{% endif %}

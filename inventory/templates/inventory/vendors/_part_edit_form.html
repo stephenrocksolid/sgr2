@@ -1,0 +1,57 @@
+<form method="post" class="form-inline"
+      hx-post="{% url 'inventory:vendor_part_edit' vendor.id link.id %}"
+      hx-target="#vendor-parts-section"
+      hx-swap="innerHTML">
+    {% csrf_token %}
+    
+    <div class="form-grid">
+        <div class="form-group">
+            <label for="{{ form.vendor_sku.id_for_label }}">{{ form.vendor_sku.label }}</label>
+            {{ form.vendor_sku }}
+            {% if form.vendor_sku.errors %}
+                <div class="field-error">{{ form.vendor_sku.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.cost.id_for_label }}">{{ form.cost.label }}</label>
+            {{ form.cost }}
+            {% if form.cost.errors %}
+                <div class="field-error">{{ form.cost.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.stock_qty.id_for_label }}">{{ form.stock_qty.label }}</label>
+            {{ form.stock_qty }}
+            {% if form.stock_qty.errors %}
+                <div class="field-error">{{ form.stock_qty.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.lead_time_days.id_for_label }}">{{ form.lead_time_days.label }}</label>
+            {{ form.lead_time_days }}
+            {% if form.lead_time_days.errors %}
+                <div class="field-error">{{ form.lead_time_days.errors.0 }}</div>
+            {% endif %}
+        </div>
+        
+        <div class="form-group full-width">
+            <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+                <div class="field-error">{{ form.notes.errors.0 }}</div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <button type="button" class="btn btn-secondary" 
+                hx-get="about:blank" 
+                hx-target="closest form" 
+                hx-swap="outerHTML">Cancel</button>
+    </div>
+</form>
+

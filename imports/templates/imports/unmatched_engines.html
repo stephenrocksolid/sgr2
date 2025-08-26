@@ -1,0 +1,750 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unmatched Engines - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .close {
+        font-size: 1.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        color: var(--gray-500);
+    }
+    
+    .close:hover {
+        color: var(--gray-700);
+    }
+    
+    .search-results {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        margin-top: 1rem;
+    }
+    
+    .search-result-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid var(--gray-100);
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .search-result-item:hover {
+        background-color: var(--gray-50);
+    }
+    
+    .search-result-item:last-child {
+        border-bottom: none;
+    }
+    
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--gray-700);
+    }
+    
+    .form-group input,
+    .form-group select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+    }
+    
+    .sg-make-display {
+        font-weight: 600;
+        color: var(--gray-700);
+        min-height: 1.5rem;
+        padding: 0.25rem 0;
+    }
+    
+    .table th {
+        white-space: nowrap;
+        min-width: 120px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    .engine-make-cell {
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+    
+    .engine-model-cell {
+        color: var(--gray-700);
+    }
+    
+    .piston-cell,
+    .build-list-cell,
+    .code-cell {
+        font-family: monospace;
+        font-size: 0.875rem;
+        color: var(--gray-600);
+    }
+    
+    .error-message {
+        color: #dc3545;
+        font-size: 0.75rem;
+        margin-top: 0.25rem;
+    }
+    
+    .sg-identifier-select {
+        min-width: 120px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+<div class="page-header">
+    <h1>Unmatched Engines</h1>
+    <p class="lead">Engines that need SG Engine model matching ({{ total_unmatched }} total)</p>
+</div>
+
+{% if page_obj %}
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Engine Make</th>
+                <th>Engine Model</th>
+                <th>Piston #</th>
+                <th>Piston Marked #</th>
+                <th>Build List</th>
+                <th>Code</th>
+                <th>SG Model</th>
+                <th>SG Identifier</th>
+                <th>SG Make</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for engine in page_obj %}
+            <tr data-engine-id="{{ engine.id }}">
+                <td class="engine-make-cell">{{ engine.engine_make }}</td>
+                <td class="engine-model-cell">{{ engine.engine_model }}</td>
+                <td class="piston-cell">{{ engine.piston_no|default:"—" }}</td>
+                <td class="piston-cell">{{ engine.piston_marked_no|default:"—" }}</td>
+                <td class="build-list-cell">{{ engine.build_list|default:"—" }}</td>
+                <td class="code-cell">{{ engine.engine_code|default:"—" }}</td>
+                <td>
+                    <select class="form-control sg-model-select" 
+                            data-engine-id="{{ engine.id }}"
+                            data-engine-make="{{ engine.engine_make }}">
+                        <option value="">Select Model</option>
+                    </select>
+                </td>
+                <td>
+                    <select class="form-control sg-identifier-select" 
+                            data-engine-id="{{ engine.id }}"
+                            disabled>
+                        <option value="">—</option>
+                    </select>
+                </td>
+                <td>
+                    <div class="sg-make-display" id="sg-make-{{ engine.id }}">—</div>
+                </td>
+                <td>
+                    <div class="action-buttons">
+                        <button class="btn btn-sm btn-primary match-engine-btn" 
+                                data-engine-id="{{ engine.id }}"
+                                disabled>
+                            Match Engine
+                        </button>
+                        <button class="btn btn-sm btn-secondary search-sg-btn" 
+                                data-engine-id="{{ engine.id }}">
+                            Search
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; Previous</a>
+    {% endif %}
+    
+    <span class="page-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>No unmatched engines found!</p>
+    <div class="empty-actions">
+        <a href="{% url 'imports:unmatched_index' %}" class="btn btn-primary">Back to Unmatched</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="action-buttons">
+    <a href="{% url 'imports:unmatched_index' %}" class="btn btn-outline">
+        ← Back to Unmatched
+    </a>
+    <button class="btn btn-primary" id="new-sg-engine-btn">
+        New SG Engine
+    </button>
+</div>
+
+<!-- Search SG Engine Modal -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Search SG Engines</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="searchQuery">Search by engine name:</label>
+                <input type="text" id="searchQuery" placeholder="Enter part of engine name..." class="form-control">
+            </div>
+            <div class="search-results" id="searchResults" style="display: none;">
+                <!-- Search results will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New SG Engine Modal -->
+<div id="newSgEngineModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Create New SG Engine</h3>
+            <span class="close">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="newSgEngineForm">
+                <div class="form-group">
+                    <label for="newSgMake">SG Make:</label>
+                    <input type="text" id="newSgMake" name="sg_make" required class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="newSgModel">SG Model:</label>
+                    <input type="text" id="newSgModel" name="sg_model" required class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="newSgIdentifier">Identifier:</label>
+                    <input type="text" id="newSgIdentifier" name="identifier" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="newSgNotes">Notes:</label>
+                    <textarea id="newSgNotes" name="notes" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" class="btn btn-primary">Create SG Engine</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('newSgEngineModal')">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load SG Models for each engine based on engine make first letter
+    loadSgModelsForEngines();
+    
+    // Handle SG Model selection changes
+    document.querySelectorAll('.sg-model-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const engineId = this.dataset.engineId;
+            const selectedModel = this.value;
+            const identifierSelect = document.querySelector(`.sg-identifier-select[data-engine-id="${engineId}"]`);
+            const matchButton = document.querySelector(`.match-engine-btn[data-engine-id="${engineId}"]`);
+            
+            // Reset identifier select and disable match button
+            identifierSelect.innerHTML = '<option value="">—</option>';
+            identifierSelect.disabled = true;
+            matchButton.disabled = true;
+            
+            if (selectedModel) {
+                // Get the SG Make for this model
+                fetch(`{% url 'imports:sg_make_for_model' %}?sg_model=${encodeURIComponent(selectedModel)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sg_make) {
+                            document.getElementById(`sg-make-${engineId}`).textContent = data.sg_make;
+                        }
+                    });
+                
+                // Load identifiers for the selected model
+                const sgMake = document.getElementById(`sg-make-${engineId}`).textContent;
+                const url = `{% url 'imports:engine_identifiers' %}?sg_model_id=${encodeURIComponent(selectedModel)}`;
+                if (sgMake && sgMake !== '—') {
+                    url += `&sg_make=${encodeURIComponent(sgMake)}`;
+                }
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        identifierSelect.innerHTML = html;
+                        identifierSelect.disabled = false;
+                    });
+            } else {
+                document.getElementById(`sg-make-${engineId}`).textContent = '—';
+            }
+        });
+    });
+    
+    // Handle SG Identifier selection changes
+    document.querySelectorAll('.sg-identifier-select').forEach(function(select) {
+        select.addEventListener('change', function() {
+            const engineId = this.dataset.engineId;
+            const selectedIdentifier = this.value;
+            const matchButton = document.querySelector(`.match-engine-btn[data-engine-id="${engineId}"]`);
+            
+            // Enable/disable match button based on identifier selection
+            matchButton.disabled = !selectedIdentifier;
+        });
+    });
+    
+    // Handle match engine button clicks
+    document.querySelectorAll('.match-engine-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            const identifierSelect = document.querySelector(`.sg-identifier-select[data-engine-id="${engineId}"]`);
+            
+            const sgEngineId = identifierSelect.value.trim();
+            
+            if (!sgEngineId) {
+                alert('Please select an SG Identifier first');
+                return;
+            }
+            
+            // Send match request
+            const formData = new FormData();
+            formData.append('engine_id', engineId);
+            formData.append('sg_engine_id', sgEngineId);
+            
+            fetch('{% url "imports:match_single" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the row from the table
+                    const row = this.closest('tr');
+                    row.remove();
+                    
+                    // Update count
+                    const countElement = document.querySelector('.lead');
+                    const currentCount = parseInt(countElement.textContent.match(/\d+/)[0]);
+                    countElement.textContent = countElement.textContent.replace(
+                        `(${currentCount} total)`, 
+                        `(${currentCount - 1} total)`
+                    );
+                } else {
+                    // Handle error with inline display
+                    if (data.html) {
+                        // Replace the row with error state
+                        const row = this.closest('tr');
+                        row.outerHTML = data.html;
+                        
+                        // Re-attach event listeners to the new row
+                        attachRowEventListeners(row.parentNode.querySelector(`tr[data-engine-id="${engineId}"]`));
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                }
+            })
+            .catch(error => {
+                alert('Error matching engine: ' + error);
+            });
+        });
+    });
+    
+    // Handle search SG Engine button clicks
+    document.querySelectorAll('.search-sg-btn').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            openSearchModal(engineId);
+        });
+    });
+    
+    // Handle New SG Engine button
+    document.getElementById('new-sg-engine-btn').addEventListener('click', function() {
+        openNewSgEngineModal();
+    });
+    
+    // Modal functionality
+    const modals = document.querySelectorAll('.modal');
+    const closeButtons = document.querySelectorAll('.close');
+    
+    closeButtons.forEach(function(button) {
+        button.addEventListener('click', function() {
+            const modal = this.closest('.modal');
+            modal.style.display = 'none';
+        });
+    });
+    
+    window.addEventListener('click', function(event) {
+        modals.forEach(function(modal) {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Search functionality
+    let currentSearchEngineId = null;
+    
+    document.getElementById('searchQuery').addEventListener('input', function() {
+        const query = this.value.trim();
+        if (query.length >= 2) {
+            searchSgEngines(query);
+        } else {
+            document.getElementById('searchResults').style.display = 'none';
+        }
+    });
+    
+    // New SG Engine form submission
+    document.getElementById('newSgEngineForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        fetch('{% url "imports:create_sg_engine" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('SG Engine created successfully!');
+                closeModal('newSgEngineModal');
+                this.reset();
+                // Reload SG models for all engines
+                loadSgModelsForEngines();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error creating SG Engine: ' + error);
+        });
+    });
+});
+
+function loadSgModelsForEngines() {
+    document.querySelectorAll('.sg-model-select').forEach(function(select) {
+        const engineMake = select.dataset.engineMake;
+        const firstLetter = engineMake.charAt(0).toUpperCase();
+        
+        // Fetch SG Models that start with the same letter as engine make
+        fetch(`{% url 'imports:sg_models_by_letter' %}?letter=${encodeURIComponent(firstLetter)}`)
+            .then(response => response.json())
+            .then(data => {
+                // Clear existing options except the first one
+                select.innerHTML = '<option value="">Select Model</option>';
+                
+                data.models.forEach(function(model) {
+                    const option = document.createElement('option');
+                    option.value = model.sg_model;
+                    option.textContent = model.sg_model;
+                    option.dataset.sgMake = model.sg_make;
+                    select.appendChild(option);
+                });
+            });
+    });
+}
+
+function openSearchModal(engineId) {
+    currentSearchEngineId = engineId;
+    document.getElementById('searchModal').style.display = 'block';
+    document.getElementById('searchQuery').focus();
+}
+
+function openNewSgEngineModal() {
+    document.getElementById('newSgEngineModal').style.display = 'block';
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+function searchSgEngines(query) {
+    fetch(`{% url 'imports:search_sg_engines' %}?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            const resultsContainer = document.getElementById('searchResults');
+            resultsContainer.innerHTML = '';
+            
+            if (data.engines.length > 0) {
+                data.engines.forEach(function(engine) {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-result-item';
+                    resultItem.innerHTML = `
+                        <strong>${engine.sg_make} ${engine.sg_model}</strong>
+                        <br><small>${engine.identifier || 'No identifier'}</small>
+                    `;
+                    resultItem.addEventListener('click', function() {
+                        selectSgEngine(engine);
+                    });
+                    resultsContainer.appendChild(resultItem);
+                });
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContainer.innerHTML = '<div class="search-result-item">No engines found</div>';
+                resultsContainer.style.display = 'block';
+            }
+        });
+}
+
+function attachRowEventListeners(row) {
+    if (!row) return;
+    
+    // Re-attach SG Model select listener
+    const modelSelect = row.querySelector('.sg-model-select');
+    if (modelSelect) {
+        modelSelect.addEventListener('change', function() {
+            const engineId = this.dataset.engineId;
+            const selectedModel = this.value;
+            const identifierSelect = row.querySelector(`.sg-identifier-select`);
+            const matchButton = row.querySelector(`.match-engine-btn`);
+            
+            // Reset identifier select and disable match button
+            identifierSelect.innerHTML = '<option value="">—</option>';
+            identifierSelect.disabled = true;
+            matchButton.disabled = true;
+            
+            if (selectedModel) {
+                // Get the SG Make for this model
+                fetch(`{% url 'imports:sg_make_for_model' %}?sg_model=${encodeURIComponent(selectedModel)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.sg_make) {
+                            document.getElementById(`sg-make-${engineId}`).textContent = data.sg_make;
+                        }
+                    });
+                
+                // Load identifiers for the selected model
+                const sgMake = document.getElementById(`sg-make-${engineId}`).textContent;
+                const url = `{% url 'imports:engine_identifiers' %}?sg_model_id=${encodeURIComponent(selectedModel)}`;
+                if (sgMake && sgMake !== '—') {
+                    url += `&sg_make=${encodeURIComponent(sgMake)}`;
+                }
+                fetch(url)
+                    .then(response => response.text())
+                    .then(html => {
+                        identifierSelect.innerHTML = html;
+                        identifierSelect.disabled = false;
+                    });
+            } else {
+                document.getElementById(`sg-make-${engineId}`).textContent = '—';
+            }
+        });
+    }
+    
+    // Re-attach SG Identifier select listener
+    const identifierSelect = row.querySelector('.sg-identifier-select');
+    if (identifierSelect) {
+        identifierSelect.addEventListener('change', function() {
+            const engineId = this.dataset.engineId;
+            const selectedIdentifier = this.value;
+            const matchButton = row.querySelector(`.match-engine-btn`);
+            
+            // Enable/disable match button based on identifier selection
+            matchButton.disabled = !selectedIdentifier;
+        });
+    }
+    
+    // Re-attach match engine button listener
+    const matchButton = row.querySelector('.match-engine-btn');
+    if (matchButton) {
+        matchButton.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            const identifierSelect = row.querySelector(`.sg-identifier-select`);
+            
+            const sgEngineId = identifierSelect.value.trim();
+            
+            if (!sgEngineId) {
+                alert('Please select an SG Identifier first');
+                return;
+            }
+            
+            // Send match request
+            const formData = new FormData();
+            formData.append('engine_id', engineId);
+            formData.append('sg_engine_id', sgEngineId);
+            
+            fetch('{% url "imports:match_single" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Remove the row from the table
+                    const row = this.closest('tr');
+                    row.remove();
+                    
+                    // Update count
+                    const countElement = document.querySelector('.lead');
+                    const currentCount = parseInt(countElement.textContent.match(/\d+/)[0]);
+                    countElement.textContent = countElement.textContent.replace(
+                        `(${currentCount} total)`, 
+                        `(${currentCount - 1} total)`
+                    );
+                } else {
+                    // Handle error with inline display
+                    if (data.html) {
+                        // Replace the row with error state
+                        const row = this.closest('tr');
+                        row.outerHTML = data.html;
+                        
+                        // Re-attach event listeners to the new row
+                        attachRowEventListeners(row.parentNode.querySelector(`tr[data-engine-id="${engineId}"]`));
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                }
+            })
+            .catch(error => {
+                alert('Error matching engine: ' + error);
+            });
+        });
+    }
+    
+    // Re-attach search button listener
+    const searchButton = row.querySelector('.search-sg-btn');
+    if (searchButton) {
+        searchButton.addEventListener('click', function() {
+            const engineId = this.dataset.engineId;
+            openSearchModal(engineId);
+        });
+    }
+}
+
+function selectSgEngine(engine) {
+    if (currentSearchEngineId) {
+        const modelSelect = document.querySelector(`.sg-model-select[data-engine-id="${currentSearchEngineId}"]`);
+        const sgMakeDisplay = document.getElementById(`sg-make-${currentSearchEngineId}`);
+        const identifierSelect = document.querySelector(`.sg-identifier-select[data-engine-id="${currentSearchEngineId}"]`);
+        const matchButton = document.querySelector(`.match-engine-btn[data-engine-id="${currentSearchEngineId}"]`);
+        
+        // Check if the option exists in the dropdown
+        let optionExists = false;
+        for (let option of modelSelect.options) {
+            if (option.value === engine.sg_model) {
+                optionExists = true;
+                break;
+            }
+        }
+        
+        // If option doesn't exist, add it to the dropdown
+        if (!optionExists) {
+            const newOption = document.createElement('option');
+            newOption.value = engine.sg_model;
+            newOption.textContent = engine.sg_model;
+            newOption.dataset.sgMake = engine.sg_make;
+            modelSelect.appendChild(newOption);
+        }
+        
+        // Set the model
+        modelSelect.value = engine.sg_model;
+        sgMakeDisplay.textContent = engine.sg_make;
+        
+        // Load identifiers for the selected model
+        const url = `{% url 'imports:engine_identifiers' %}?sg_model_id=${encodeURIComponent(engine.sg_model)}&sg_make=${encodeURIComponent(engine.sg_make)}`;
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                identifierSelect.innerHTML = html;
+                identifierSelect.disabled = false;
+                
+                // Find and select the matching identifier
+                for (let option of identifierSelect.options) {
+                    if (option.textContent === engine.identifier) {
+                        identifierSelect.value = option.value;
+                        matchButton.disabled = false;
+                        break;
+                    }
+                }
+            });
+        
+        // Close modal
+        closeModal('searchModal');
+        currentSearchEngineId = null;
+        
+        // Clear search query
+        document.getElementById('searchQuery').value = '';
+        document.getElementById('searchResults').style.display = 'none';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ build_list.name }} - {{ engine.engine_make }} {{ engine.engine_model }} - Build Lists - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
+        color: white;
+        padding: 2rem;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .detail-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .breadcrumb a {
+        color: white;
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .detail-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--red-600);
+    }
+    
+    .build-list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 2rem;
+    }
+    
+    .build-list-info h1 {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-900);
+    }
+    
+    .build-list-notes {
+        color: var(--gray-600);
+        font-style: italic;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="detail-header">
+        <div class="breadcrumb">
+            <a href="{% url 'inventory:engines_list' %}">Engines</a> &gt; 
+            <a href="{% url 'inventory:engine_detail' engine.id %}">{{ engine.engine_make }} {{ engine.engine_model }}</a> &gt; 
+            Build Lists
+        </div>
+        <h1 class="detail-title">{{ build_list.name }}</h1>
+        <div class="detail-subtitle">{{ engine.engine_make }} {{ engine.engine_model }}</div>
+    </div>
+    
+    <!-- Build List Header -->
+    <div class="detail-section">
+        <div class="build-list-header">
+            <div class="build-list-info">
+                <h1>{{ build_list.name }}</h1>
+                {% if build_list.notes %}
+                    <div class="build-list-notes">{{ build_list.notes }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Kits Section -->
+    <div class="detail-section" id="kits-section">
+        {% include 'inventory/partials/_build_list_kits.html' %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+    <a href="{% url 'inventory:engine_detail' engine.id %}" class="btn btn-secondary">
+        ← Back to Engine
+    </a>
+    <a href="/admin/inventory/buildlist/{{ build_list.pk }}/change/" class="btn btn-primary" target="_blank">
+        Edit Build List
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Build list detail page loaded');
+    });
+</script>
+{% endblock %}

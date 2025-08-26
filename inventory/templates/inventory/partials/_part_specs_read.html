@@ -1,0 +1,161 @@
+{% load inventory_extras %}
+
+{% if part.category %}
+    <div class="specs-read-container">
+        <h3>Specifications (Category: {{ part.category.name }})</h3>
+        
+        {% if attribute_values %}
+            <div class="field-grid">
+                {% for attr_value in attribute_values %}
+                    <div class="field-row">
+                        <div class="field-label">
+                            {{ attr_value.attribute.name }}
+                            {% if attr_value.attribute.is_required %}
+                                <span class="required">*</span>
+                            {% endif %}
+                        </div>
+                        <div class="field-value">
+                            {% if attr_value.attribute.data_type == 'text' %}
+                                {% if attr_value.value_text %}
+                                    {{ attr_value.value_text }}
+                                    {% if attr_value.attribute.unit %}
+                                        <span class="unit">{{ attr_value.attribute.unit }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% elif attr_value.attribute.data_type == 'int' %}
+                                {% if attr_value.value_int is not None %}
+                                    {{ attr_value.value_int }}
+                                    {% if attr_value.attribute.unit %}
+                                        <span class="unit">{{ attr_value.attribute.unit }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% elif attr_value.attribute.data_type == 'dec' %}
+                                {% if attr_value.value_dec is not None %}
+                                    {{ attr_value.value_dec|floatformat:6 }}
+                                    {% if attr_value.attribute.unit %}
+                                        <span class="unit">{{ attr_value.attribute.unit }}</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% elif attr_value.attribute.data_type == 'bool' %}
+                                {% if attr_value.value_bool is not None %}
+                                    {% if attr_value.value_bool %}Yes{% else %}No{% endif %}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% elif attr_value.attribute.data_type == 'date' %}
+                                {% if attr_value.value_date %}
+                                    {{ attr_value.value_date|date:"M d, Y" }}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% elif attr_value.attribute.data_type == 'choice' %}
+                                {% if attr_value.choice %}
+                                    {{ attr_value.choice.label }}
+                                {% else %}
+                                    <span class="empty">—</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if attr_value.attribute.help_text %}
+                        <div class="field-help">
+                            <small>{{ attr_value.attribute.help_text }}</small>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-specs">
+                <p>No specifications have been added for this part.</p>
+            </div>
+        {% endif %}
+    </div>
+{% else %}
+    <div class="specs-read-container">
+        <h3>Specifications</h3>
+        <div class="no-category">
+            <p>No category has been selected for this part.</p>
+        </div>
+    </div>
+{% endif %}
+
+<style>
+.specs-read-container {
+    margin-bottom: 2rem;
+}
+
+.specs-read-container h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--red-600);
+}
+
+.field-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.field-row {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+.field-label {
+    font-weight: 600;
+    color: var(--gray-700);
+    font-size: 0.875rem;
+}
+
+.required {
+    color: #dc3545;
+    margin-left: 4px;
+}
+
+.field-value {
+    color: var(--gray-900);
+    font-size: 0.9rem;
+}
+
+.field-value .unit {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.field-value .empty {
+    color: var(--gray-400);
+    font-style: italic;
+}
+
+.field-help {
+    grid-column: 2;
+    margin-top: -0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.field-help small {
+    color: var(--gray-500);
+    font-size: 0.8rem;
+}
+
+.no-specs, .no-category {
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+    font-style: italic;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+}
+</style>

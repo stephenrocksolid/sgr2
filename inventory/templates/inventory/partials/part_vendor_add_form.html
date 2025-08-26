@@ -1,0 +1,63 @@
+{% if vendors %}
+    <div class="add-form-container">
+        <h4>Add Vendor to Part</h4>
+        <form hx-post="{% url 'inventory:part_vendor_add' part.id %}"
+              hx-target="#vendors-content"
+              hx-swap="outerHTML"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              hx-on::after-request="if(event.detail.successful) document.getElementById('add-vendor-form').innerHTML = ''">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="vendor_id">Select Vendor:</label>
+                <select name="vendor_id" id="vendor_id" class="form-control" required>
+                    <option value="">Choose a vendor...</option>
+                    {% for vendor in vendors %}
+                        <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="vendor_sku">Vendor SKU:</label>
+                <input type="text" name="vendor_sku" id="vendor_sku" class="form-control" placeholder="Vendor's part number">
+            </div>
+            
+            <div class="form-group">
+                <label for="cost">Cost:</label>
+                <input type="number" name="cost" id="cost" class="form-control" step="0.01" min="0" placeholder="0.00">
+            </div>
+            
+            <div class="form-group">
+                <label for="stock_qty">Stock Quantity:</label>
+                <input type="number" name="stock_qty" id="stock_qty" class="form-control" min="0" value="0">
+            </div>
+            
+            <div class="form-group">
+                <label for="lead_time_days">Lead Time (Days):</label>
+                <input type="number" name="lead_time_days" id="lead_time_days" class="form-control" min="0" placeholder="Days">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                <textarea name="notes" id="notes" class="form-control" rows="3" placeholder="Optional notes about this vendor..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Vendor</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('add-vendor-form').innerHTML = ''">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No available vendors to add. All vendors are already associated with this part.
+    </div>
+    <button class="btn btn-secondary"
+            onclick="document.getElementById('add-vendor-form').innerHTML = ''">
+        Back
+    </button>
+{% endif %}

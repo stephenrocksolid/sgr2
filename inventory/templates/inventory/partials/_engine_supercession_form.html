@@ -1,0 +1,25 @@
+<form
+  hx-post="{% url 'inventory:engine_supercession_add' engine.id direction %}"
+  hx-target="#engine-supercessions-section"
+  hx-swap="innerHTML"
+  hx-on::after-request="if(event.detail.successful) document.getElementById('supercession-form-region').innerHTML = ''"
+>
+  {% csrf_token %}
+  <div class="form-group">
+    <label for="sg_engine">Select SG Engine:</label>
+    <select name="sg_engine_id" class="form-control">
+      {% for sg in sg_engines %}
+        <option value="{{ sg.id }}">{{ sg.sg_make }} {{ sg.sg_model }} ({{ sg.identifier }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="flex gap-2 mt-2">
+    <button type="submit" class="btn btn-primary">Add Supercession</button>
+    <button type="button" class="btn btn-secondary"
+            hx-get="{% url 'inventory:engine_supercessions_partial' engine.id %}"
+            hx-target="#engine-supercessions-section"
+            hx-swap="innerHTML">
+      Cancel
+    </button>
+  </div>
+</form>

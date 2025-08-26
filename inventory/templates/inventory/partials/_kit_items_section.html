@@ -1,0 +1,396 @@
+{% load static %}
+{% load kit_extras %}
+
+<!-- Kit Items Section -->
+<div class="detail-section" id="kit-items-section">
+    <h2 class="section-title">Kit Items</h2>
+    
+    {% if items %}
+        <div class="table-wrap">
+            <table>
+                <thead class="sticky-table">
+                    <tr>
+                        <th>Part</th>
+                        <th>Vendor</th>
+                        <th>Quantity</th>
+                        <th>Unit Cost</th>
+                        <th>Line Total</th>
+                        <th>Notes</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                        <tr>
+                            <td>
+                                <strong>{{ item.part.part_number }}</strong><br>
+                                <small>{{ item.part.name }}</small>
+                            </td>
+                            <td>{{ item.vendor.name }}</td>
+                            <td>{{ item.quantity }}</td>
+                            <td>${{ item.unit_cost|floatformat:2 }}</td>
+                            <td>${{ item.unit_cost|multiply:item.quantity|floatformat:2 }}</td>
+                            <td>{{ item.notes|default:"—"|truncatechars:50 }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <button class="btn btn-sm btn-secondary" 
+                                            onclick="editKitItem({{ item.id }}, '{{ item.quantity }}', '{{ item.unit_cost }}', '{{ item.notes|escapejs }}')">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            hx-post="{% url 'inventory:kit_item_remove' kit.id item.id %}"
+                                            hx-target="#kit-items-section"
+                                            hx-swap="outerHTML"
+                                            hx-confirm="Are you sure you want to remove this item from the kit?"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                                        Remove
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="totals-row">
+                        <td colspan="4"><strong>Total Cost:</strong></td>
+                        <td><strong>${{ kit.cost_total|floatformat:2 }}</strong></td>
+                        <td colspan="2"></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-message">
+            <p>No items have been added to this kit.</p>
+        </div>
+    {% endif %}
+    
+    <!-- Add Item Form -->
+    <div class="add-item-form">
+        <h4>Add New Item</h4>
+        <form hx-post="{% url 'inventory:kit_item_add' kit.id %}" 
+              hx-target="#kit-items-section" 
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="part_id">Part *</label>
+                    <select name="part_id" id="part_id" required onchange="loadVendorsForPart(this.value)">
+                        <option value="">Select a part...</option>
+                        {% for part in parts %}
+                            <option value="{{ part.id }}">{{ part.part_number }} - {{ part.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="vendor_id">Vendor *</label>
+                    <select name="vendor_id" id="vendor_id" required onchange="loadVendorCost()">
+                        <option value="">Select a vendor...</option>
+                        {% for vendor in vendors %}
+                            <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="quantity">Quantity</label>
+                    <input type="number" name="quantity" id="quantity" step="1" min="1" value="1" inputmode="numeric" pattern="\d+" required>
+                </div>
+                <div class="form-group">
+                    <label for="unit_cost">Unit Cost</label>
+                    <input type="number" name="unit_cost" id="unit_cost" step="0.01" min="0" placeholder="0.00" required readonly>
+                    <small class="form-help">Cost will be automatically set based on the selected vendor</small>
+                </div>
+                <div class="form-group">
+                    <label for="notes">Notes</label>
+                    <textarea name="notes" id="notes" rows="2" placeholder="Optional notes about this item..."></textarea>
+                </div>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Edit Item Modal -->
+<div id="edit-item-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Kit Item</h3>
+            <span class="close" onclick="closeEditItemModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="edit-item-form">
+                <div class="form-group">
+                    <label for="edit_quantity">Quantity</label>
+                    <input type="number" name="quantity" id="edit_quantity" step="1" min="1" inputmode="numeric" pattern="\d+" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_unit_cost">Unit Cost</label>
+                    <input type="number" name="unit_cost" id="edit_unit_cost" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_notes">Notes</label>
+                    <textarea name="notes" id="edit_notes" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditItemModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.add-item-form {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: var(--gray-50);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--gray-700);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--red-600);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.totals-row {
+    background: var(--gray-50);
+    font-weight: 600;
+}
+
+.totals-row td {
+    padding: 1rem 0.5rem;
+    border-top: 2px solid var(--gray-200);
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--gray-900);
+}
+
+.close {
+    color: var(--gray-400);
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--gray-600);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.form-help {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    margin-top: 0.25rem;
+}
+
+/* Style for readonly input to make it clear it's not editable */
+.form-group input[readonly] {
+    background-color: var(--gray-100);
+    color: var(--gray-700);
+    cursor: not-allowed;
+}
+</style>
+
+<script>
+// Use window object to avoid redeclaration conflicts
+if (typeof window.currentItemId === 'undefined') {
+    window.currentItemId = null;
+}
+
+// Only define functions if they don't already exist
+if (typeof window.loadVendorsForPart === 'undefined') {
+    window.loadVendorsForPart = function(partId) {
+        if (!partId) {
+            document.getElementById('vendor_id').innerHTML = '<option value="">Select a vendor...</option>';
+            document.getElementById('unit_cost').value = '';
+            return;
+        }
+        
+        fetch(`/inventory/parts/${partId}/vendors/options/`)
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('vendor_id').innerHTML = html;
+                // Clear unit cost when part changes
+                document.getElementById('unit_cost').value = '';
+                
+                // Auto-select the first vendor (primary vendor if available)
+                const vendorSelect = document.getElementById('vendor_id');
+                const options = vendorSelect.options;
+                
+                // Select the first vendor that has cost data (should be primary vendor)
+                for (let i = 0; i < options.length; i++) {
+                    const option = options[i];
+                    const cost = option.getAttribute('data-cost');
+                    // Select the first vendor that has cost data
+                    if (cost && cost !== '') {
+                        vendorSelect.selectedIndex = i;
+                        // Trigger the vendor cost loading
+                        loadVendorCost();
+                        break;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading vendors:', error);
+            });
+    };
+}
+
+if (typeof window.loadVendorCost === 'undefined') {
+    window.loadVendorCost = function() {
+        const partId = document.getElementById('part_id').value;
+        const vendorId = document.getElementById('vendor_id').value;
+        
+        if (!partId || !vendorId) {
+            // Clear the unit cost if no vendor is selected
+            document.getElementById('unit_cost').value = '';
+            return;
+        }
+        
+        // Get the vendor cost from the selected option
+        const vendorSelect = document.getElementById('vendor_id');
+        const selectedOption = vendorSelect.options[vendorSelect.selectedIndex];
+        const cost = selectedOption.getAttribute('data-cost');
+        
+        if (cost && cost !== '') {
+            document.getElementById('unit_cost').value = cost;
+        } else {
+            // If no cost data available, set to 0 and show a message
+            document.getElementById('unit_cost').value = '0.00';
+            // You could add a visual indicator here if needed
+        }
+    };
+}
+
+if (typeof window.editKitItem === 'undefined') {
+    window.editKitItem = function(itemId, quantity, unitCost, notes) {
+        window.currentItemId = itemId;
+        
+        // Populate the modal form
+        document.getElementById('edit_quantity').value = quantity;
+        document.getElementById('edit_unit_cost').value = unitCost;
+        document.getElementById('edit_notes').value = notes;
+        
+        // Set up the form submission
+        const form = document.getElementById('edit-item-form');
+        form.onsubmit = function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(form);
+            fetch(`/inventory/kits/{{ kit.id }}/items/${itemId}/edit/`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                document.getElementById('kit-items-section').innerHTML = html;
+                closeEditItemModal();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the item.');
+            });
+        };
+        
+        // Show the modal
+        document.getElementById('edit-item-modal').style.display = 'block';
+    };
+}
+
+if (typeof window.closeEditItemModal === 'undefined') {
+    window.closeEditItemModal = function() {
+        document.getElementById('edit-item-modal').style.display = 'none';
+        window.currentItemId = null;
+    };
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('edit-item-modal');
+    if (event.target === modal) {
+        closeEditItemModal();
+    }
+}
+</script>

@@ -1,0 +1,52 @@
+{% if available_engines %}
+    <div class="add-form-container">
+        <h4>Add Engine This Supersedes (Older Predecessor)</h4>
+        <form hx-post="{% url 'inventory:add_engine_supercession_from' engine.pk %}"
+              hx-target="#engine-supercessions-list"
+              hx-swap="outerHTML"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              hx-on::after-request="if(event.detail.successful) document.getElementById('add-supercession-from-form').innerHTML = ''">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="older_engine_id">Older Engine:</label>
+                <select name="older_engine_id" id="older_engine_id" class="form-control" required>
+                    <option value="">Select an older engine...</option>
+                    {% for available_engine in available_engines %}
+                        <option value="{{ available_engine.pk }}">
+                            {{ available_engine.engine_make }} {{ available_engine.engine_model }}
+                            {% if available_engine.cpl_number %} ({{ available_engine.cpl_number }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="effective_date">Effective Date:</label>
+                <input type="date" name="effective_date" id="effective_date" class="form-control">
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">Notes:</label>
+                <textarea name="notes" id="notes" class="form-control" rows="3" 
+                          placeholder="Optional notes about this supercession..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Supercession</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('add-supercession-from-form').innerHTML = ''">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No available engines to supersede. All engines are already superseded by this engine.
+    </div>
+    <button class="btn btn-secondary"
+            onclick="document.getElementById('add-supercession-from-form').innerHTML = ''">
+        Back
+    </button>
+{% endif %}

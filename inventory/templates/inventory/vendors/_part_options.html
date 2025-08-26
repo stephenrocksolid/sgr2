@@ -1,0 +1,12 @@
+{% if parts %}
+  {% for p in parts %}
+    {% if p.id in linked_ids %}
+      <option value="{{ p.id }}">[Linked] {{ p.part_number }} — {{ p.name }}</option>
+    {% else %}
+      <option value="{{ p.id }}">{{ p.part_number }} — {{ p.name }}</option>
+    {% endif %}
+  {% endfor %}
+{% else %}
+  <option value="" disabled>No matches</option>
+{% endif %}
+

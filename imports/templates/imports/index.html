@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Import Management{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Import Management</h1>
+        <div class="header-actions">
+            <a href="{% url 'imports:upload_step' %}" class="btn btn-primary">Start New Import</a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-number">{{ total_batches }}</div>
+            <div class="stat-label">Total Imports</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ completed_batches }}</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ failed_batches }}</div>
+            <div class="stat-label">Failed</div>
+        </div>
+    </div>
+
+    {% if page_obj %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Rows</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in page_obj %}
+                        <tr>
+                            <td>
+                                <strong>{{ batch.original_filename }}</strong>
+                                {% if batch.created_by %}
+                                    <br><small>by {{ batch.created_by.username }}</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-{{ batch.file_type }}">
+                                    {{ batch.file_type|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="status-badge status-{{ batch.status }}">
+                                    {{ batch.get_status_display }}
+                                </span>
+                                {% if batch.status == 'processing' %}
+                                    <div class="progress-bar">
+                                        <div class="progress-fill" style="width: {{ batch.progress_percentage }}%"></div>
+                                    </div>
+                                {% endif %}
+                            </td>
+                            <td>{{ batch.total_rows|default:"—" }}</td>
+                            <td>{{ batch.created_at|date:"M j, Y g:i A" }}</td>
+                            <td>
+                                <a href="{% url 'imports:batch_detail' batch.id %}" class="btn btn-sm btn-secondary">View</a>
+                                {% if batch.status == 'uploaded' %}
+                                    <a href="{% url 'imports:options_step' batch.id %}" class="btn btn-sm btn-primary">Continue</a>
+                                {% elif batch.status == 'mapped' %}
+                                    <a href="{% url 'imports:processing_step' batch.id %}" class="btn btn-sm btn-primary">Process</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        {% if page_obj.has_other_pages %}
+            <div class="pagination">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; Previous</a>
+                {% endif %}
+                
+                <span class="page-info">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next &raquo;</a>
+                {% endif %}
+            </div>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <p>No import batches found.</p>
+            <div class="empty-actions">
+                <a href="{% url 'imports:upload_step' %}" class="btn btn-primary">Start Your First Import</a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+

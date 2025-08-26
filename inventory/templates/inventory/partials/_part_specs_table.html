@@ -1,0 +1,458 @@
+{% load inventory_extras %}
+
+<div class="specs-table-container">
+    <!-- Category Selector -->
+    <div class="category-selector">
+        <label for="category-select">Part Category:</label>
+        <select id="category-select" 
+                hx-post="{% url 'inventory:part_category_change' part.id %}"
+                hx-target="#part-specs-section"
+                hx-swap="innerHTML"
+                hx-confirm="Changing the category will affect existing specifications. How would you like to handle existing values?">
+            <option value="">-- Select Category --</option>
+            {% for category in categories %}
+                <option value="{{ category.id }}" 
+                        {% if part.category.id == category.id %}selected{% endif %}>
+                    {{ category.name }}
+                </option>
+            {% endfor %}
+        </select>
+        
+        <!-- Hidden reconciliation option -->
+        <input type="hidden" name="reconciliation_option" value="clear">
+    </div>
+
+    {% if part.category %}
+        <!-- Specifications Table -->
+        <div class="specs-table-wrapper">
+            <h4>Specifications for {{ part.category.name }}</h4>
+            
+            <table class="specs-table">
+                <thead>
+                    <tr>
+                        <th>Specification</th>
+                        <th>Value</th>
+                        <th>Unit</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attr_value in attribute_values %}
+                        <tr class="spec-row" data-pav-id="{{ attr_value.id }}">
+                            <td class="spec-name">
+                                {{ attr_value.attribute.name }}
+                                {% if attr_value.attribute.is_required %}
+                                    <span class="required">*</span>
+                                {% endif %}
+                            </td>
+                            <td class="spec-value" id="value-{{ attr_value.id }}">
+                                <span class="value-display">
+                                    {% if attr_value.attribute.data_type == 'text' %}
+                                        {{ attr_value.value_text|default:"—" }}
+                                    {% elif attr_value.attribute.data_type == 'int' %}
+                                        {{ attr_value.value_int|default:"—" }}
+                                    {% elif attr_value.attribute.data_type == 'dec' %}
+                                        {{ attr_value.value_dec|floatformat:6|default:"—" }}
+                                    {% elif attr_value.attribute.data_type == 'bool' %}
+                                        {% if attr_value.value_bool %}Yes{% else %}No{% endif %}
+                                    {% elif attr_value.attribute.data_type == 'date' %}
+                                        {{ attr_value.value_date|date:"Y-m-d"|default:"—" }}
+                                    {% elif attr_value.attribute.data_type == 'choice' %}
+                                        {{ attr_value.choice.label|default:"—" }}
+                                    {% endif %}
+                                </span>
+                                <div class="value-edit" style="display: none;">
+                                    <!-- Will be populated by HTMX -->
+                                </div>
+                            </td>
+                            <td class="spec-unit">
+                                {{ attr_value.attribute.unit|default:"—" }}
+                            </td>
+                            <td class="spec-actions">
+                                <button class="btn-edit" 
+                                        onclick="editSpecValue({{ attr_value.id }}, '{{ attr_value.attribute.data_type }}')"
+                                        title="Edit">
+                                    ✏️
+                                </button>
+                                <button class="btn-save" 
+                                        onclick="saveSpecValue({{ attr_value.id }})"
+                                        style="display: none;"
+                                        title="Save">
+                                    💾
+                                </button>
+                                <button class="btn-cancel" 
+                                        onclick="cancelEdit({{ attr_value.id }})"
+                                        style="display: none;"
+                                        title="Cancel">
+                                    ❌
+                                </button>
+                                {% if not attr_value.attribute.is_required %}
+                                    <button class="btn-remove" 
+                                            hx-post="{% url 'inventory:part_specs_remove' part.id attr_value.id %}"
+                                            hx-target="#part-specs-section"
+                                            hx-swap="innerHTML"
+                                            hx-confirm="Are you sure you want to remove this specification?"
+                                            title="Remove">
+                                        🗑️
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% if attr_value.attribute.help_text %}
+                            <tr class="help-text-row">
+                                <td colspan="4" class="help-text">
+                                    <small>{{ attr_value.attribute.help_text }}</small>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="4" class="no-specs">
+                                No specifications added yet.
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Add Row Form -->
+            {% if available_attributes %}
+                <div class="add-row-form">
+                    <h5>Add Specification</h5>
+                    <form hx-post="{% url 'inventory:part_specs_add' part.id %}"
+                          hx-target="#part-specs-section"
+                          hx-swap="innerHTML"
+                          class="add-spec-form">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="new-attribute">Specification:</label>
+                                <select id="new-attribute" 
+                                        name="attribute_id" 
+                                        hx-get="{% url 'inventory:part_specs_value_input' part.id %}"
+                                        hx-target="#new-value-container"
+                                        hx-swap="innerHTML"
+                                        hx-trigger="change"
+                                        required>
+                                    <option value="">-- Select Specification --</option>
+                                    {% for attribute in available_attributes %}
+                                        <option value="{{ attribute.id }}">{{ attribute.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="new-value-container">Value:</label>
+                                <div id="new-value-container">
+                                    <input type="text" name="value" placeholder="Select a specification first" disabled>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <button type="submit" class="btn btn-primary">Add</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            {% else %}
+                <div class="no-available-specs">
+                    <p>All available specifications for this category have been added.</p>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="no-category-message">
+            <p>Select a category to add specifications.</p>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.specs-table-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.category-selector {
+    margin-bottom: 20px;
+}
+
+.category-selector label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.category-selector select {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.specs-table-wrapper h4 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.specs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.specs-table th {
+    background: #e9ecef;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.specs-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: top;
+}
+
+.specs-table tr:hover {
+    background: #f8f9fa;
+}
+
+.spec-name {
+    font-weight: 500;
+    color: #495057;
+    width: 25%;
+}
+
+.required {
+    color: #dc3545;
+    margin-left: 4px;
+}
+
+.spec-value {
+    width: 35%;
+}
+
+.value-display {
+    color: #212529;
+}
+
+.spec-unit {
+    width: 15%;
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.spec-actions {
+    width: 15%;
+    text-align: center;
+}
+
+.spec-actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    margin: 0 2px;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.spec-actions button:hover {
+    background: #e9ecef;
+}
+
+.help-text-row {
+    background: #f8f9fa;
+}
+
+.help-text {
+    padding: 8px 12px;
+    font-size: 0.85em;
+    color: #6c757d;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.no-specs, .no-category-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+.add-row-form {
+    margin-top: 30px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.add-row-form h5 {
+    margin-bottom: 15px;
+    color: #495057;
+}
+
+.add-spec-form .form-row {
+    display: flex;
+    gap: 15px;
+    align-items: end;
+}
+
+.add-spec-form .form-group {
+    flex: 1;
+}
+
+.add-spec-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.add-spec-form select,
+.add-spec-form input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.add-spec-form select:focus,
+.add-spec-form input:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: none;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.no-available-specs {
+    margin-top: 20px;
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+    font-style: italic;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.value-edit {
+    width: 100%;
+}
+
+.value-edit input,
+.value-edit select {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #007bff;
+    border-radius: 4px;
+    font-size: 14px;
+}
+</style>
+
+<script>
+function editSpecValue(pavId, dataType) {
+    const valueCell = document.getElementById(`value-${pavId}`);
+    const displaySpan = valueCell.querySelector('.value-display');
+    const editDiv = valueCell.querySelector('.value-edit');
+    
+    // Get current value
+    let currentValue = '';
+    if (dataType === 'bool') {
+        currentValue = displaySpan.textContent.trim() === 'Yes' ? 'true' : 'false';
+    } else {
+        currentValue = displaySpan.textContent.trim();
+        if (currentValue === '—') currentValue = '';
+    }
+    
+    // Show edit form
+    displaySpan.style.display = 'none';
+    editDiv.style.display = 'block';
+    
+    // Load the appropriate input via HTMX
+    htmx.ajax('GET', `{% url 'inventory:part_specs_value_input' part.id %}?attribute_id=${pavId}&current_value=${encodeURIComponent(currentValue)}`, {
+        target: editDiv,
+        swap: 'innerHTML'
+    });
+    
+    // Show save/cancel buttons
+    const row = valueCell.closest('tr');
+    row.querySelector('.btn-edit').style.display = 'none';
+    row.querySelector('.btn-save').style.display = 'inline-block';
+    row.querySelector('.btn-cancel').style.display = 'inline-block';
+}
+
+function saveSpecValue(pavId) {
+    const valueCell = document.getElementById(`value-${pavId}`);
+    const editDiv = valueCell.querySelector('.value-edit');
+    const input = editDiv.querySelector('input, select');
+    
+    if (!input) return;
+    
+    let value = input.value;
+    if (input.type === 'checkbox') {
+        value = input.checked ? 'true' : 'false';
+    }
+    
+    // Submit via HTMX
+    htmx.ajax('POST', `{% url 'inventory:part_specs_edit' part.id 0 %}`.replace('0', pavId), {
+        target: '#part-specs-section',
+        swap: 'innerHTML',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        values: {
+            value: value
+        }
+    });
+}
+
+function cancelEdit(pavId) {
+    const valueCell = document.getElementById(`value-${pavId}`);
+    const displaySpan = valueCell.querySelector('.value-display');
+    const editDiv = valueCell.querySelector('.value-edit');
+    
+    // Hide edit form
+    displaySpan.style.display = 'block';
+    editDiv.style.display = 'none';
+    
+    // Show edit button, hide save/cancel
+    const row = valueCell.closest('tr');
+    row.querySelector('.btn-edit').style.display = 'inline-block';
+    row.querySelector('.btn-save').style.display = 'none';
+    row.querySelector('.btn-cancel').style.display = 'none';
+}
+
+// Category change confirmation
+document.getElementById('category-select').addEventListener('change', function() {
+    if (this.value) {
+        const option = confirm('How would you like to handle existing specifications?\n\nOK = Keep matching specifications\nCancel = Clear all specifications');
+        const hiddenInput = this.parentElement.querySelector('input[name="reconciliation_option"]');
+        hiddenInput.value = option ? 'keep_matching' : 'clear';
+    }
+});
+</script>

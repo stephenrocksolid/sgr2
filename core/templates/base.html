@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Spring Garden Repair Part Manager{% endblock %}</title>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    {% load static %}
+    <!-- Styles -->
+    <link rel="stylesheet" href="{% static 'core/styles.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="sidebar-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h1 class="sidebar-title">SGR Part Manager</h1>
+        </div>
+        <nav class="sidebar-nav">
+            <ul class="sidebar-nav-list">
+                <li class="sidebar-nav-item">
+                    <a href="{% url 'inventory:machines_list' %}" class="sidebar-nav-link">
+                        <span class="sidebar-nav-text">Machines</span>
+                    </a>
+                </li>
+                <li class="sidebar-nav-item">
+                    <a href="{% url 'inventory:engines_list' %}" class="sidebar-nav-link">
+                        <span class="sidebar-nav-text">Engines</span>
+                    </a>
+                </li>
+                <li class="sidebar-nav-item">
+                    <a href="{% url 'inventory:parts_list' %}" class="sidebar-nav-link">
+                        <span class="sidebar-nav-text">Parts</span>
+                    </a>
+                </li>
+                <li class="sidebar-nav-item sidebar-divider">
+                    <a href="{% url 'imports:index' %}" class="sidebar-nav-link">
+                        <span class="sidebar-nav-text">Imports</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="main-content-container">
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
+    </main>
+
+
+
+    <!-- Scripts -->
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

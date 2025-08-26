@@ -1,0 +1,182 @@
+<!-- Progress and Statistics -->
+<div class="row mb-4">
+    <div class="col-md-8">
+        <div class="progress mb-2" style="height: 25px;">
+            <div class="progress-bar {% if batch.status == 'failed' %}bg-danger{% elif batch.status == 'completed' %}bg-success{% else %}bg-primary{% endif %}" 
+                 role="progressbar" 
+                 style="width: {{ batch.progress_percentage }}%"
+                 aria-valuenow="{{ batch.progress_percentage }}" 
+                 aria-valuemin="0" 
+                 aria-valuemax="100">
+                {{ batch.progress_percentage }}%
+            </div>
+        </div>
+        <small class="text-muted">
+            Processed {{ batch.processed_rows }} of {{ batch.total_rows }} rows
+            {% if batch.status == 'processing' %}
+                <span class="spinner-border spinner-border-sm ms-2" role="status"></span>
+            {% endif %}
+        </small>
+    </div>
+    <div class="col-md-4 text-end">
+        <span class="badge {% if batch.status == 'completed' %}bg-success{% elif batch.status == 'failed' %}bg-danger{% elif batch.status == 'processing' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
+            {{ batch.get_status_display }}
+        </span>
+    </div>
+</div>
+
+<!-- Import Row Statistics -->
+{% if rows_stats %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Processing Results</h6>
+                <a href="{% url 'imports:batch_rows' batch.id %}" class="btn btn-sm btn-outline-primary">
+                    View All Rows
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="text-primary">{{ rows_stats.total_rows }}</h5>
+                            <small class="text-muted">Total Rows</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="{% if rows_stats.error_rows > 0 %}text-danger{% else %}text-success{% endif %}">
+                                {{ rows_stats.error_rows }}
+                            </h5>
+                            <small class="text-muted">Errors</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="text-success">{{ rows_stats.machine_created }}</h5>
+                            <small class="text-muted">Machines Created</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="text-success">{{ rows_stats.engine_created }}</h5>
+                            <small class="text-muted">Engines Created</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="text-success">{{ rows_stats.part_created }}</h5>
+                            <small class="text-muted">Parts Created</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <h5 class="text-info">{{ rows_stats.relationships_created }}</h5>
+                        <small class="text-muted">Relationships</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Recent Logs -->
+<div class="card">
+    <div class="card-header">
+        <h6 class="mb-0">Recent Logs</h6>
+    </div>
+    <div class="card-body p-0">
+        {% if recent_logs %}
+            <div class="logs-list">
+                {% for log in recent_logs %}
+                    <div class="log-entry log-{{ log.level }}">
+                        <div class="log-header">
+                            <span class="log-level">{{ log.level|title }}</span>
+                            <span class="log-time">{{ log.created_at|date:"g:i:s A" }}</span>
+                            {% if log.row_number %}
+                                <span class="log-row">Row {{ log.row_number }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="log-message">{{ log.message }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="no-logs">
+                <p>No logs available yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.logs-list {
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    background: white;
+}
+
+.log-entry {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.log-entry:last-child {
+    border-bottom: none;
+}
+
+.log-entry.log-error {
+    background: var(--error);
+    color: white;
+}
+
+.log-entry.log-warning {
+    background: var(--warning);
+    color: var(--gray-800);
+}
+
+.log-entry.log-info {
+    background: var(--info);
+    color: var(--gray-800);
+}
+
+.log-header {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-size-sm);
+}
+
+.log-level {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: var(--font-size-xs);
+}
+
+.log-time {
+    color: var(--gray-500);
+}
+
+.log-row {
+    background: var(--gray-200);
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: var(--font-size-xs);
+}
+
+.log-message {
+    font-size: var(--font-size-sm);
+    line-height: 1.4;
+}
+
+.no-logs {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--gray-500);
+    font-style: italic;
+}
+</style>

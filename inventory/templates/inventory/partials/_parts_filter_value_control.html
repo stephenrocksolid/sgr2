@@ -1,0 +1,148 @@
+{% if attribute.data_type == 'text' %}
+    <div class="filter-value-control">
+        <label for="filter_operator_{{ attribute.id }}">Operator:</label>
+        <select id="filter_operator_{{ attribute.id }}" name="filter_operator_{{ attribute.id }}" class="form-control">
+            <option value="contains">Contains</option>
+            <option value="equals">Equals</option>
+            <option value="starts_with">Starts with</option>
+            <option value="ends_with">Ends with</option>
+        </select>
+        
+        <label for="filter_value_{{ attribute.id }}">Value:</label>
+        <input type="text" 
+               id="filter_value_{{ attribute.id }}" 
+               name="filter_value_{{ attribute.id }}" 
+               class="form-control" 
+               placeholder="Enter text value">
+    </div>
+
+{% elif attribute.data_type == 'int' or attribute.data_type == 'dec' %}
+    <div class="filter-value-control">
+        <label for="filter_operator_{{ attribute.id }}">Operator:</label>
+        <select id="filter_operator_{{ attribute.id }}" name="filter_operator_{{ attribute.id }}" class="form-control">
+            <option value="eq">=</option>
+            <option value="ne">≠</option>
+            <option value="gt">></option>
+            <option value="gte">≥</option>
+            <option value="lt"><</option>
+            <option value="lte">≤</option>
+            <option value="between">Between</option>
+        </select>
+        
+        <label for="filter_value_{{ attribute.id }}">Value:</label>
+        <input type="number" 
+               id="filter_value_{{ attribute.id }}" 
+               name="filter_value_{{ attribute.id }}" 
+               class="form-control" 
+               step="{% if attribute.data_type == 'int' %}1{% else %}0.000001{% endif %}"
+               placeholder="Enter numeric value">
+        
+        <div id="filter_value2_container_{{ attribute.id }}" style="display: none;">
+            <label for="filter_value2_{{ attribute.id }}">To:</label>
+            <input type="number" 
+                   id="filter_value2_{{ attribute.id }}" 
+                   name="filter_value2_{{ attribute.id }}" 
+                   class="form-control" 
+                   step="{% if attribute.data_type == 'int' %}1{% else %}0.000001{% endif %}"
+                   placeholder="Enter second value">
+        </div>
+    </div>
+
+{% elif attribute.data_type == 'bool' %}
+    <div class="filter-value-control">
+        <label for="filter_operator_{{ attribute.id }}">Operator:</label>
+        <select id="filter_operator_{{ attribute.id }}" name="filter_operator_{{ attribute.id }}" class="form-control">
+            <option value="is_true">Is true</option>
+            <option value="is_false">Is false</option>
+        </select>
+        
+        <input type="hidden" id="filter_value_{{ attribute.id }}" name="filter_value_{{ attribute.id }}" value="true">
+    </div>
+
+{% elif attribute.data_type == 'date' %}
+    <div class="filter-value-control">
+        <label for="filter_operator_{{ attribute.id }}">Operator:</label>
+        <select id="filter_operator_{{ attribute.id }}" name="filter_operator_{{ attribute.id }}" class="form-control">
+            <option value="on">On</option>
+            <option value="before">Before</option>
+            <option value="after">After</option>
+            <option value="between">Between</option>
+        </select>
+        
+        <label for="filter_value_{{ attribute.id }}">Date:</label>
+        <input type="date" 
+               id="filter_value_{{ attribute.id }}" 
+               name="filter_value_{{ attribute.id }}" 
+               class="form-control">
+        
+        <div id="filter_value2_container_{{ attribute.id }}" style="display: none;">
+            <label for="filter_value2_{{ attribute.id }}">To:</label>
+            <input type="date" 
+                   id="filter_value2_{{ attribute.id }}" 
+                   name="filter_value2_{{ attribute.id }}" 
+                   class="form-control">
+        </div>
+    </div>
+
+{% elif attribute.data_type == 'choice' %}
+    <div class="filter-value-control">
+        <label for="filter_operator_{{ attribute.id }}">Operator:</label>
+        <select id="filter_operator_{{ attribute.id }}" name="filter_operator_{{ attribute.id }}" class="form-control">
+            <option value="equals">Equals</option>
+            <option value="not_equals">Not equals</option>
+        </select>
+        
+        <label for="filter_value_{{ attribute.id }}">Value:</label>
+        <select id="filter_value_{{ attribute.id }}" name="filter_value_{{ attribute.id }}" class="form-control">
+            <option value="">-- Select {{ attribute.name }} --</option>
+            {% for choice in attribute.choices.all %}
+                <option value="{{ choice.value }}">{{ choice.label }}</option>
+            {% endfor %}
+        </select>
+    </div>
+{% endif %}
+
+<script>
+// Show/hide second value field for "between" operators
+document.addEventListener('DOMContentLoaded', function() {
+    const operatorSelect = document.getElementById('filter_operator_{{ attribute.id }}');
+    const value2Container = document.getElementById('filter_value2_container_{{ attribute.id }}');
+    
+    if (operatorSelect && value2Container) {
+        operatorSelect.addEventListener('change', function() {
+            if (this.value === 'between') {
+                value2Container.style.display = 'block';
+            } else {
+                value2Container.style.display = 'none';
+            }
+        });
+    }
+});
+</script>
+
+<style>
+.filter-value-control {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.filter-value-control label {
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 2px;
+}
+
+.filter-value-control .form-control {
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.filter-value-control .form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+</style>

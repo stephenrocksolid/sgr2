@@ -1,0 +1,32 @@
+<div class="add-form-container">
+    <h4>Add Kit</h4>
+    <form hx-post="{% url 'inventory:engine_kit_create' engine.id %}" 
+          hx-target="#build-list-section" 
+          hx-swap="innerHTML"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('add-kit-form').innerHTML = ''">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="kit_name">Name:</label>
+            <input type="text" name="name" id="kit_name" class="form-control" required placeholder="Enter kit name">
+        </div>
+        
+        <div class="form-group">
+            <label for="kit_notes">Notes:</label>
+            <textarea name="notes" id="kit_notes" class="form-control" rows="3" placeholder="Optional notes about this kit..."></textarea>
+        </div>
+        
+        <div class="form-group">
+            <label for="kit_margin">Margin %:</label>
+            <input type="number" name="margin_pct" id="kit_margin" class="form-control" step="0.01" min="0" value="0" placeholder="Margin percentage">
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Add Kit</button>
+            <button type="button" class="btn btn-secondary"
+                    onclick="document.getElementById('add-kit-form').innerHTML = ''">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

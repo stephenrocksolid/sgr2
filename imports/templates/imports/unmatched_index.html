@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unmatched Items - SGR Part Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Unmatched Items</h1>
+    <p class="lead">Review and resolve items that need attention after import</p>
+</div>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ unmatched_engines }}</div>
+        <div class="stat-label">Unmatched Engines</div>
+        <a href="{% url 'imports:unmatched_engines' %}" class="btn btn-sm btn-primary mt-2">View Engines</a>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ unmatched_machines }}</div>
+        <div class="stat-label">Machines Without Engines</div>
+        <a href="{% url 'imports:unmatched_machines' %}" class="btn btn-sm btn-primary mt-2">View Machines</a>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ unmatched_parts }}</div>
+        <div class="stat-label">Parts Without Engines</div>
+        <a href="{% url 'imports:unmatched_parts' %}" class="btn btn-sm btn-primary mt-2">View Parts</a>
+    </div>
+</div>
+
+{% if error_rows %}
+<div class="demo-section">
+    <h2>Recent Import Errors</h2>
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Batch</th>
+                    <th>Row</th>
+                    <th>Error</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in error_rows %}
+                <tr>
+                    <td>
+                        <a href="{% url 'imports:batch_detail' row.batch.id %}">
+                            {{ row.batch.original_filename }}
+                        </a>
+                    </td>
+                    <td>{{ row.row_number }}</td>
+                    <td>
+                        {% if row.errors %}
+                            <div class="error-message">
+                                {{ row.errors|truncatechars:100 }}
+                            </div>
+                        {% else %}
+                            <span class="text-muted">No error details</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ row.created_at|date:"M j, Y g:i A" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="demo-section">
+    <h2>Quick Actions</h2>
+    <div class="action-buttons">
+        <a href="{% url 'imports:unmatched_engines' %}" class="btn btn-primary">
+            Match Engine Models
+        </a>
+        <a href="{% url 'imports:unmatched_machines' %}" class="btn btn-secondary">
+            Link Machines to Engines
+        </a>
+        <a href="{% url 'imports:unmatched_parts' %}" class="btn btn-secondary">
+            Link Parts to Engines
+        </a>
+        <a href="{% url 'imports:index' %}" class="btn btn-outline">
+            Back to Imports
+        </a>
+    </div>
+</div>
+{% endblock %}
+

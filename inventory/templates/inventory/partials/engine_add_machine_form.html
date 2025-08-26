@@ -1,0 +1,121 @@
+<form hx-post="{% url 'inventory:add_engine_machine' engine.pk %}"
+      hx-target="#engine-machines-list"
+      hx-swap="outerHTML"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      class="add-form">
+    
+    <div class="form-group">
+        <label for="machine">Machine:</label>
+        <select name="machine" id="machine" required class="form-control">
+            <option value="">Select a machine...</option>
+            {% for machine in machines %}
+                <option value="{{ machine.id }}">
+                    {{ machine.year }} {{ machine.make }} {{ machine.model }} ({{ machine.machine_type }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    
+    <div class="form-group">
+        <label for="notes">Notes:</label>
+        <textarea name="notes" id="notes" class="form-control" rows="3" 
+                  placeholder="Optional notes about this engine-machine relationship..."></textarea>
+    </div>
+    
+    <div class="form-group">
+        <label class="checkbox-label">
+            <input type="checkbox" name="is_primary" id="is_primary">
+            This is the primary engine for this machine
+        </label>
+    </div>
+    
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary">Add Machine</button>
+        <button type="button" class="btn btn-secondary" 
+                onclick="document.getElementById('add-machine-form').innerHTML = ''">
+            Cancel
+        </button>
+    </div>
+</form>
+
+<style>
+.add-form {
+    background: var(--gray-50);
+    padding: 1rem;
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-200);
+    margin-top: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--gray-700);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--red-500);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: normal;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: var(--border-radius);
+    font-size: 0.875rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background: var(--red-600);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--red-700);
+}
+
+.btn-secondary {
+    background: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-400);
+}
+</style>

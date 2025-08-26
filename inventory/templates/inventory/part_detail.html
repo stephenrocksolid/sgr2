@@ -1,0 +1,518 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ part.part_number }} - {{ part.name }} - Parts - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .detail-header {
+        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
+        color: white;
+        padding: 2rem;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .detail-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .breadcrumb a {
+        color: white;
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .detail-section {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        padding: 1.5rem;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--red-600);
+    }
+    
+    .field-grid {
+        display: grid;
+        gap: 1rem;
+    }
+    
+    .field-row {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 1rem;
+        align-items: start;
+    }
+    
+    .field-label {
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+    }
+    
+    .field-value {
+        color: var(--gray-900);
+        font-size: 0.9rem;
+    }
+    
+    .field-value.empty {
+        color: var(--gray-400);
+        font-style: italic;
+    }
+    
+    .engines-section {
+        grid-column: 1 / -1;
+    }
+    
+    .vendors-section {
+        grid-column: 1 / -1;
+    }
+    
+    .specs-section {
+        grid-column: 1 / -1;
+    }
+    
+    .record-info-section {
+        grid-column: 1 / -1;
+    }
+    
+    .basic-info-section {
+        grid-column: 1 / -1;
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .section-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .btn {
+        padding: 0.5rem 1rem;
+        border: none;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.15s ease-in-out;
+        text-decoration: none;
+        display: inline-block;
+    }
+    
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+    
+    .btn-outline-primary {
+        background-color: transparent;
+        color: #007bff;
+        border: 1px solid #007bff;
+    }
+    
+    .btn-outline-primary:hover {
+        background-color: #007bff;
+        color: white;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    /* Tab Styles */
+    .tabs {
+        display: flex;
+        border-bottom: 1px solid var(--gray-200);
+        margin-bottom: 1rem;
+    }
+    
+    .tab {
+        padding: 0.75rem 1.5rem;
+        background: var(--gray-100);
+        border: 1px solid var(--gray-200);
+        border-bottom: none;
+        cursor: pointer;
+        font-weight: 500;
+        color: var(--gray-700);
+        transition: all 0.2s;
+    }
+    
+    .tab:first-child {
+        border-top-left-radius: var(--border-radius);
+    }
+    
+    .tab:last-child {
+        border-top-right-radius: var(--border-radius);
+    }
+    
+    .tab.active {
+        background: white;
+        color: var(--red-600);
+        border-color: var(--red-600);
+        border-bottom: 1px solid white;
+        margin-bottom: -1px;
+    }
+    
+    .tab:hover:not(.active) {
+        background: var(--gray-50);
+        color: var(--gray-900);
+    }
+    
+    .tab-content {
+        display: none;
+    }
+    
+    .tab-content.active {
+        display: block;
+    }
+    
+    .stock-summary {
+        background: var(--gray-50);
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+        border: 1px solid var(--gray-200);
+    }
+    
+    .stock-summary h3 {
+        margin: 0 0 0.5rem 0;
+        color: var(--gray-900);
+        font-size: 1rem;
+    }
+    
+    .stock-total {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--red-600);
+    }
+    
+    .vendor-badge {
+        display: inline-block;
+        background: var(--red-100);
+        color: var(--red-800);
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+    }
+    
+    /* Category selector styles */
+    .category-selector {
+        margin-bottom: 1rem;
+        padding: 1rem;
+        background: var(--gray-50);
+        border-radius: var(--border-radius);
+        border: 1px solid var(--gray-200);
+    }
+    
+    .category-selector label {
+        display: block;
+        font-weight: 600;
+        color: var(--gray-700);
+        margin-bottom: 0.5rem;
+    }
+    
+    .category-selector select {
+        width: 100%;
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: 4px;
+        font-size: 0.9rem;
+    }
+    
+    .category-selector select:focus {
+        outline: none;
+        border-color: var(--red-600);
+        box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.25);
+    }
+    
+    @media (max-width: 768px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .field-row {
+            grid-template-columns: 1fr;
+            gap: 0.25rem;
+        }
+        
+        .detail-header {
+            margin: -1rem -1rem 1rem -1rem;
+            padding: 1.5rem;
+        }
+        
+        .detail-title {
+            font-size: 1.5rem;
+        }
+        
+        .tabs {
+            flex-direction: column;
+        }
+        
+        .tab {
+            border-radius: 0;
+            border-left: none;
+            border-right: none;
+        }
+        
+        .tab:first-child {
+            border-top-left-radius: var(--border-radius);
+            border-top-right-radius: var(--border-radius);
+        }
+        
+        .tab:last-child {
+            border-bottom-left-radius: var(--border-radius);
+            border-bottom-right-radius: var(--border-radius);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-header">
+    <div class="breadcrumb">
+        <a href="{% url 'imports:index' %}">Home</a> → 
+        <a href="{% url 'inventory:parts_list' %}">Parts</a> → 
+        {{ part.part_number }}
+    </div>
+    
+    <h1 class="detail-title">{{ part.part_number }} - {{ part.name }}</h1>
+    {% if part.category %}
+        <p class="detail-subtitle">Category: {{ part.category.name }}</p>
+    {% else %}
+        <p class="detail-subtitle">Part Details</p>
+    {% endif %}
+</div>
+
+<div class="detail-grid">
+    <!-- Basic Information -->
+    <div class="detail-section basic-info-section">
+        <h2 class="section-title">Basic Information</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Part Number:</span>
+                <span class="field-value">{{ part.part_number }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Part Name:</span>
+                <span class="field-value">{{ part.name }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Category:</span>
+                <span class="field-value {% if not part.category %}empty{% endif %}">
+                    {{ part.category.name|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Manufacturer:</span>
+                <span class="field-value {% if not part.manufacturer %}empty{% endif %}">
+                    {{ part.manufacturer|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Unit:</span>
+                <span class="field-value {% if not part.unit %}empty{% endif %}">
+                    {{ part.unit|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Type:</span>
+                <span class="field-value {% if not part.type %}empty{% endif %}">
+                    {{ part.type|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Manufacturer Type:</span>
+                <span class="field-value {% if not part.manufacturer_type %}empty{% endif %}">
+                    {{ part.manufacturer_type|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Preferred Vendor:</span>
+                <span class="field-value {% if not part.preferred_vendor %}empty{% endif %}">
+                    {{ part.preferred_vendor.name|default:"Not specified" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+        <!-- Specifications Section -->
+    <div class="detail-section specs-section">
+        <h2 class="section-title">Specifications</h2>
+        
+        <!-- Dynamic Specifications Section -->
+        <div id="part-specs-section">
+            {% include 'inventory/partials/_part_specs_read.html' %}
+        </div>
+    </div>
+    
+    <!-- Used on Engines -->
+    <div class="detail-section engines-section">
+        <h2 class="section-title">Used on Engines</h2>
+        <div id="part-engines-section"
+             hx-get="{% url 'inventory:part_engines_partial' part.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading engines...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Used on Machines -->
+    <div class="detail-section engines-section">
+        <h2 class="section-title">Used on Machines</h2>
+        <div id="part-machines-section"
+             hx-get="{% url 'inventory:part_machines_partial' part.id %}"
+             hx-trigger="load"
+             hx-target="this"
+             hx-swap="innerHTML">
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading machines...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vendors Tab -->
+    <div class="detail-section vendors-section" id="vendors-section">
+        <h2 class="section-title">Vendors</h2>
+        
+        {% include 'inventory/partials/_part_vendors_section.html' %}
+    </div>
+    
+    <!-- Audit Information -->
+    <div class="detail-section record-info-section">
+        <h2 class="section-title">Record Information</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Created:</span>
+                <span class="field-value">{{ part.created_at|date:"F j, Y g:i A" }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Updated:</span>
+                <span class="field-value">{{ part.updated_at|date:"F j, Y g:i A" }}</span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Created By:</span>
+                <span class="field-value {% if not part.created_by %}empty{% endif %}">
+                    {{ part.created_by|default:"System" }}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Updated By:</span>
+                <span class="field-value {% if not part.updated_by %}empty{% endif %}">
+                    {{ part.updated_by|default:"System" }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="action-buttons">
+    <a href="{% url 'inventory:parts_list' %}" class="btn btn-secondary">
+        ← Back to Parts
+    </a>
+    <a href="{% url 'inventory:part_edit' part.pk %}" class="btn btn-primary">
+        Edit Part
+    </a>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function switchTab(tabName) {
+        // Hide all tab contents
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Remove active class from all tabs
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.classList.remove('active');
+        });
+        
+        // Show selected tab content
+        document.getElementById(tabName + '-tab').classList.add('active');
+        
+        // Add active class to clicked tab
+        event.target.classList.add('active');
+    }
+    
+    // Handle category selection change
+    document.addEventListener('DOMContentLoaded', function() {
+        const categorySelect = document.getElementById('category-select');
+        if (categorySelect) {
+            categorySelect.addEventListener('change', function() {
+                const categoryId = this.value;
+                if (categoryId) {
+                    // Load the specs form for the selected category
+                    fetch(`{% url 'inventory:part_specs_form' part.id %}?category_id=${categoryId}`)
+                        .then(response => response.text())
+                        .then(html => {
+                            document.getElementById('part-specs-section').innerHTML = html;
+                        });
+                } else {
+                    // Show no category message
+                    document.getElementById('part-specs-section').innerHTML = 
+                        '<div class="no-category-message"><p>Select a category to add specifications.</p></div>';
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

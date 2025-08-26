@@ -1,0 +1,43 @@
+{% load static %}
+
+<tr data-engine-id="{{ engine.id }}">
+    <td class="engine-make-cell">{{ engine.engine_make }}</td>
+    <td class="engine-model-cell">{{ engine.engine_model }}</td>
+    <td class="piston-cell">{{ engine.piston_no|default:"—" }}</td>
+    <td class="piston-cell">{{ engine.piston_marked_no|default:"—" }}</td>
+    <td class="build-list-cell">{{ engine.build_list|default:"—" }}</td>
+    <td class="code-cell">{{ engine.engine_code|default:"—" }}</td>
+    <td>
+        <select class="form-control sg-model-select" 
+                data-engine-id="{{ engine.id }}"
+                data-engine-make="{{ engine.engine_make }}">
+            <option value="">Select Model</option>
+        </select>
+    </td>
+    <td>
+        <select class="form-control sg-identifier-select" 
+                data-engine-id="{{ engine.id }}"
+                disabled>
+            <option value="">—</option>
+        </select>
+        {% if error %}
+        <div class="error-message text-danger small mt-1">{{ error }}</div>
+        {% endif %}
+    </td>
+    <td>
+        <div class="sg-make-display" id="sg-make-{{ engine.id }}">—</div>
+    </td>
+    <td>
+        <div class="action-buttons">
+            <button class="btn btn-sm btn-primary match-engine-btn" 
+                    data-engine-id="{{ engine.id }}"
+                    disabled>
+                Match Engine
+            </button>
+            <button class="btn btn-sm btn-secondary search-sg-btn" 
+                    data-engine-id="{{ engine.id }}">
+                Search
+            </button>
+        </div>
+    </td>
+</tr>

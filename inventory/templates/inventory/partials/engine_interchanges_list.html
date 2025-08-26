@@ -1,0 +1,50 @@
+{% if interchanges %}
+    <table class="related-table">
+        <thead>
+            <tr>
+                <th>Engine</th>
+                <th>Make</th>
+                <th>Model</th>
+                <th>CPL Number</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for interchange in interchanges %}
+                <tr>
+                    <td>
+                        <strong>{{ interchange.engine_make }} {{ interchange.engine_model }}</strong>
+                    </td>
+                    <td>{{ interchange.engine_make }}</td>
+                    <td>{{ interchange.engine_model }}</td>
+                    <td>{{ interchange.cpl_number|default:"—" }}</td>
+                    <td>{{ interchange.status|default:"—" }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm"
+                                hx-post="{% url 'inventory:remove_engine_interchange' engine.pk interchange.pk %}"
+                                hx-target="#engine-interchanges-list"
+                                hx-confirm="Are you sure you want to remove this interchange relationship?"
+                                hx-swap="outerHTML"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="empty-message">
+        This engine has no interchange relationships.
+    </div>
+{% endif %}
+
+<div class="mt-3">
+    <button class="btn btn-primary"
+            hx-get="{% url 'inventory:engine_add_interchange_form' engine.pk %}"
+            hx-target="#add-interchange-form"
+            hx-swap="innerHTML">
+        Add Interchange
+    </button>
+</div>

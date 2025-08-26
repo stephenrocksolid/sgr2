@@ -1,0 +1,54 @@
+{% if machine_engines %}
+    <table class="related-table">
+        <thead>
+            <tr>
+                <th>Machine</th>
+                <th>Year</th>
+                <th>Machine Type</th>
+                <th>Market Type</th>
+                <th>Primary Engine</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for machine_engine in machine_engines %}
+                <tr>
+                    <td>
+                        <strong>{{ machine_engine.machine.make }} {{ machine_engine.machine.model }}</strong>
+                    </td>
+                    <td>{{ machine_engine.machine.year }}</td>
+                    <td>{{ machine_engine.machine.machine_type }}</td>
+                    <td>{{ machine_engine.machine.market_type }}</td>
+                    <td>{{ machine_engine.is_primary|yesno:"Yes,No" }}</td>
+                    <td>{{ machine_engine.notes|default:"—" }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm"
+                                hx-post="{% url 'inventory:remove_engine_machine' engine.pk machine_engine.pk %}"
+                                hx-target="#engine-machines-list"
+                                hx-confirm="Are you sure you want to remove this machine from the engine?"
+                                hx-swap="outerHTML"
+                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                            Remove
+                        </button>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="empty-message">
+        This engine is not associated with any machines.
+    </div>
+{% endif %}
+
+<div class="mt-3">
+    <button class="btn btn-primary"
+            hx-get="{% url 'inventory:engine_add_machine_form' engine.pk %}"
+            hx-target="#add-machine-form"
+            hx-swap="innerHTML">
+        Add Machine
+    </button>
+</div>
+
+<div id="add-machine-form" class="mt-3"></div>

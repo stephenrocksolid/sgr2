@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unmatched Parts - SGR Part Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Unmatched Parts</h1>
+    <p class="lead">Parts that need engine relationships ({{ total_unmatched }} total)</p>
+</div>
+
+{% if page_obj %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Part Number</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Manufacturer</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for part in page_obj %}
+            <tr>
+                <td><strong>{{ part.part_number }}</strong></td>
+                <td>{{ part.name }}</td>
+                <td>{{ part.category|default:"—" }}</td>
+                <td>{{ part.manufacturer|default:"—" }}</td>
+                <td>
+                    <a href="{% url 'inventory:part_detail' part.id %}" class="btn btn-sm btn-secondary">
+                        View Details
+                    </a>
+                    <a href="/admin/inventory/part/{{ part.id }}/change/" class="btn btn-sm btn-primary" target="_blank">
+                        Add Engines
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; Previous</a>
+    {% endif %}
+    
+    <span class="page-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>No unmatched parts found!</p>
+    <div class="empty-actions">
+        <a href="{% url 'imports:unmatched_index' %}" class="btn btn-primary">Back to Unmatched</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="action-buttons">
+    <a href="{% url 'imports:unmatched_index' %}" class="btn btn-outline">
+        ← Back to Unmatched
+    </a>
+</div>
+{% endblock %}
+

@@ -1,0 +1,195 @@
+{% load static %}
+
+<h2 class="section-title">Build Lists</h2>
+    
+    {% if build_lists %}
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Kits</th>
+                        <th>Last Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for build_list in build_lists %}
+                        <tr>
+                            <td>
+                                <strong>{{ build_list.name }}</strong>
+                                {% if build_list.notes %}
+                                    <br><small class="text-muted">{{ build_list.notes|truncatechars:100 }}</small>
+                                {% endif %}
+                            </td>
+                            <td>{{ build_list.kits.count }}</td>
+                            <td>{{ build_list.updated_at|date:"M j, Y g:i A" }}</td>
+                            <td>
+                                <div class="action-buttons">
+                                    <a href="{% url 'inventory:build_list_detail' engine.id build_list.id %}" 
+                                       class="btn btn-sm btn-primary">
+                                        Open
+                                    </a>
+                                    <button class="btn btn-sm btn-secondary" 
+                                            onclick="editBuildList({{ build_list.id }}, '{{ build_list.name|escapejs }}', '{{ build_list.notes|escapejs }}')">
+                                        Rename
+                                    </button>
+                                    <button class="btn btn-sm btn-danger" 
+                                            hx-post="{% url 'inventory:build_list_delete' build_list.id %}"
+                                            hx-target="#build-lists-section"
+                                            hx-swap="innerHTML"
+                                            hx-confirm="Are you sure you want to delete this build list? This will also delete all kits and items within it.">
+                                        Delete
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="empty-message">
+            <p>No build lists have been created for this engine.</p>
+        </div>
+    {% endif %}
+    
+    <div class="mt-3">
+        <button class="btn btn-primary"
+                hx-get="{% url 'inventory:build_list_add_form' engine.id %}"
+                hx-target="#add-build-list-form"
+                hx-swap="innerHTML">
+            Create New Build List
+        </button>
+    </div>
+    
+    <div id="add-build-list-form" class="mt-3"></div>
+
+<!-- Edit Build List Modal -->
+<div id="edit-build-list-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Edit Build List</h3>
+            <span class="close" onclick="closeEditBuildListModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="edit-build-list-form">
+                <div class="form-group">
+                    <label for="edit_build_list_name">Name *</label>
+                    <input type="text" name="name" id="edit_build_list_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="edit_build_list_notes">Notes</label>
+                    <textarea name="notes" id="edit_build_list_notes" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEditBuildListModal()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    background-color: white;
+    margin: 5% auto;
+    padding: 0;
+    border-radius: var(--border-radius);
+    width: 90%;
+    max-width: 600px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: var(--gray-900);
+}
+
+.close {
+    color: var(--gray-400);
+    font-size: 1.5rem;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: var(--gray-600);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+</style>
+
+<script>
+function editBuildList(buildListId, name, notes) {
+    // Populate the modal form
+    document.getElementById('edit_build_list_name').value = name;
+    document.getElementById('edit_build_list_notes').value = notes;
+    
+    // Set up the form submission
+    const form = document.getElementById('edit-build-list-form');
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(form);
+        fetch(`/inventory/build-lists/${buildListId}/rename/`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.getElementById('build-lists-section').innerHTML = html;
+            closeEditBuildListModal();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the build list.');
+        });
+    };
+    
+    // Show the modal
+    document.getElementById('edit-build-list-modal').style.display = 'block';
+}
+
+function closeEditBuildListModal() {
+    document.getElementById('edit-build-list-modal').style.display = 'none';
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('edit-build-list-modal');
+    if (event.target === modal) {
+        closeEditBuildListModal();
+    }
+}
+</script>

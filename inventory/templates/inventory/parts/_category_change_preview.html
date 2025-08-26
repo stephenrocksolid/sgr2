@@ -1,0 +1,39 @@
+<div class="alert alert-warning mb-3">
+  <strong>Category change preview:</strong> Changing to <em>{{ new_category.name }}</em>.
+  <ul class="mt-2 ml-5 list-disc">
+    <li><strong>{{ will_carry|length }}</strong> spec(s) will carry over (matching attribute <code>code</code>).</li>
+    <li><strong>{{ will_drop|length }}</strong> spec(s) will be removed because they don't exist in the new category.</li>
+  </ul>
+</div>
+
+{% if will_drop %}
+  <div class="card mb-3">
+    <div class="card-header">Specs that will be removed</div>
+    <div class="card-body text-sm">
+      <ul class="ml-5 list-disc">
+        {% for code, pav in will_drop %}
+          <li><code>{{ code }}</code> — {{ pav.attribute.name }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">New Specifications ({{ new_category.name }})</div>
+  <div class="card-body">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {% for field in specs_form %}
+        <div>
+          {{ field.label_tag }}{{ field }}
+          {% for e in field.errors %}<div class="form-error">{{ e }}</div>{% endfor %}
+        </div>
+      {% empty %}
+        <div class="text-sm text-gray-500">This category has no specifications.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<input type="hidden" name="confirm_category_change" value="1">
+

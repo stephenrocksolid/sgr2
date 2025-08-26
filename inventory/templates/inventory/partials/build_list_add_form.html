@@ -1,0 +1,27 @@
+<div class="add-form-container">
+    <h4>Create New Build List</h4>
+    <form hx-post="{% url 'inventory:build_list_create' engine.id %}" 
+          hx-target="#build-lists-section" 
+          hx-swap="innerHTML"
+          hx-on::after-request="if(event.detail.successful) document.getElementById('add-build-list-form').innerHTML = ''">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="build_list_name">Name:</label>
+            <input type="text" name="name" id="build_list_name" class="form-control" required placeholder="Enter build list name">
+        </div>
+        
+        <div class="form-group">
+            <label for="build_list_notes">Notes:</label>
+            <textarea name="notes" id="build_list_notes" class="form-control" rows="3" placeholder="Optional notes about this build list..."></textarea>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Build List</button>
+            <button type="button" class="btn btn-secondary"
+                    onclick="document.getElementById('add-build-list-form').innerHTML = ''">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>

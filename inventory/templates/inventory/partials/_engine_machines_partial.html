@@ -1,0 +1,43 @@
+{% if machine_engines %}
+    <table class="related-table">
+        <thead>
+            <tr>
+                <th>Machine</th>
+                <th>Year</th>
+                <th>Machine Type</th>
+                <th>Market Type</th>
+                <th>Primary Engine</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for machine_engine in machine_engines %}
+                <tr class="machine-row" data-machine-id="{{ machine_engine.id }}">
+                    <td>
+                        <strong>{{ machine_engine.machine.make }} {{ machine_engine.machine.model }}</strong>
+                    </td>
+                    <td>{{ machine_engine.machine.year }}</td>
+                    <td>{{ machine_engine.machine.machine_type }}</td>
+                    <td>{{ machine_engine.machine.market_type }}</td>
+                    <td>{{ machine_engine.is_primary|yesno:"Yes,No" }}</td>
+                    <td>{{ machine_engine.notes|default:"—" }}</td>
+                    <td class="text-right">
+                        <form hx-post="{% url 'inventory:engine_machine_remove' engine.pk machine_engine.pk %}"
+                              hx-target="#engine-machines-section"
+                              hx-swap="innerHTML"
+                              hx-confirm="Are you sure you want to remove this machine from the engine?">
+                            {% csrf_token %}
+                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% else %}
+    <div class="empty-message">
+        <p class="text-muted">This engine is not associated with any machines yet.</p>
+    </div>
+{% endif %}
+

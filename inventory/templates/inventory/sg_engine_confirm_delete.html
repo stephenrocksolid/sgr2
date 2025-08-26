@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete {{ sg_engine.sg_make }} {{ sg_engine.sg_model }} - SG Engine Catalog{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div class="header-content">
+        <h1>Delete SG Engine</h1>
+        <p class="text-muted">Confirm deletion of SG Engine entry</p>
+    </div>
+    <div class="header-actions">
+        <a href="{% url 'inventory:sg_engine_detail' sg_engine.pk %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</div>
+
+<div class="delete-confirmation">
+    <div class="alert alert-danger">
+        <h3>⚠️ Warning: This action cannot be undone</h3>
+        <p>You are about to delete the SG Engine <strong>"{{ sg_engine.sg_make }} {{ sg_engine.sg_model }}"</strong>.</p>
+    </div>
+    
+    <div class="detail-section">
+        <div class="section-header">SG Engine Details</div>
+        <div class="section-content">
+            <div class="field-grid">
+                <div class="field-group">
+                    <div class="field-label">SG Engine Make</div>
+                    <div class="field-value">{{ sg_engine.sg_make }}</div>
+                </div>
+                
+                <div class="field-group">
+                    <div class="field-label">SG Engine Model</div>
+                    <div class="field-value">{{ sg_engine.sg_model }}</div>
+                </div>
+                
+                <div class="field-group">
+                    <div class="field-label">Notes</div>
+                    <div class="field-value {% if not sg_engine.notes %}empty{% endif %}">
+                        {{ sg_engine.notes|default:"No notes provided"|linebreaks }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if engines %}
+        <div class="detail-section">
+            <div class="section-header">⚠️ Related Engines ({{ engines.count }})</div>
+            <div class="section-content">
+                <div class="alert alert-warning">
+                    <p><strong>Warning:</strong> This SG Engine is currently associated with {{ engines.count }} engine{{ engines.count|pluralize }}. 
+                    Deleting this SG Engine will remove the association from these engines.</p>
+                </div>
+                
+                <div class="table-wrap">
+                    <table class="related-table">
+                        <thead>
+                            <tr>
+                                <th>Engine</th>
+                                <th>Engine Make</th>
+                                <th>Engine Model</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for engine in engines %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ engine.engine_make }} {{ engine.engine_model }}</strong>
+                                    </td>
+                                    <td>{{ engine.engine_make }}</td>
+                                    <td>{{ engine.engine_model }}</td>
+                                    <td>{{ engine.status|default:"—" }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+    
+    <form method="post" class="delete-form">
+        {% csrf_token %}
+        <div class="form-actions">
+            <button type="submit" class="btn btn-danger">Delete SG Engine</button>
+            <a href="{% url 'inventory:sg_engine_detail' sg_engine.pk %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+

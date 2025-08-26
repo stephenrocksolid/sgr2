@@ -1,0 +1,60 @@
+<form method="post" class="form-inline"
+      hx-post="{% url 'inventory:vendor_part_add' vendor.id %}"
+      hx-target="#vendor-parts-section"
+      hx-swap="innerHTML">
+  {% csrf_token %}
+  
+  <div class="form-grid">
+    <div class="form-group full-width">
+      <label for="search-parts">Search Parts</label>
+      <input type="text" name="q" id="search-parts" value="{{ q }}" class="form-control"
+             placeholder="Type part number or name…"
+             hx-get="{% url 'inventory:vendor_part_options' vendor.id %}"
+             hx-target="#add-part-options"
+             hx-trigger="keyup changed delay:300ms"
+             hx-include="[name='q']"
+             hx-swap="innerHTML">
+      <div class="help-text">Search loads up to 100 matches. Already-linked parts are marked — selecting one will update that link.</div>
+    </div>
+    
+    <div class="form-group">
+      <label for="add-part-options">Part</label>
+      <select id="add-part-options" name="part_id" class="form-control" required>
+        {% include "inventory/vendors/_part_options.html" with parts=parts linked_ids=linked_ids %}
+      </select>
+    </div>
+    
+    <div class="form-group">
+      <label for="vendor_sku">Vendor SKU</label>
+      <input type="text" name="vendor_sku" id="vendor_sku" class="form-control">
+    </div>
+    
+    <div class="form-group">
+      <label for="cost">Cost</label>
+      <input type="number" name="cost" id="cost" class="form-control" step="0.01" min="0">
+    </div>
+    
+    <div class="form-group">
+      <label for="stock_qty">Stock Qty</label>
+      <input type="number" name="stock_qty" id="stock_qty" class="form-control" step="1" min="0">
+    </div>
+    
+    <div class="form-group">
+      <label for="lead_time_days">Lead Time (days)</label>
+      <input type="number" name="lead_time_days" id="lead_time_days" class="form-control" step="1" min="0">
+    </div>
+    
+    <div class="form-group full-width">
+      <label for="notes">Notes</label>
+      <textarea name="notes" id="notes" class="form-control" rows="2"></textarea>
+    </div>
+  </div>
+  
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">Save</button>
+    <button type="button" class="btn btn-secondary" 
+            hx-get="about:blank" 
+            hx-target="closest form" 
+            hx-swap="outerHTML">Cancel</button>
+  </div>
+</form>

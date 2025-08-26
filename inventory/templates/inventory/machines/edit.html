@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}Edit Machine — {{ machine.make }} {{ machine.model }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .edit-header {
+        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
+        color: white;
+        padding: 2rem;
+        margin: -1rem -1rem 2rem -1rem;
+        border-radius: var(--border-radius);
+    }
+    
+    .edit-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .edit-subtitle {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        margin-bottom: 1rem;
+    }
+    
+    .breadcrumb {
+        font-size: 0.875rem;
+        opacity: 0.8;
+    }
+    
+    .breadcrumb a {
+        color: white;
+        text-decoration: none;
+    }
+    
+    .breadcrumb a:hover {
+        text-decoration: underline;
+    }
+    
+    .edit-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .edit-card {
+        background: white;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+    }
+    
+    .edit-card-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-50);
+    }
+    
+    .edit-card-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: 0.5rem;
+    }
+    
+    .edit-card-subtitle {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .edit-card-body {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group.full-width {
+        grid-column: 1 / -1;
+    }
+    
+    .form-label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+    }
+    
+    .form-control {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 1rem;
+        transition: border-color 0.2s ease;
+    }
+    
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+    }
+    
+    .form-error {
+        color: var(--error);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+        background-color: #fed7d7;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--border-radius);
+        border: 1px solid #feb2b2;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        padding-top: 1.5rem;
+        border-top: 1px solid var(--gray-200);
+    }
+    
+    @media (max-width: 768px) {
+        .form-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
+        
+        .edit-header {
+            margin: -1rem -1rem 1rem -1rem;
+            padding: 1.5rem;
+        }
+        
+        .edit-title {
+            font-size: 1.5rem;
+        }
+        
+        .form-actions {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-header">
+    <div class="breadcrumb">
+        <a href="{% url 'imports:index' %}">Home</a> → 
+        <a href="{% url 'inventory:machines_list' %}">Machines</a> → 
+        <a href="{% url 'inventory:machine_detail' machine.pk %}">{{ machine.make }} {{ machine.model }}</a> → 
+        Edit
+    </div>
+    
+    <h1 class="edit-title">Edit Machine</h1>
+    <p class="edit-subtitle">{{ machine.make }} {{ machine.model }} (ID {{ machine.id }})</p>
+</div>
+
+<div class="edit-container">
+    <div class="edit-card">
+        <div class="edit-card-header">
+            <h2 class="edit-card-title">Machine Information</h2>
+            <p class="edit-card-subtitle">Update the machine details below</p>
+        </div>
+        
+        <div class="edit-card-body">
+            <form method="post" action="{% url 'inventory:machine_update' machine.pk %}">
+                {% csrf_token %}
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.make.id_for_label }}">Make</label>
+                        {{ form.make }}
+                        {% for error in form.make.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.model.id_for_label }}">Model</label>
+                        {{ form.model }}
+                        {% for error in form.model.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.year.id_for_label }}">Year</label>
+                        {{ form.year }}
+                        {% for error in form.year.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.machine_type.id_for_label }}">Machine Type</label>
+                        {{ form.machine_type }}
+                        {% for error in form.machine_type.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="{{ form.market_type.id_for_label }}">Market Type</label>
+                        {{ form.market_type }}
+                        {% for error in form.market_type.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button class="btn btn-primary" type="submit">Save Changes</button>
+                    <a href="{% url 'inventory:machine_detail' machine.pk %}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

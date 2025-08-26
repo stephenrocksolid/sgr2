@@ -1,0 +1,41 @@
+{% if available_engines %}
+    <div class="add-form-container">
+        <h4>Add Engine Compatible</h4>
+        <form hx-post="{% url 'inventory:add_engine_compatible' engine.pk %}"
+              hx-target="#engine-compatibles-list"
+              hx-swap="outerHTML"
+              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+              hx-on::after-request="if(event.detail.successful) document.getElementById('add-compatible-form').innerHTML = ''">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="compatible_id">Engine:</label>
+                <select name="compatible_id" id="compatible_id" class="form-control" required>
+                    <option value="">Select an engine...</option>
+                    {% for available_engine in available_engines %}
+                        <option value="{{ available_engine.pk }}">
+                            {{ available_engine.engine_make }} {{ available_engine.engine_model }}
+                            {% if available_engine.cpl_number %} ({{ available_engine.cpl_number }}){% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Add Compatible</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('add-compatible-form').innerHTML = ''">
+                    Cancel
+                </button>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        No available engines to add as compatibles. All engines are already compatible with this engine.
+    </div>
+    <button class="btn btn-secondary"
+            onclick="document.getElementById('add-compatible-form').innerHTML = ''">
+        Back
+    </button>
+{% endif %}

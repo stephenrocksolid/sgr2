@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+
+{% block title %}Import Rows - {{ batch.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1>Import Rows: {{ batch.original_filename }}</h1>
+                <a href="{% url 'imports:batch_detail' batch.id %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Batch Details
+                </a>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="row mb-4">
+                <div class="col-md-2">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ filtered_stats.total_rows }}</h5>
+                            <p class="card-text">Total Rows</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center {% if filtered_stats.error_rows > 0 %}border-danger{% endif %}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ filtered_stats.error_rows }}</h5>
+                            <p class="card-text">Errors</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ filtered_stats.machine_created }}</h5>
+                            <p class="card-text">Machines Created</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ filtered_stats.engine_created }}</h5>
+                            <p class="card-text">Engines Created</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ filtered_stats.part_created }}</h5>
+                            <p class="card-text">Parts Created</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-2">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ page_obj.paginator.count }}</h5>
+                            <p class="card-text">Showing</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="has_errors" class="form-label">Has Errors</label>
+                            <select name="has_errors" id="has_errors" class="form-select">
+                                <option value="">All</option>
+                                <option value="true" {% if current_filters.has_errors == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if current_filters.has_errors == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="machine_created" class="form-label">Machine Created</label>
+                            <select name="machine_created" id="machine_created" class="form-select">
+                                <option value="">All</option>
+                                <option value="true" {% if current_filters.machine_created == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if current_filters.machine_created == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="engine_created" class="form-label">Engine Created</label>
+                            <select name="engine_created" id="engine_created" class="form-select">
+                                <option value="">All</option>
+                                <option value="true" {% if current_filters.engine_created == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if current_filters.engine_created == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="part_created" class="form-label">Part Created</label>
+                            <select name="part_created" id="part_created" class="form-select">
+                                <option value="">All</option>
+                                <option value="true" {% if current_filters.part_created == 'true' %}selected{% endif %}>Yes</option>
+                                <option value="false" {% if current_filters.part_created == 'false' %}selected{% endif %}>No</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{% url 'imports:batch_rows' batch.id %}" class="btn btn-outline-secondary">Clear Filters</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Rows Table -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Import Rows</h5>
+                </div>
+                <div class="card-body">
+                    {% if page_obj %}
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark sticky-top">
+                                    <tr>
+                                        <th>Row #</th>
+                                        <th>Status</th>
+                                        <th>Machine</th>
+                                        <th>Engine</th>
+                                        <th>Part</th>
+                                        <th>Relationships</th>
+                                        <th>Processing Time</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in page_obj %}
+                                    <tr class="{% if row.has_errors %}table-danger{% endif %}">
+                                        <td>{{ row.row_number }}</td>
+                                        <td>
+                                            {% if row.has_errors %}
+                                                <span class="badge bg-danger">Error</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Success</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if row.machine_created %}
+                                                <span class="badge bg-success">Created</span>
+                                            {% elif row.machine_updated %}
+                                                <span class="badge bg-warning">Updated</span>
+                                            {% elif row.machine_id %}
+                                                <span class="badge bg-info">Existing</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if row.engine_created %}
+                                                <span class="badge bg-success">Created</span>
+                                            {% elif row.engine_updated %}
+                                                <span class="badge bg-warning">Updated</span>
+                                            {% elif row.engine_id %}
+                                                <span class="badge bg-info">Existing</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if row.part_created %}
+                                                <span class="badge bg-success">Created</span>
+                                            {% elif row.part_updated %}
+                                                <span class="badge bg-warning">Updated</span>
+                                            {% elif row.part_id %}
+                                                <span class="badge bg-info">Existing</span>
+                                            {% else %}
+                                                <span class="badge bg-secondary">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if row.machine_engine_created or row.engine_part_created or row.part_vendor_created %}
+                                                <div class="d-flex flex-column gap-1">
+                                                    {% if row.machine_engine_created %}
+                                                        <span class="badge bg-primary">Machine-Engine</span>
+                                                    {% endif %}
+                                                    {% if row.engine_part_created %}
+                                                        <span class="badge bg-primary">Engine-Part</span>
+                                                    {% endif %}
+                                                    {% if row.part_vendor_created %}
+                                                        <span class="badge bg-primary">Part-Vendor</span>
+                                                    {% endif %}
+                                                </div>
+                                            {% else %}
+                                                <span class="badge bg-secondary">None</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ row.processing_time_ms }}ms</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-info" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#rowDetailModal{{ row.id }}">
+                                                Details
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if page_obj.has_other_pages %}
+                        <nav aria-label="Import rows pagination">
+                            <ul class="pagination justify-content-center">
+                                {% if page_obj.has_previous %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page=1{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">First</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Previous</a>
+                                    </li>
+                                {% endif %}
+
+                                <li class="page-item active">
+                                    <span class="page-link">
+                                        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                                    </span>
+                                </li>
+
+                                {% if page_obj.has_next %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Next</a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% for key, value in current_filters.items %}{% if value %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Last</a>
+                                    </li>
+                                {% endif %}
+                            </ul>
+                        </nav>
+                        {% endif %}
+
+                    {% else %}
+                        <div class="text-center py-4">
+                            <p class="text-muted">No import rows found matching the current filters.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Row Detail Modals -->
+{% for row in page_obj %}
+<div class="modal fade" id="rowDetailModal{{ row.id }}" tabindex="-1" aria-labelledby="rowDetailModalLabel{{ row.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="rowDetailModalLabel{{ row.id }}">Row {{ row.row_number }} Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Original Data</h6>
+                        <pre class="bg-light p-3 rounded"><code>{{ row.original_data|pprint }}</code></pre>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Normalized Data</h6>
+                        <div class="mb-3">
+                            <strong>Machine:</strong>
+                            <pre class="bg-light p-2 rounded small">{{ row.normalized_machine_data|pprint }}</pre>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Engine:</strong>
+                            <pre class="bg-light p-2 rounded small">{{ row.normalized_engine_data|pprint }}</pre>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Part:</strong>
+                            <pre class="bg-light p-2 rounded small">{{ row.normalized_part_data|pprint }}</pre>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if row.has_errors %}
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h6 class="text-danger">Errors</h6>
+                        <ul class="list-unstyled">
+                            {% for error in row.error_messages %}
+                                <li class="text-danger">{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+

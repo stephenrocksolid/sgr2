@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Spring Garden Repair Part Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Spring Garden Repair Part Manager</h1>
+    <p class="lead">Welcome to the SGR Part Manager system. This demo showcases the wide container layout and table with sticky headers.</p>
+</div>
+
+<div class="demo-section">
+    <h2>System Status</h2>
+    <p><strong>Celery Task ID:</strong> {{ celery_task_id }}</p>
+    <p>This demonstrates that Celery is working and integrated with the system.</p>
+</div>
+
+<div class="demo-section">
+    <h2>Demo Table with Sticky Header</h2>
+    <p>This table demonstrates the sticky header functionality. Scroll down to see the header remain fixed at the top.</p>
+    
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Machine Name</th>
+                    <th>Type</th>
+                    <th>Year</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in sample_data %}
+                <tr>
+                    <td>{{ item.id }}</td>
+                    <td>{{ item.name }}</td>
+                    <td>{{ item.type }}</td>
+                    <td>{{ item.year }}</td>
+                    <td>
+                        <span class="status-badge status-active">{{ item.status }}</span>
+                    </td>
+                    <td>
+                        <a href="#" class="btn btn-outline btn-sm">View</a>
+                        <a href="#" class="btn btn-primary btn-sm">Edit</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Layout Features</h2>
+    <div class="feature-grid">
+        <div class="feature-card">
+            <h3>Wide Container</h3>
+            <p>Uses 90-95% viewport width on desktop for a full-width feel, avoiding narrow centered columns.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Sticky Headers</h3>
+            <p>Table headers remain visible when scrolling through large datasets.</p>
+        </div>
+        <div class="feature-card">
+            <h3>Brand Palette</h3>
+            <p>Consistent color scheme using CSS variables for brand gray/red and neutral colors.</p>
+        </div>
+        <div class="feature-card">
+            <h3>HTMX Ready</h3>
+            <p>HTMX script included for dynamic interactions and real-time updates.</p>
+        </div>
+    </div>
+</div>
+
+<div class="demo-section">
+    <h2>Quick Actions</h2>
+    <div class="action-buttons">
+        <a href="{% url 'inventory:index' %}" class="btn btn-primary">View Inventory</a>
+        <a href="{% url 'imports:index' %}" class="btn btn-secondary">Import Data</a>
+        <a href="/admin/" class="btn btn-outline">Admin Panel</a>
+    </div>
+</div>
+{% endblock %}

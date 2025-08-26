@@ -1,0 +1,189 @@
+{% load inventory_extras %}
+
+{% if part.category %}
+    <div class="specs-form-container">
+        <h4>Specifications for {{ part.category.name }}</h4>
+        
+        <form hx-post="{% url 'inventory:part_specs_save' part.id %}" 
+              hx-target="#part-specs-section" 
+              hx-swap="innerHTML"
+              class="specs-form">
+            {% csrf_token %}
+            
+            {% for attribute in attributes %}
+                <div class="form-group">
+                    <label for="attr_{{ attribute.id }}">
+                        {{ attribute.name }}
+                        {% if attribute.unit %}({{ attribute.unit }}){% endif %}
+                        {% if attribute.is_required %}<span class="required">*</span>{% endif %}
+                    </label>
+                    
+                    {% if attribute.data_type == 'text' %}
+                        <input type="text" 
+                               id="attr_{{ attribute.id }}" 
+                               name="attr_{{ attribute.id }}" 
+                               value="{{ attribute_values|get_item:attribute.id|get_value_text|default:'' }}"
+                               class="form-control"
+                               {% if attribute.is_required %}required{% endif %}>
+                    
+                    {% elif attribute.data_type == 'int' %}
+                        <input type="number" 
+                               step="1" 
+                               id="attr_{{ attribute.id }}" 
+                               name="attr_{{ attribute.id }}" 
+                               value="{{ attribute_values|get_item:attribute.id|get_value_int|default:'' }}"
+                               class="form-control"
+                               {% if attribute.is_required %}required{% endif %}>
+                    
+                    {% elif attribute.data_type == 'dec' %}
+                        <input type="number" 
+                               step="0.000001" 
+                               id="attr_{{ attribute.id }}" 
+                               name="attr_{{ attribute.id }}" 
+                               value="{{ attribute_values|get_item:attribute.id|get_value_dec|default:'' }}"
+                               class="form-control"
+                               {% if attribute.is_required %}required{% endif %}>
+                    
+                    {% elif attribute.data_type == 'bool' %}
+                        <div class="checkbox-wrapper">
+                            <input type="checkbox" 
+                                   id="attr_{{ attribute.id }}" 
+                                   name="attr_{{ attribute.id }}" 
+                                   value="true"
+                                   {% if attribute_values|get_item:attribute.id|get_value_bool %}checked{% endif %}
+                                   class="form-check-input">
+                            <label for="attr_{{ attribute.id }}" class="form-check-label">
+                                {{ attribute.name }}
+                            </label>
+                        </div>
+                    
+                    {% elif attribute.data_type == 'date' %}
+                        <input type="date" 
+                               id="attr_{{ attribute.id }}" 
+                               name="attr_{{ attribute.id }}" 
+                               value="{{ attribute_values|get_item:attribute.id|get_value_date|date:'Y-m-d'|default:'' }}"
+                               class="form-control"
+                               {% if attribute.is_required %}required{% endif %}>
+                    
+                    {% elif attribute.data_type == 'choice' %}
+                        <select id="attr_{{ attribute.id }}" 
+                                name="attr_{{ attribute.id }}" 
+                                class="form-control"
+                                {% if attribute.is_required %}required{% endif %}>
+                            <option value="">-- Select {{ attribute.name }} --</option>
+                            {% for choice in attribute.choices.all %}
+                                <option value="{{ choice.value }}" 
+                                        {% if attribute_values|get_item:attribute.id|get_choice_value == choice.value %}selected{% endif %}>
+                                    {{ choice.label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
+                    
+                    {% if attribute.help_text %}
+                        <small class="form-text text-muted">{{ attribute.help_text }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Specifications</button>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="no-category-message">
+        <p>Select a category to add specifications.</p>
+    </div>
+{% endif %}
+
+<style>
+.specs-form-container {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 15px;
+}
+
+.specs-form-container h4 {
+    margin-bottom: 20px;
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 500;
+    color: #555;
+}
+
+.required {
+    color: #dc3545;
+}
+
+.form-control {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-check-input {
+    margin: 0;
+}
+
+.form-check-label {
+    margin: 0;
+    font-weight: normal;
+}
+
+.form-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 4px;
+}
+
+.form-actions {
+    margin-top: 20px;
+    padding-top: 15px;
+    border-top: 1px solid #dee2e6;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.no-category-message {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6c757d;
+    font-style: italic;
+}
+</style>
