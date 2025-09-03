@@ -239,3 +239,50 @@ def get_expected_fields(section):
     }
     
     return section_fields.get(section, [])
+
+def get_engine_field_aliases():
+    """Get field aliases for engine import mapping."""
+    return {
+        'serial_number': ['s/n', 'serial', 'serial number', 'sn'],
+        'di': ['di', 'direct injection'],
+        'idi': ['idi', 'indirect injection'],
+        'common_rail': ['common rail', 'common-rail', 'cr'],
+        'two_valve': ['2v', '2 valve', 'two valve'],
+        'four_valve': ['4v', '4 valve', 'four valve'],
+        'five_valve': ['5v', '5 valve', 'five valve'],
+        'casting_comments': ['casting # comments', 'casting comments', 'casting notes'],
+    }
+
+def fuzzy_match_header(header, target_field, aliases):
+    """Fuzzy match a header to a target field using aliases."""
+    header_lower = header.lower().strip()
+    
+    # Direct match
+    if header_lower == target_field.lower():
+        return True
+    
+    # Check aliases
+    if target_field in aliases:
+        for alias in aliases[target_field]:
+            if header_lower == alias.lower():
+                return True
+            # Handle punctuation variations
+            alias_clean = alias.lower().replace('#', '').replace('-', ' ').replace('_', ' ')
+            header_clean = header_lower.replace('#', '').replace('-', ' ').replace('_', ' ')
+            if alias_clean == header_clean:
+                return True
+    
+    return False
+
+def suggest_engine_field_mappings(headers):
+    """Suggest field mappings for engine import based on header analysis."""
+    aliases = get_engine_field_aliases()
+    suggestions = {}
+    
+    for header in headers:
+        for field, field_aliases in aliases.items():
+            if fuzzy_match_header(header, field, aliases):
+                suggestions[field] = header
+                break
+    
+    return suggestions

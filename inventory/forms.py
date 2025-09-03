@@ -532,12 +532,13 @@ class EngineForm(forms.ModelForm):
         fields = [
             "engine_make", "engine_model", "status", "price",
             "sg_engine", "sg_engine_notes",
-            "cpl_number", "ar_number", "build_list", "engine_code",
+            "cpl_number", "ar_number", "build_list", "engine_code", "serial_number",
             "cylinder", "valves_per_cyl", "bore_stroke", "compression_ratio", "firing_order",
             "crankshaft_no", "piston_no", "piston_marked_no", "piston_notes", "oh_kit_no",
+            "di", "idi", "common_rail", "two_valve", "four_valve", "five_valve",
             "overview_comments", "interference", "camshaft", "valve_adjustment",
             "rod_journal_diameter", "main_journal_diameter_pos1", "main_journal_diameter_1",
-            "big_end_housing_bore",
+            "big_end_housing_bore", "casting_comments",
         ]
         widgets = {
             "engine_make": forms.TextInput(attrs={"class": "form-control"}),
@@ -569,6 +570,15 @@ class EngineForm(forms.ModelForm):
             "main_journal_diameter_pos1": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": "0"}),
             "main_journal_diameter_1": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": "0"}),
             "big_end_housing_bore": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": "0"}),
+            # New fields
+            "serial_number": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 1Z2345..."}),
+            "di": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "idi": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "common_rail": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "two_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "four_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "five_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "casting_comments": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
 

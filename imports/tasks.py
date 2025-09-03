@@ -13,6 +13,22 @@ from openpyxl import load_workbook
 from .models import ImportBatch, ImportLog, SavedImportMapping, ImportRow
 from inventory.models import Machine, Engine, Part, SGEngine, Vendor, PartVendor, MachineEngine, EnginePart, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice
 
+def get_valid_model_fields(model_class):
+    """Get a set of valid field names for a Django model."""
+    return {field.name for field in model_class._meta.get_fields()}
+
+def filter_valid_fields(data, model_class):
+    """Filter data to only include fields that exist on the model."""
+    valid_fields = get_valid_model_fields(model_class)
+    filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+    
+    # Log filtered out fields for debugging
+    filtered_out = {k: v for k, v in data.items() if k not in valid_fields}
+    if filtered_out:
+        print(f"Warning: Filtered out invalid fields for {model_class.__name__}: {list(filtered_out.keys())}")
+    
+    return filtered_data
+
 # Import Celery task decorator with fallback
 try:
     from celery import shared_task
@@ -284,11 +300,20 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             except (InvalidOperation, ValueError):
                 return None
         elif field_type == 'boolean':
-            if value.lower() in ('true', '1', 'yes', 'y'):
+            # Handle various boolean formats
+            value_lower = value.lower().strip()
+            
+            # Truthy values
+            if value_lower in ('true', '1', 'yes', 'y', '✓', 'di', 'idi', 'common rail', 'common-rail', 'cr', '2v', '2 valve', 'two valve', '4v', '4 valve', 'four valve', '5v', '5 valve', 'five valve'):
                 return True
-            elif value.lower() in ('false', '0', 'no', 'n'):
+            # Falsy values
+            elif value_lower in ('false', '0', 'no', 'n', 'x', ''):
                 return False
-            return None
+            # For any other value, log warning and default to False
+            else:
+                # Log warning for invalid boolean values
+                print(f"Warning: Invalid boolean value '{value}' - defaulting to False")
+                return False
         
         return value
     
@@ -315,16 +340,18 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             
             # Determine field type for normalization
             if field_name in ['engine_make', 'engine_model', 'sg_engine_identifier', 'sg_engine_notes',
-                             'cpl_number', 'ar_number', 'build_list', 'engine_code', 'crankshaft_no',
-                             'piston_no', 'piston_marked_no', 'piston_notes', 'oh_kit_no', 'bore_stroke',
-                             'firing_order', 'overview_comments', 'interference', 'camshaft', 'valve_adjustment',
-                             'status']:
+                             'cpl_number', 'ar_number', 'build_list', 'engine_code', 'serial_number',
+                             'crankshaft_no', 'piston_no', 'piston_marked_no', 'piston_notes', 'oh_kit_no', 
+                             'bore_stroke', 'firing_order', 'overview_comments', 'interference', 'camshaft', 
+                             'valve_adjustment', 'status', 'casting_comments']:
                 normalized_value = normalize_value(value, 'string')
             elif field_name in ['cylinder', 'valves_per_cyl']:
                 normalized_value = normalize_value(value, 'integer')
             elif field_name in ['compression_ratio', 'rod_journal_diameter', 'main_journal_diameter_pos1',
                                'main_journal_diameter_1', 'big_end_housing_bore', 'price']:
                 normalized_value = normalize_value(value, 'decimal')
+            elif field_name in ['di', 'idi', 'common_rail', 'two_valve', 'four_valve', 'five_valve']:
+                normalized_value = normalize_value(value, 'boolean')
             else:
                 normalized_value = normalize_value(value, 'string')
             
@@ -417,7 +444,8 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
             return
         elif mapping.update_existing:
             # Update existing
-            for field, value in machine_data.items():
+            filtered_machine_data = filter_valid_fields(machine_data, Machine)
+            for field, value in filtered_machine_data.items():
                 setattr(existing_machine, field, value)
             existing_machine.save()
             import_row.machine_updated = True
@@ -425,8 +453,11 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
             import_row.save()
             return
     
+    # Filter out fields that don't exist on the Machine model
+    filtered_machine_data = filter_valid_fields(machine_data, Machine)
+    
     # Create new machine
-    machine = Machine.objects.create(**machine_data)
+    machine = Machine.objects.create(**filtered_machine_data)
     import_row.machine_created = True
     import_row.machine_id = machine.id
     import_row.save()
@@ -481,7 +512,8 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
             return
         elif mapping.update_existing:
             # Update existing
-            for field, value in engine_data.items():
+            filtered_engine_data = filter_valid_fields(engine_data, Engine)
+            for field, value in filtered_engine_data.items():
                 setattr(existing_engine, field, value)
             existing_engine.save()
             import_row.engine_updated = True
@@ -489,8 +521,11 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
             import_row.save()
             return
     
+    # Filter out fields that don't exist on the Engine model
+    filtered_engine_data = filter_valid_fields(engine_data, Engine)
+    
     # Create new engine
-    engine = Engine.objects.create(**engine_data)
+    engine = Engine.objects.create(**filtered_engine_data)
     import_row.engine_created = True
     import_row.engine_id = engine.id
     import_row.save()
@@ -529,7 +564,8 @@ def process_part_row(batch, mapping, normalized_data, import_row):
             return
         elif mapping.update_existing:
             # Update existing
-            for field, value in part_data.items():
+            filtered_part_data = filter_valid_fields(part_data, Part)
+            for field, value in filtered_part_data.items():
                 setattr(existing_part, field, value)
             existing_part.save()
             import_row.part_updated = True
@@ -539,8 +575,11 @@ def process_part_row(batch, mapping, normalized_data, import_row):
             apply_part_attributes_from_row(existing_part, normalized_data.get('raw_data', {}), mapping, batch, import_row)
             return
     
+    # Filter out fields that don't exist on the Part model
+    filtered_part_data = filter_valid_fields(part_data, Part)
+    
     # Create new part
-    part = Part.objects.create(**part_data)
+    part = Part.objects.create(**filtered_part_data)
     import_row.part_created = True
     import_row.part_id = part.id
     import_row.save()

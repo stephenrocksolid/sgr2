@@ -143,6 +143,7 @@ class AdditionalEngineMappingForm(forms.Form):
             ('ar_number', 'AR Number'),
             ('build_list', 'Build List'),
             ('engine_code', 'Engine Code'),
+            ('serial_number', 'S/N (Serial Number)'),
             ('cylinder', 'Cylinders'),
             ('valves_per_cyl', 'Valves per Cylinder'),
             ('bore_stroke', 'Bore & Stroke'),
@@ -155,6 +156,19 @@ class AdditionalEngineMappingForm(forms.Form):
             ('piston_marked_no', 'Piston Marked Number'),
             ('piston_notes', 'Piston Notes'),
             ('oh_kit_no', 'Overhaul Kit Number'),
+            
+            # Injection System
+            ('di', 'DI (Direct Injection)'),
+            ('idi', 'IDI (Indirect Injection)'),
+            ('common_rail', 'Common Rail'),
+            
+            # Valve Configuration
+            ('two_valve', '2V (2 Valve)'),
+            ('four_valve', '4V (4 Valve)'),
+            ('five_valve', '5V (5 Valve)'),
+            
+            # Casting Information
+            ('casting_comments', 'Casting # Comments'),
             
             # Overview
             ('overview_comments', 'Overview Comments'),

@@ -74,6 +74,10 @@
         align-items: start;
     }
     
+    .field-row.full-width {
+        grid-column: 1 / -1;
+    }
+    
     .field-label {
         font-weight: 600;
         color: var(--gray-700);
@@ -88,6 +92,38 @@
     .field-value.empty {
         color: var(--gray-400);
         font-style: italic;
+    }
+    
+    .badge {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        border-radius: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+    }
+    
+    .badge-success {
+        background-color: var(--green-100);
+        color: var(--green-800);
+        border: 1px solid var(--green-200);
+    }
+    
+    .badge-secondary {
+        background-color: var(--gray-100);
+        color: var(--gray-600);
+        border: 1px solid var(--gray-200);
+    }
+    
+    .valve-summary {
+        font-weight: 600;
+        color: var(--blue-700);
+    }
+    
+    .casting-comments {
+        white-space: pre-line;
+        line-height: 1.5;
     }
     
     .specs-section {
@@ -305,6 +341,12 @@
                 </span>
             </div>
             <div class="field-row">
+                <span class="field-label">Serial Number:</span>
+                <span class="field-value {% if not engine.serial_number %}empty{% endif %}">
+                    {{ engine.serial_number|default:"Not specified" }}
+                </span>
+            </div>
+            <div class="field-row">
                 <span class="field-label">Cylinders:</span>
                 <span class="field-value {% if not engine.cylinder %}empty{% endif %}">
                     {{ engine.cylinder|default:"Not specified" }}
@@ -369,6 +411,79 @@
                 <span class="field-label">Piston Notes:</span>
                 <span class="field-value {% if not engine.piston_notes %}empty{% endif %}">
                     {{ engine.piston_notes|default:"No notes" }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Injection System -->
+    <div class="detail-section injection-section">
+        <h2 class="section-title">Injection System</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">Direct Injection (DI):</span>
+                <span class="field-value">
+                    {% if engine.di %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Indirect Injection (IDI):</span>
+                <span class="field-value">
+                    {% if engine.idi %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Common Rail:</span>
+                <span class="field-value">
+                    {% if engine.common_rail %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Valve Configuration -->
+    <div class="detail-section valves-section">
+        <h2 class="section-title">Valve Configuration</h2>
+        <div class="field-grid">
+            <div class="field-row">
+                <span class="field-label">2 Valve:</span>
+                <span class="field-value">
+                    {% if engine.two_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">4 Valve:</span>
+                <span class="field-value">
+                    {% if engine.four_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">5 Valve:</span>
+                <span class="field-value">
+                    {% if engine.five_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
+                </span>
+            </div>
+            <div class="field-row">
+                <span class="field-label">Valve Summary:</span>
+                <span class="field-value">
+                    <span class="valve-summary">{{ engine.valves_display }}</span>
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Casting Information -->
+    <div class="detail-section casting-section">
+        <h2 class="section-title">Casting Information</h2>
+        <div class="field-grid">
+            <div class="field-row full-width">
+                <span class="field-label">Casting # Comments:</span>
+                <span class="field-value {% if not engine.casting_comments %}empty{% endif %}">
+                    {% if engine.casting_comments %}
+                        <div class="casting-comments">{{ engine.casting_comments|linebreaks }}</div>
+                    {% else %}
+                        No casting comments
+                    {% endif %}
                 </span>
             </div>
         </div>

@@ -9,3 +9,13 @@ def get_item(d, key):
         return None
     return d.get(str(key))
 
+@register.filter
+def underscore_to_space(value):
+    """Replace underscores with spaces in a string.
+    Usage: {{ value|underscore_to_space }}
+    """
+    if not value:
+        return value
+    return str(value).replace('_', ' ')
+
+

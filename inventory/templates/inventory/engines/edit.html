@@ -99,6 +99,17 @@
         grid-column: 1 / -1;
     }
     
+    .form-help {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-top: 0.25rem;
+        font-style: italic;
+    }
+    
+    .form-check-input {
+        margin-right: 0.5rem;
+    }
+    
     .form-label {
         display: block;
         margin-bottom: 0.5rem;
@@ -293,6 +304,14 @@
                     </div>
                     
                     <div class="form-group">
+                        <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial Number</label>
+                        {{ form.serial_number }}
+                        {% for error in form.serial_number.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
                         <label class="form-label" for="{{ form.cylinder.id_for_label }}">Cylinders</label>
                         {{ form.cylinder }}
                         {% for error in form.cylinder.errors %}
@@ -380,6 +399,111 @@
                         <label class="form-label" for="{{ form.piston_notes.id_for_label }}">Piston Notes</label>
                         {{ form.piston_notes }}
                         {% for error in form.piston_notes.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Injection System -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <h2 class="edit-card-title">Injection System</h2>
+                <p class="edit-card-subtitle">Fuel injection configuration</p>
+            </div>
+            
+            <div class="edit-card-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.di }}
+                            Direct Injection (DI)
+                        </label>
+                        {% for error in form.di.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.idi }}
+                            Indirect Injection (IDI)
+                        </label>
+                        {% for error in form.idi.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.common_rail }}
+                            Common Rail
+                        </label>
+                        {% for error in form.common_rail.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Valve Configuration -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <h2 class="edit-card-title">Valve Configuration</h2>
+                <p class="edit-card-subtitle">Valve setup per cylinder</p>
+            </div>
+            
+            <div class="edit-card-body">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.two_valve }}
+                            2 Valve
+                        </label>
+                        {% for error in form.two_valve.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.four_valve }}
+                            4 Valve
+                        </label>
+                        {% for error in form.four_valve.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">
+                            {{ form.five_valve }}
+                            5 Valve
+                        </label>
+                        {% for error in form.five_valve.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Casting Information -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <h2 class="edit-card-title">Casting Information</h2>
+                <p class="edit-card-subtitle">Casting number comments and notes</p>
+            </div>
+            
+            <div class="edit-card-body">
+                <div class="form-grid">
+                    <div class="form-group full-width">
+                        <label class="form-label" for="{{ form.casting_comments.id_for_label }}">Casting # Comments</label>
+                        {{ form.casting_comments }}
+                        <div class="form-help">Notes specific to casting numbers; separate from general notes.</div>
+                        {% for error in form.casting_comments.errors %}
                             <div class="form-error">{{ error }}</div>
                         {% endfor %}
                     </div>

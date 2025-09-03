@@ -173,17 +173,31 @@ class Engine(AuditMixin):
     price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=100, blank=True)
     
+    # Serial Number
+    serial_number = models.CharField(max_length=120, blank=True, null=True, db_index=True, verbose_name="S/N")
+    
+    # Injection System
+    di = models.BooleanField(default=False, verbose_name="DI (Direct Injection)")
+    idi = models.BooleanField(default=False, verbose_name="IDI (Indirect Injection)")
+    common_rail = models.BooleanField(default=False, verbose_name="Common Rail")
+    
+    # Valve Configuration
+    two_valve = models.BooleanField(default=False, verbose_name="2V (2 Valve)")
+    four_valve = models.BooleanField(default=False, verbose_name="4V (4 Valve)")
+    five_valve = models.BooleanField(default=False, verbose_name="5V (5 Valve)")
+    
+    # Casting Information
+    casting_comments = models.TextField(blank=True, null=True, verbose_name="Casting # Comments")
+    
     # Engine relationships
     interchanges = models.ManyToManyField(
         'self',
         symmetrical=True,
-        related_name='interchanged_with',
         blank=True
     )
     compatibles = models.ManyToManyField(
         'self',
         symmetrical=True,
-        related_name='compatible_with',
         blank=True
     )
 
@@ -195,7 +209,19 @@ class Engine(AuditMixin):
         ]
 
     def __str__(self):
-        return f"{self.engine_make} {self.engine_model}"
+        base_name = f"{self.engine_make} {self.engine_model}"
+        if self.serial_number:
+            return f"{base_name} (SN: {self.serial_number})"
+        return base_name
+    
+    @property
+    def valves_display(self):
+        """Display valve configuration flags."""
+        flags = []
+        if self.two_valve: flags.append("2V")
+        if self.four_valve: flags.append("4V")
+        if self.five_valve: flags.append("5V")
+        return ", ".join(flags) or "-"
     
     @property
     def supersedes(self):

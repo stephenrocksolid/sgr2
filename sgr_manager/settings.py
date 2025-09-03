@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+@r1$)fv(rc5+q@dy3se7gjtqx66qyjyv_=f=^d)^o@$g&&w)8')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "false").lower() in ("1","true","yes")
+DEBUG = True  # Force DEBUG=True for development
 
 # ---- Hosts & security ----
 # Comma-separated in .env on the server; sensible defaults for local + prod
@@ -93,6 +93,7 @@ DATABASES = {
         env="DATABASE_URL",           # must be provided
         conn_max_age=600,             # good for prod
         ssl_require=False,            # flip to True if you later enable SSL in PG
+        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),  # fallback to SQLite
     )
 }
 

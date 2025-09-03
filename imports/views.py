@@ -227,6 +227,10 @@ def mapping_step(request, batch_id):
         section='parts'
     )
     
+    # Get auto-suggestions for engine fields
+    from .utils import suggest_engine_field_mappings
+    engine_suggestions = suggest_engine_field_mappings(batch.discovered_headers)
+    
     # Get all part attributes for mapping
     all_attrs = PartAttribute.objects.select_related('category').order_by('category__name', 'sort_order', 'name')
     
@@ -241,6 +245,7 @@ def mapping_step(request, batch_id):
         'part_form': part_form,
         'all_attrs': all_attrs,
         'saved_mappings': saved_mappings,
+        'engine_suggestions': engine_suggestions,
         'step': 2,
         'total_steps': 3,
     }

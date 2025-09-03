@@ -105,6 +105,23 @@
                         <h3>Engine Fields</h3>
                         <p>Map fields for engine data (optional)</p>
                         
+                        {% if engine_suggestions %}
+                        <div class="auto-suggestions">
+                            <h4>Auto-Detected Mappings</h4>
+                            <p>We've detected some fields that might match your headers:</p>
+                            <div class="suggestion-list">
+                                {% for field, header in engine_suggestions.items %}
+                                <div class="suggestion-item">
+                                    <span class="field-name">{{ field|title|underscore_to_space }}</span>
+                                    <span class="arrow">→</span>
+                                    <span class="header-name">{{ header }}</span>
+                                    <button type="button" class="btn btn-sm btn-primary" onclick="applySuggestion('{{ field }}', '{{ header }}')">Apply</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        
                         <div class="field-mappings">
                             {% for field in engine_form %}
                                 <div class="form-group">
@@ -279,6 +296,47 @@ document.addEventListener('DOMContentLoaded', function() {
         nameFilter.addEventListener('input', filterAttributes);
     }
 });
+
+// Auto-suggestion functionality
+function applySuggestion(fieldName, headerName) {
+    // Find the corresponding select field
+    const fieldId = `id_map_engines_${fieldName}`;
+    const selectField = document.getElementById(fieldId);
+    
+    if (selectField) {
+        // Set the value
+        selectField.value = headerName;
+        
+        // Add visual feedback
+        selectField.style.backgroundColor = '#d4edda';
+        selectField.style.borderColor = '#c3e6cb';
+        
+        // Remove highlight after 2 seconds
+        setTimeout(() => {
+            selectField.style.backgroundColor = '';
+            selectField.style.borderColor = '';
+        }, 2000);
+        
+        // Show success message
+        const successMsg = document.createElement('div');
+        successMsg.className = 'alert alert-success';
+        successMsg.textContent = `Applied: ${fieldName} → ${fieldName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())} → ${headerName}`;
+        successMsg.style.marginTop = '0.5rem';
+        successMsg.style.fontSize = '0.875rem';
+        successMsg.style.color = '#155724';
+        successMsg.style.backgroundColor = '#d4edda';
+        successMsg.style.border = '1px solid #c3e6cb';
+        successMsg.style.borderRadius = '0.25rem';
+        successMsg.style.padding = '0.5rem';
+        
+        selectField.parentNode.appendChild(successMsg);
+        
+        // Remove message after 3 seconds
+        setTimeout(() => {
+            successMsg.remove();
+        }, 3000);
+    }
+}
 </script>
 {% endblock %}
 
@@ -348,6 +406,64 @@ document.addEventListener('DOMContentLoaded', function() {
 
 .step-label {
     margin-top: var(--spacing-sm);
+}
+
+.auto-suggestions {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.auto-suggestions h4 {
+    color: #495057;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.auto-suggestions p {
+    color: #6c757d;
+    margin-bottom: 1rem;
+    font-size: 0.875rem;
+}
+
+.suggestion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 0.25rem;
+}
+
+.suggestion-item .field-name {
+    font-weight: 600;
+    color: #495057;
+    min-width: 120px;
+}
+
+.suggestion-item .arrow {
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.suggestion-item .header-name {
+    color: #495057;
+    flex: 1;
+    font-family: monospace;
+    background-color: #f8f9fa;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
     font-size: var(--font-size-sm);
     color: var(--gray-600);
     text-align: center;
