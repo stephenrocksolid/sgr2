@@ -275,14 +275,30 @@ def processing_step(request, batch_id):
             if getattr(settings, 'CELERY_ENABLED', False):
                 process_import_batch.delay(batch.id)
             else:
-                # Run synchronously if Celery is not available
-                process_import_batch(batch.id)
+                # For large files, run asynchronously even without Celery
+                if batch.total_rows > 5000:
+                    import threading
+                    thread = threading.Thread(target=process_import_batch, args=(batch.id,))
+                    thread.daemon = True
+                    thread.start()
+                else:
+                    # Run synchronously for small files
+                    process_import_batch(batch.id)
             
             messages.success(request, "Import processing started. You can monitor progress below.")
             return redirect('imports:processing_step', batch_id=batch.id)
     else:
+        # Smart chunk size based on file size
+        default_chunk_size = 2000
+        if batch.total_rows > 20000:
+            default_chunk_size = 500  # Very large files
+        elif batch.total_rows > 10000:
+            default_chunk_size = 1000  # Large files
+        elif batch.total_rows > 5000:
+            default_chunk_size = 1500  # Medium files
+        
         form = ProcessingOptionsForm(initial={
-            'chunk_size': batch.mapping.chunk_size if batch.mapping else 2000,
+            'chunk_size': batch.mapping.chunk_size if batch.mapping else default_chunk_size,
             'skip_duplicates': batch.mapping.skip_duplicates if batch.mapping else True,
             'update_existing': batch.mapping.update_existing if batch.mapping else False,
         })

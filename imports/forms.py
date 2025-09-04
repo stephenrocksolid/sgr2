@@ -221,9 +221,9 @@ class ProcessingOptionsForm(forms.Form):
     chunk_size = forms.IntegerField(
         min_value=100,
         max_value=10000,
-        initial=2000,
+        initial=1000,
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
-        help_text="Number of rows to process in each batch"
+        help_text="Number of rows to process in each batch (smaller chunks for large files)"
     )
     
     skip_duplicates = forms.BooleanField(
