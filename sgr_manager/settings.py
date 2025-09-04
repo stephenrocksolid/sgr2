@@ -116,18 +116,25 @@ TEMPLATES = [
 WSGI_APPLICATION = 'sgr_manager.wsgi.application'
 
 
+def first_env(*keys, default=None):
+    for k in keys:
+        v = os.environ.get(k)
+        if v not in (None, ""):
+            return v
+    return default
+
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": env("PGDATABASE", "sgr_dev"),
-        "USER": env("PGUSER", "sgr_user"),
-        "PASSWORD": env("PGPASSWORD", "devpass"),
-        "HOST": env("PGHOST", "127.0.0.1"),
-        "PORT": env("PGPORT", "5432"),
-        "CONN_MAX_AGE": 60,
+        "NAME": first_env("DB_NAME", "PGDATABASE", default="sgr_dev"),
+        "USER": first_env("DB_USER", "PGUSER", default="sgr_user"),
+        "PASSWORD": first_env("DB_PASSWORD", "PGPASSWORD", default="devpass"),
+        "HOST": first_env("DB_HOST", "PGHOST", default="127.0.0.1"),
+        "PORT": first_env("DB_PORT", "PGPORT", default="5432"),
+        "CONN_MAX_AGE": int(first_env("DB_CONN_MAX_AGE", default="60")),
+        "OPTIONS": {},
     }
 }
-
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 
 
