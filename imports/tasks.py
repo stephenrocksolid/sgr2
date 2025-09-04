@@ -429,9 +429,16 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
     dedupe_fields = ['make', 'model', 'year', 'machine_type', 'market_type']
     dedupe_filters = {}
     
+    # String fields that should use case-insensitive matching
+    string_fields = ['make', 'model', 'machine_type', 'market_type']
+    
     for field in dedupe_fields:
         if field in machine_data:
-            dedupe_filters[f"{field}__iexact"] = machine_data[field]
+            if field in string_fields:
+                dedupe_filters[f"{field}__iexact"] = machine_data[field]
+            else:
+                # For non-string fields (like year), use exact matching
+                dedupe_filters[field] = machine_data[field]
     
     # Check for existing machine
     existing_machine = Machine.objects.filter(**dedupe_filters).first()

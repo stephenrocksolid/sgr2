@@ -11,28 +11,56 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-import dj_database_url
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+# Environment variable helpers
+def env(key, default=None):
+    return os.getenv(key, default)
+
+
+def env_bool(key, default=False):
+    val = os.getenv(key, None)
+    if val is None:
+        return default
+    return str(val).lower() in {"1", "true", "yes", "on"}
+
+
+def env_csv(key, default_list):
+    raw = os.getenv(key, None)
+    if not raw:
+        return default_list
+    return [x.strip() for x in raw.split(",") if x.strip()]
+
+
+# Optional: load .env in development if present
+try:
+    if os.path.exists(os.path.join(BASE_DIR, ".env")):
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv(os.path.join(BASE_DIR, ".env"))
+    elif os.path.exists(".env"):
+        # Also try current directory for .env file
+        from dotenv import load_dotenv  # type: ignore
+        load_dotenv(".env")
+except Exception:
+    # Don't fail if python-dotenv isn't installed in some environments
+    pass
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+@r1$)fv(rc5+q@dy3se7gjtqx66qyjyv_=f=^d)^o@$g&&w)8')
+SECRET_KEY = os.getenv("SECRET_KEY", locals().get("SECRET_KEY", "dev-insecure-secret-key-change-me"))
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True  # Force DEBUG=True for development
+DEBUG = env_bool("DEBUG", True)
 
 # ---- Hosts & security ----
-# Comma-separated in .env on the server; sensible defaults for local + prod
-ALLOWED_HOSTS = os.getenv(
-    "ALLOWED_HOSTS",
-    "sgr.rocksoliddata.solutions,167.71.249.156,localhost,127.0.0.1"
-).split(",")
+ALLOWED_HOSTS = env_csv("ALLOWED_HOSTS", ["127.0.0.1", "localhost"])
 
 # If you're using HTTPS on the domain, set CSRF trusted origins
 # (Django requires full scheme here)
@@ -89,12 +117,15 @@ WSGI_APPLICATION = 'sgr_manager.wsgi.application'
 
 
 DATABASES = {
-    "default": dj_database_url.config(
-        env="DATABASE_URL",           # must be provided
-        conn_max_age=600,             # good for prod
-        ssl_require=False,            # flip to True if you later enable SSL in PG
-        default="sqlite:///" + str(BASE_DIR / "db.sqlite3"),  # fallback to SQLite
-    )
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": env("PGDATABASE", "sgr_dev"),
+        "USER": env("PGUSER", "sgr_user"),
+        "PASSWORD": env("PGPASSWORD", "devpass"),
+        "HOST": env("PGHOST", "127.0.0.1"),
+        "PORT": env("PGPORT", "5432"),
+        "CONN_MAX_AGE": 60,
+    }
 }
 
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
