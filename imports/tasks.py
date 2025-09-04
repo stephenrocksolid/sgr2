@@ -29,6 +29,56 @@ def filter_valid_fields(data, model_class):
     
     return filtered_data
 
+def validate_and_truncate_fields(data, model_class, batch=None, row_number=None):
+    """Validate and truncate field values to match model constraints."""
+    if not data:
+        return data
+    
+    validated_data = {}
+    
+    # Get model field information
+    model_fields = {field.name: field for field in model_class._meta.get_fields()}
+    
+    for field_name, value in data.items():
+        if field_name not in model_fields:
+            validated_data[field_name] = value
+            continue
+            
+        field = model_fields[field_name]
+        
+        # Skip if value is None or empty
+        if value is None or value == '':
+            validated_data[field_name] = value
+            continue
+            
+        # Convert to string for validation
+        str_value = str(value)
+        
+        # Check for CharField with max_length
+        if hasattr(field, 'max_length') and field.max_length:
+            if len(str_value) > field.max_length:
+                truncated_value = str_value[:field.max_length]
+                validated_data[field_name] = truncated_value
+                
+                # Log truncation warning
+                warning_msg = f"Truncated {field_name} from {len(str_value)} to {field.max_length} characters: '{str_value}' -> '{truncated_value}'"
+                print(f"Warning: {warning_msg}")
+                
+                # Log to database if batch info is available
+                if batch and row_number is not None:
+                    ImportLog.objects.create(
+                        batch=batch,
+                        level='warning',
+                        message=warning_msg,
+                        row_number=row_number
+                    )
+            else:
+                validated_data[field_name] = value
+        else:
+            validated_data[field_name] = value
+    
+    return validated_data
+
 # Import Celery task decorator with fallback
 try:
     from celery import shared_task
@@ -452,7 +502,8 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
         elif mapping.update_existing:
             # Update existing
             filtered_machine_data = filter_valid_fields(machine_data, Machine)
-            for field, value in filtered_machine_data.items():
+            validated_machine_data = validate_and_truncate_fields(filtered_machine_data, Machine, batch, import_row.row_number)
+            for field, value in validated_machine_data.items():
                 setattr(existing_machine, field, value)
             existing_machine.save()
             import_row.machine_updated = True
@@ -463,8 +514,11 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
     # Filter out fields that don't exist on the Machine model
     filtered_machine_data = filter_valid_fields(machine_data, Machine)
     
+    # Validate and truncate field lengths
+    validated_machine_data = validate_and_truncate_fields(filtered_machine_data, Machine, batch, import_row.row_number)
+    
     # Create new machine
-    machine = Machine.objects.create(**filtered_machine_data)
+    machine = Machine.objects.create(**validated_machine_data)
     import_row.machine_created = True
     import_row.machine_id = machine.id
     import_row.save()
@@ -487,14 +541,18 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
     # Handle SG Engine mapping
     sg_engine = None
     if engine_data.get('sg_make') and engine_data.get('sg_model'):
+        # Validate and truncate SGEngine data
+        sg_engine_defaults = {
+            'sg_make': engine_data['sg_make'],
+            'sg_model': engine_data['sg_model'],
+            'identifier': f"{engine_data['sg_make']}_{engine_data['sg_model']}".replace(' ', '_').upper()
+        }
+        validated_sg_defaults = validate_and_truncate_fields(sg_engine_defaults, SGEngine, batch, import_row.row_number)
+        
         sg_engine, created = SGEngine.objects.get_or_create(
             sg_make__iexact=engine_data['sg_make'],
             sg_model__iexact=engine_data['sg_model'],
-            defaults={
-                'sg_make': engine_data['sg_make'],
-                'sg_model': engine_data['sg_model'],
-                'identifier': f"{engine_data['sg_make']}_{engine_data['sg_model']}".replace(' ', '_').upper()
-            }
+            defaults=validated_sg_defaults
         )
         engine_data['sg_engine'] = sg_engine
     
@@ -520,7 +578,8 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
         elif mapping.update_existing:
             # Update existing
             filtered_engine_data = filter_valid_fields(engine_data, Engine)
-            for field, value in filtered_engine_data.items():
+            validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
+            for field, value in validated_engine_data.items():
                 setattr(existing_engine, field, value)
             existing_engine.save()
             import_row.engine_updated = True
@@ -531,8 +590,11 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
     # Filter out fields that don't exist on the Engine model
     filtered_engine_data = filter_valid_fields(engine_data, Engine)
     
+    # Validate and truncate field lengths
+    validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
+    
     # Create new engine
-    engine = Engine.objects.create(**filtered_engine_data)
+    engine = Engine.objects.create(**validated_engine_data)
     import_row.engine_created = True
     import_row.engine_id = engine.id
     import_row.save()
@@ -572,7 +634,8 @@ def process_part_row(batch, mapping, normalized_data, import_row):
         elif mapping.update_existing:
             # Update existing
             filtered_part_data = filter_valid_fields(part_data, Part)
-            for field, value in filtered_part_data.items():
+            validated_part_data = validate_and_truncate_fields(filtered_part_data, Part, batch, import_row.row_number)
+            for field, value in validated_part_data.items():
                 setattr(existing_part, field, value)
             existing_part.save()
             import_row.part_updated = True
@@ -585,8 +648,11 @@ def process_part_row(batch, mapping, normalized_data, import_row):
     # Filter out fields that don't exist on the Part model
     filtered_part_data = filter_valid_fields(part_data, Part)
     
+    # Validate and truncate field lengths
+    validated_part_data = validate_and_truncate_fields(filtered_part_data, Part, batch, import_row.row_number)
+    
     # Create new part
-    part = Part.objects.create(**filtered_part_data)
+    part = Part.objects.create(**validated_part_data)
     import_row.part_created = True
     import_row.part_id = part.id
     import_row.save()
@@ -781,9 +847,13 @@ def create_relationships(batch, mapping, normalized_data, import_row):
         # Create or get vendor
         vendor_name = vendor_data.get('vendor_name')
         if vendor_name:
+            # Validate vendor defaults
+            vendor_defaults = {'name': vendor_name}
+            validated_vendor_defaults = validate_and_truncate_fields(vendor_defaults, Vendor, batch, import_row.row_number)
+            
             vendor, created = Vendor.objects.get_or_create(
                 name__iexact=vendor_name,
-                defaults={'name': vendor_name}
+                defaults=validated_vendor_defaults
             )
             
             # Create PartVendor relationship
@@ -799,10 +869,13 @@ def create_relationships(batch, mapping, normalized_data, import_row):
             if vendor_data.get('vendor_notes'):
                 part_vendor_data['notes'] = vendor_data['vendor_notes']
             
+            # Validate PartVendor data
+            validated_part_vendor_data = validate_and_truncate_fields(part_vendor_data, PartVendor, batch, import_row.row_number)
+            
             part_vendor, created = PartVendor.objects.get_or_create(
                 part=part,
                 vendor=vendor,
-                defaults=part_vendor_data
+                defaults=validated_part_vendor_data
             )
             
             if created:
