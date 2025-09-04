@@ -192,27 +192,27 @@ LOGIN_REDIRECT_URL = '/inventory/machines/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Celery Configuration
-# Use memory broker for development if Redis is not available
-CELERY_ENABLED = False
-CELERY_BROKER_URL = 'memory://'
-CELERY_RESULT_BACKEND = 'rpc://'
-
-# Only try Redis if explicitly enabled
-if os.environ.get('USE_REDIS', 'False').lower() == 'true':
-    try:
-        import redis
-        redis_client = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-        redis_client.ping()
-        CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-        CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-        CELERY_ENABLED = True
-    except (ImportError, redis.ConnectionError):
-        pass
-
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
+CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://127.0.0.1:6379/0")
+CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", "redis://127.0.0.1:6379/1")
+CELERY_TASK_TIME_LIMIT = int(os.getenv("CELERY_TASK_TIME_LIMIT", "1800"))
+CELERY_TASK_SOFT_TIME_LIMIT = int(os.getenv("CELERY_TASK_SOFT_TIME_LIMIT", "1500"))
+CELERY_TASK_IGNORE_RESULT = False
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+
+# Legacy compatibility - check if Redis is available
+CELERY_ENABLED = True
+try:
+    import redis
+    redis_client = redis.Redis.from_url(CELERY_BROKER_URL)
+    redis_client.ping()
+except (ImportError, redis.ConnectionError, redis.TimeoutError):
+    # Fallback to memory broker for development
+    CELERY_ENABLED = False
+    CELERY_BROKER_URL = 'memory://'
+    CELERY_RESULT_BACKEND = 'rpc://'
 
 # Media files
 MEDIA_URL = '/media/'

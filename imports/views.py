@@ -273,16 +273,24 @@ def processing_step(request, batch_id):
             # Start processing task
             from django.conf import settings
             if getattr(settings, 'CELERY_ENABLED', False):
-                process_import_batch.delay(batch.id)
+                # Use Celery for async processing
+                result = process_import_batch.delay(batch.id)
+                batch.celery_id = result.id
+                batch.status = 'queued'
+                batch.save(update_fields=['celery_id', 'status'])
             else:
                 # For large files, run asynchronously even without Celery
                 if batch.total_rows > 5000:
                     import threading
+                    batch.status = 'processing'
+                    batch.save(update_fields=['status'])
                     thread = threading.Thread(target=process_import_batch, args=(batch.id,))
                     thread.daemon = True
                     thread.start()
                 else:
                     # Run synchronously for small files
+                    batch.status = 'processing'
+                    batch.save(update_fields=['status'])
                     process_import_batch(batch.id)
             
             messages.success(request, "Import processing started. You can monitor progress below.")
@@ -316,6 +324,38 @@ def batch_status(request, batch_id):
     """HTMX endpoint for polling import status."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
     
+    # Check Celery task status if available
+    celery_meta = {}
+    if batch.celery_id:
+        try:
+            from celery.result import AsyncResult
+            from django.conf import settings
+            
+            if getattr(settings, 'CELERY_ENABLED', False):
+                result = AsyncResult(batch.celery_id)
+                celery_meta = {
+                    'state': result.state,
+                    'meta': result.info if hasattr(result, 'info') else {}
+                }
+                
+                # Update batch status based on Celery task state
+                if result.state == 'PENDING' and batch.status != 'queued':
+                    batch.status = 'queued'
+                    batch.save(update_fields=['status'])
+                elif result.state == 'PROGRESS' and batch.status != 'processing':
+                    batch.status = 'processing'
+                    batch.save(update_fields=['status'])
+                elif result.state == 'SUCCESS' and batch.status != 'completed':
+                    batch.status = 'completed'
+                    batch.save(update_fields=['status'])
+                elif result.state == 'FAILURE' and batch.status != 'failed':
+                    batch.status = 'failed'
+                    batch.error_message = str(result.info) if result.info else 'Task failed'
+                    batch.save(update_fields=['status', 'error_message'])
+        except Exception as e:
+            # If Celery check fails, continue with database status
+            celery_meta = {'error': str(e)}
+    
     # Get recent logs
     recent_logs = batch.logs.all()[:10]
     
@@ -340,6 +380,7 @@ def batch_status(request, batch_id):
         'batch': batch,
         'recent_logs': recent_logs,
         'rows_stats': rows_stats,
+        'celery_meta': celery_meta,
     }
     
     html = render_to_string('imports/partials/batch_status.html', context)
@@ -351,7 +392,8 @@ def batch_status(request, batch_id):
         'total_rows': batch.total_rows,
         'html': html,
         'is_complete': batch.status in ['completed', 'failed'],
-        'rows_stats': rows_stats
+        'rows_stats': rows_stats,
+        'celery_meta': celery_meta
     })
 
 @login_required

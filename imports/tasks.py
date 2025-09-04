@@ -82,17 +82,21 @@ def validate_and_truncate_fields(data, model_class, batch=None, row_number=None)
 # Import Celery task decorator with fallback
 try:
     from celery import shared_task
+    CELERY_AVAILABLE = True
 except ImportError:
     # Fallback decorator when Celery is not available
-    def shared_task(func):
-        return func
+    def shared_task(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    CELERY_AVAILABLE = False
 
 @shared_task
 def test_task():
     return "Celery is working!"
 
-@shared_task
-def process_import_batch(batch_id):
+@shared_task(bind=True, time_limit=1800, soft_time_limit=1500)
+def process_import_batch(self, batch_id):
     """Process an import batch in chunks with transaction.atomic() per chunk."""
     start_time = time.time()
     
@@ -101,6 +105,13 @@ def process_import_batch(batch_id):
         batch.status = 'processing'
         batch.progress_percentage = 0
         batch.save()
+        
+        # Update Celery task state
+        if CELERY_AVAILABLE and hasattr(self, 'update_state'):
+            self.update_state(
+                state='PROGRESS',
+                meta={'rows': 0, 'created': 0, 'errors': 0, 'status': 'Starting import...'}
+            )
         
         # Log start
         ImportLog.objects.create(
@@ -117,9 +128,9 @@ def process_import_batch(batch_id):
         
         # Process file based on type
         if batch.is_csv():
-            success_count, error_count = process_csv_import(batch, mapping)
+            success_count, error_count = process_csv_import(batch, mapping, self)
         elif batch.is_xlsx():
-            success_count, error_count = process_xlsx_import(batch, mapping)
+            success_count, error_count = process_xlsx_import(batch, mapping, self)
         else:
             raise Exception(f"Unsupported file type: {batch.file_type}")
         
@@ -128,6 +139,18 @@ def process_import_batch(batch_id):
         batch.progress_percentage = 100
         batch.processed_rows = success_count + error_count
         batch.save()
+        
+        # Final Celery task state update
+        if CELERY_AVAILABLE and hasattr(self, 'update_state'):
+            self.update_state(
+                state='SUCCESS',
+                meta={
+                    'rows': success_count + error_count,
+                    'created': success_count,
+                    'errors': error_count,
+                    'status': 'Import completed successfully'
+                }
+            )
         
         # Log completion
         ImportLog.objects.create(
@@ -152,6 +175,13 @@ def process_import_batch(batch_id):
             batch.error_message = str(e)
             batch.save()
             
+            # Update Celery task state
+            if CELERY_AVAILABLE and hasattr(self, 'update_state'):
+                self.update_state(
+                    state='FAILURE',
+                    meta={'status': f'Import failed: {str(e)}'}
+                )
+            
             ImportLog.objects.create(
                 batch=batch,
                 level='error',
@@ -165,104 +195,196 @@ def process_import_batch(batch_id):
             'error': str(e)
         }
 
-def process_csv_import(batch, mapping):
-    """Process CSV import in chunks."""
+def process_csv_import(batch, mapping, task_instance=None):
+    """Process CSV import in chunks with streaming."""
     success_count = 0
     error_count = 0
     
-    # Read file content
+    # Use streaming approach to avoid loading entire file into memory
+    chunk_size = mapping.chunk_size or 1000  # Default to 1000 if not set
+    
+    # Read file in streaming fashion
     with batch.file.open('rb') as f:
-        file_content = f.read()
-    
-    # Process CSV - read all data, not just preview
-    from .utils import process_csv_file_all_data
-    csv_data = process_csv_file_all_data(
-        file_content, 
-        encoding=batch.encoding, 
-        delimiter=batch.delimiter
-    )
-    
-    headers = csv_data['headers']
-    data = csv_data['data']  # All data, not just preview
-    
-    # Process in chunks
-    chunk_size = mapping.chunk_size
-    total_rows = len(data)
-    
-    for i in range(0, total_rows, chunk_size):
-        chunk = data[i:i + chunk_size]
+        # Detect encoding and delimiter if needed
+        file_content_sample = f.read(8192)  # Read first 8KB for detection
+        f.seek(0)  # Reset to beginning
         
-        # Process chunk with transaction
-        chunk_success, chunk_errors = process_data_chunk(
-            batch, mapping, headers, chunk, i + 1
-        )
+        # Process CSV with streaming
+        import csv
+        import io
         
-        success_count += chunk_success
-        error_count += chunk_errors
+        # Decode the file content
+        text_content = file_content_sample.decode(batch.encoding or 'utf-8', errors='ignore')
         
-        # Update progress
-        progress = min(100, int((i + len(chunk)) / total_rows * 100))
-        batch.progress_percentage = progress
-        batch.processed_rows = i + len(chunk)
-        batch.save()
+        # Get headers from first line
+        first_line = text_content.split('\n')[0]
+        headers = [h.strip() for h in first_line.split(batch.delimiter or ',')]
+        
+        # Stream process the file
+        f.seek(0)
+        text_stream = io.TextIOWrapper(f, encoding=batch.encoding or 'utf-8')
+        csv_reader = csv.reader(text_stream, delimiter=batch.delimiter or ',')
+        
+        # Skip header row
+        next(csv_reader, None)
+        
+        # Process in chunks
+        chunk_data = []
+        row_number = 1
+        
+        for row in csv_reader:
+            chunk_data.append(row)
+            
+            # Process chunk when it reaches the chunk size
+            if len(chunk_data) >= chunk_size:
+                chunk_success, chunk_errors = process_data_chunk(
+                    batch, mapping, headers, chunk_data, row_number - len(chunk_data) + 1, task_instance
+                )
+                
+                success_count += chunk_success
+                error_count += chunk_errors
+                
+                # Update progress
+                progress = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
+                batch.progress_percentage = progress
+                batch.processed_rows = row_number
+                batch.save()
+                
+                # Update Celery task state
+                if task_instance and CELERY_AVAILABLE and hasattr(task_instance, 'update_state'):
+                    task_instance.update_state(
+                        state='PROGRESS',
+                        meta={
+                            'rows': row_number,
+                            'created': success_count,
+                            'errors': error_count,
+                            'status': f'Processing row {row_number}...'
+                        }
+                    )
+                
+                # Clear chunk
+                chunk_data = []
+            
+            row_number += 1
+        
+        # Process remaining data in chunk
+        if chunk_data:
+            chunk_success, chunk_errors = process_data_chunk(
+                batch, mapping, headers, chunk_data, row_number - len(chunk_data), task_instance
+            )
+            success_count += chunk_success
+            error_count += chunk_errors
     
     return success_count, error_count
 
-def process_xlsx_import(batch, mapping):
-    """Process XLSX import in chunks."""
+def process_xlsx_import(batch, mapping, task_instance=None):
+    """Process XLSX import in chunks with streaming."""
     success_count = 0
     error_count = 0
     
-    # Read file content
+    # Use streaming approach for XLSX
+    chunk_size = mapping.chunk_size or 1000  # Default to 1000 if not set
+    
+    # Stream process XLSX file
     with batch.file.open('rb') as f:
-        file_content = f.read()
-    
-    # Get worksheet data
-    from .utils import get_xlsx_worksheet_data
-    worksheet_data = get_xlsx_worksheet_data(file_content, batch.worksheet_name)
-    
-    headers = worksheet_data['headers']
-    data = worksheet_data['data']  # All data, not just preview
-    
-    # Process in chunks
-    chunk_size = mapping.chunk_size
-    total_rows = len(data)
-    
-    for i in range(0, total_rows, chunk_size):
-        chunk = data[i:i + chunk_size]
+        from openpyxl import load_workbook
         
-        # Process chunk with transaction
-        chunk_success, chunk_errors = process_data_chunk(
-            batch, mapping, headers, chunk, i + 1
-        )
+        # Load workbook with read_only=True for memory efficiency
+        workbook = load_workbook(f, read_only=True, data_only=True)
         
-        success_count += chunk_success
-        error_count += chunk_errors
+        # Get the specified worksheet
+        worksheet_name = batch.worksheet_name or workbook.sheetnames[0]
+        worksheet = workbook[worksheet_name]
         
-        # Update progress
-        progress = min(100, int((i + len(chunk)) / total_rows * 100))
-        batch.progress_percentage = progress
-        batch.processed_rows = i + len(chunk)
-        batch.save()
+        # Get headers from first row
+        headers = []
+        first_row = next(worksheet.iter_rows(min_row=1, max_row=1, values_only=True), None)
+        if first_row:
+            headers = [str(cell).strip() if cell is not None else '' for cell in first_row]
+        
+        # Process rows in chunks
+        chunk_data = []
+        row_number = 1
+        
+        # Iterate through rows starting from row 2 (skip header)
+        for row in worksheet.iter_rows(min_row=2, values_only=True):
+            # Convert row to list and handle None values
+            row_data = [str(cell).strip() if cell is not None else '' for cell in row]
+            
+            # Skip completely empty rows
+            if not any(cell for cell in row_data):
+                continue
+            
+            chunk_data.append(row_data)
+            
+            # Process chunk when it reaches the chunk size
+            if len(chunk_data) >= chunk_size:
+                chunk_success, chunk_errors = process_data_chunk(
+                    batch, mapping, headers, chunk_data, row_number - len(chunk_data) + 1, task_instance
+                )
+                
+                success_count += chunk_success
+                error_count += chunk_errors
+                
+                # Update progress
+                progress = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
+                batch.progress_percentage = progress
+                batch.processed_rows = row_number
+                batch.save()
+                
+                # Update Celery task state
+                if task_instance and CELERY_AVAILABLE and hasattr(task_instance, 'update_state'):
+                    task_instance.update_state(
+                        state='PROGRESS',
+                        meta={
+                            'rows': row_number,
+                            'created': success_count,
+                            'errors': error_count,
+                            'status': f'Processing row {row_number}...'
+                        }
+                    )
+                
+                # Clear chunk
+                chunk_data = []
+            
+            row_number += 1
+        
+        # Process remaining data in chunk
+        if chunk_data:
+            chunk_success, chunk_errors = process_data_chunk(
+                batch, mapping, headers, chunk_data, row_number - len(chunk_data), task_instance
+            )
+            success_count += chunk_success
+            error_count += chunk_errors
+        
+        workbook.close()
     
     return success_count, error_count
 
-def process_data_chunk(batch, mapping, headers, chunk_data, start_row):
-    """Process a chunk of data rows with transaction.atomic() per chunk."""
+def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_instance=None):
+    """Process a chunk of data rows with transaction.atomic() per chunk and bulk operations."""
     success_count = 0
     error_count = 0
     
+    # Pre-create ImportRow records in bulk to reduce DB queries
+    import_rows_to_create = []
     for row_index, row in enumerate(chunk_data):
         row_number = start_row + row_index
-        row_start_time = time.time()
-        
-        # Create ImportRow record outside of transaction
         row_data = dict(zip(headers, row))
-        import_row = ImportRow.objects.create(
+        import_rows_to_create.append(ImportRow(
             batch=batch,
             row_number=row_number,
             original_data=row_data
-        )
+        ))
+    
+    # Bulk create ImportRow records
+    created_import_rows = ImportRow.objects.bulk_create(import_rows_to_create)
+    
+    # Process each row with chunked transactions
+    for row_index, (row, import_row) in enumerate(zip(chunk_data, created_import_rows)):
+        row_number = start_row + row_index
+        row_start_time = time.time()
+        row_data = dict(zip(headers, row))
         
         try:
             # Process row within transaction

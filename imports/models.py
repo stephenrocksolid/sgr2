@@ -11,6 +11,7 @@ class ImportBatch(models.Model):
     STATUS_CHOICES = [
         ('uploaded', 'Uploaded'),
         ('mapped', 'Mapped'),
+        ('queued', 'Queued'),
         ('processing', 'Processing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
@@ -39,6 +40,7 @@ class ImportBatch(models.Model):
     progress_percentage = models.IntegerField(default=0)
     processed_rows = models.IntegerField(default=0)
     error_message = models.TextField(blank=True)
+    celery_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for tracking async processing")
     
     # Mapping
     mapping = models.ForeignKey('SavedImportMapping', on_delete=models.SET_NULL, null=True, blank=True)
