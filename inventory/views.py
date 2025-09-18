@@ -7,8 +7,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.urls import reverse
-from .models import Machine, Engine, Part, PartVendor, MachineEngine, EnginePart, SGEngine, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice, PartCategory, Vendor, BuildList, Kit, KitItem, EngineSupercession
-from .forms import SGEngineForm, MachineEngineForm, MachinePartForm, EngineMachineForm, EnginePartForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitItemForm, PartEngineLinkForm, PartMachineLinkForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, PartVendorForm
+from .models import Machine, Engine, Part, PartVendor, MachineEngine, EnginePart, SGEngine, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice, PartCategory, Vendor, VendorContact, BuildList, Kit, KitItem, EngineSupercession
+from .forms import SGEngineForm, MachineEngineForm, MachinePartForm, EngineMachineForm, EnginePartForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitItemForm, PartEngineLinkForm, PartMachineLinkForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, VendorContactForm, VendorContactFormSet, PartVendorForm, PartVendorFormSet
 from django.contrib.auth.decorators import login_required
 from io import StringIO
 from datetime import datetime
@@ -29,42 +29,40 @@ def index(request):
 
 @login_required
 def machines_list(request):
-    """Display a list of machines with search and filtering."""
-    # Get filter parameters
-    search_query = request.GET.get('search', '')
-    make_filter = request.GET.get('make', '')
-    model_filter = request.GET.get('model', '')
-    year_filter = request.GET.get('year', '')
-    machine_type_filter = request.GET.get('machine_type', '')
-    market_type_filter = request.GET.get('market_type', '')
+    """Display a list of machines with advanced search and filtering."""
+    from .search_utils import parse_query, apply_tokens, apply_generics
     
-    # Get sorting parameters
+    # Map tokens → lookups
+    MACHINES_KEY_MAP = {
+        'make': 'make__icontains',
+        'model': 'model__icontains',
+        'year': 'year__icontains',
+        'type': 'machine_type__icontains',
+        'market': 'market_type__icontains',
+    }
+    
+    MACHINES_GENERIC_FIELDS = [
+        'make__icontains',
+        'model__icontains', 
+        'year__icontains',
+        'machine_type__icontains',
+        'market_type__icontains',
+    ]
+    
+    # Get search query and sorting parameters
+    qtext = request.GET.get('q', '').strip()
     sort_field = request.GET.get('sort', 'make')
     sort_order = request.GET.get('order', 'asc')
     
+    # Base queryset
     machines = Machine.objects.all()
     
-    # Apply filters
-    if search_query:
-        machines = machines.filter(
-            Q(make__icontains=search_query) |
-            Q(model__icontains=search_query)
-        )
-    
-    if make_filter:
-        machines = machines.filter(make=make_filter)
-    
-    if model_filter:
-        machines = machines.filter(model__icontains=model_filter)
-    
-    if year_filter:
-        machines = machines.filter(year=year_filter)
-    
-    if machine_type_filter:
-        machines = machines.filter(machine_type=machine_type_filter)
-    
-    if market_type_filter:
-        machines = machines.filter(market_type=market_type_filter)
+    # Apply advanced search if query provided
+    if qtext:
+        tokens, generic = parse_query(qtext)
+        machines = apply_tokens(machines, tokens, MACHINES_KEY_MAP)
+        machines = apply_generics(machines, generic, MACHINES_GENERIC_FIELDS)
+        machines = machines.distinct()
     
     # Apply sorting
     if sort_field in ['make', 'model', 'year', 'machine_type', 'market_type', 'created_at']:
@@ -73,12 +71,6 @@ def machines_list(request):
         machines = machines.order_by(sort_field)
     else:
         machines = machines.order_by('make', 'model')
-    
-    # Get unique values for filter dropdowns
-    makes = Machine.objects.values_list('make', flat=True).distinct().order_by('make')
-    machine_types = Machine.objects.values_list('machine_type', flat=True).distinct().order_by('machine_type')
-    market_types = Machine.objects.values_list('market_type', flat=True).distinct().order_by('market_type')
-    years = Machine.objects.values_list('year', flat=True).distinct().order_by('-year')
     
     # Pagination
     paginator = Paginator(machines, 25)
@@ -108,18 +100,7 @@ def machines_list(request):
         'page_obj': page_obj,
         'machines': page_obj.object_list,
         'total_count': paginator.count,
-        'search_query': search_query,
-        'makes': makes,
-        'machine_types': machine_types,
-        'market_types': market_types,
-        'years': years,
-        'current_filters': {
-            'make': make_filter,
-            'model': model_filter,
-            'year': year_filter,
-            'machine_type': machine_type_filter,
-            'market_type': market_type_filter,
-        },
+        'q': qtext,
         'current_sort': sort_field,
         'current_order': sort_order,
     }
@@ -166,40 +147,70 @@ def machine_update(request, pk):
 
 @login_required
 def engines_list(request):
-    """Display a list of engines with search and filtering."""
-    # Get filter parameters
-    search_query = request.GET.get('search', '')
-    make_filter = request.GET.get('make', '')
-    sg_make_filter = request.GET.get('sg_make', '')
-    sg_model_filter = request.GET.get('sg_model', '')
-    status_filter = request.GET.get('status', '')
+    """Display a list of engines with advanced search and filtering."""
+    import re
+    from django.db.models import Q
     
-    # Get sorting parameters
+    # Token parsing regex for key:value pairs
+    TOKEN_RE = re.compile(r'''(?P<key>\w+):(?P<val>"[^"]+"|\S+)''')
+    
+    def parse_query(q):
+        """Parse search query into tokens and generic terms."""
+        q = (q or "").strip()
+        tokens = [(m.group('key').lower(), m.group('val').strip('"')) for m in TOKEN_RE.finditer(q)]
+        consumed = set(m.span() for m in TOKEN_RE.finditer(q))
+        generic = [w for i,w in enumerate(q.split()) if not any(s<=q.find(w)<e for s,e in consumed)]
+        return tokens, generic
+    
+    # Field mapping for supported search keys
+    KEY_MAP = {
+        'make': 'engine_make__icontains',
+        'model': 'engine_model__icontains',
+        'id': 'sg_engine_identifier__icontains',
+        'identifier': 'sg_engine_identifier__icontains',
+        'sg_make': 'sg_engine__sg_make__icontains',
+        'sg_model': 'sg_engine__sg_model__icontains',
+        'cpl': 'cpl_number__icontains',
+        'status': 'status__icontains',
+        'sn': 'serial_number__icontains',
+        'notes': 'sg_engine_notes__icontains',
+    }
+    
+    # Get search query and sorting parameters
+    qtext = request.GET.get('q', '').strip()
     sort_field = request.GET.get('sort', 'engine_make')
     sort_order = request.GET.get('order', 'asc')
     
+    # Base queryset with select_related for performance
     engines = Engine.objects.select_related('sg_engine').all()
     
-    # Apply filters
-    if search_query:
-        engines = engines.filter(
-            Q(engine_make__icontains=search_query) |
-            Q(engine_model__icontains=search_query) |
-            Q(cpl_number__icontains=search_query) |
-            Q(ar_number__icontains=search_query)
-        )
-    
-    if make_filter:
-        engines = engines.filter(engine_make=make_filter)
-    
-    if sg_make_filter:
-        engines = engines.filter(sg_engine__sg_make=sg_make_filter)
-    
-    if sg_model_filter:
-        engines = engines.filter(sg_engine__sg_model__icontains=sg_model_filter)
-    
-    if status_filter:
-        engines = engines.filter(status=status_filter)
+    # Apply advanced search if query provided
+    if qtext:
+        tokens, generic = parse_query(qtext)
+        expr = Q()
+        
+        # Process fielded tokens (key:value pairs)
+        for k, v in tokens:
+            field = KEY_MAP.get(k)
+            if field:
+                expr &= Q(**{field: v})
+        
+        # Process generic terms (OR across multiple fields)
+        if generic:
+            g = Q()
+            for term in generic:
+                g |= (Q(engine_make__icontains=term) |
+                      Q(engine_model__icontains=term) |
+                      Q(sg_engine_identifier__icontains=term) |
+                      Q(sg_engine__sg_make__icontains=term) |
+                      Q(sg_engine__sg_model__icontains=term) |
+                      Q(cpl_number__icontains=term) |
+                      Q(status__icontains=term) |
+                      Q(serial_number__icontains=term) |
+                      Q(sg_engine_notes__icontains=term))
+            expr &= g
+        
+        engines = engines.filter(expr).distinct()
     
     # Apply sorting
     if sort_field in ['engine_make', 'engine_model', 'cpl_number', 'ar_number', 'status', 'created_at']:
@@ -208,11 +219,6 @@ def engines_list(request):
         engines = engines.order_by(sort_field)
     else:
         engines = engines.order_by('engine_make', 'engine_model')
-    
-    # Get unique values for filter dropdowns
-    makes = Engine.objects.values_list('engine_make', flat=True).distinct().order_by('engine_make')
-    sg_makes = SGEngine.objects.values_list('sg_make', flat=True).distinct().order_by('sg_make')
-    statuses = Engine.objects.values_list('status', flat=True).distinct().order_by('status')
     
     # Pagination
     paginator = Paginator(engines, 25)
@@ -245,17 +251,7 @@ def engines_list(request):
         'page_obj': page_obj,
         'engines': page_obj.object_list,
         'total_count': paginator.count,
-        'search_query': search_query,
-        'makes': makes,
-        'sg_makes': sg_makes,
-        'statuses': statuses,
-        'current_filters': {
-            'search': search_query,
-            'make': make_filter,
-            'sg_make': sg_make_filter,
-            'sg_model': sg_model_filter,
-            'status': status_filter,
-        },
+        'q': qtext,
         'current_sort': sort_field,
         'current_order': sort_order,
     }
@@ -312,48 +308,53 @@ def engine_update(request, pk):
 
 @login_required
 def parts_list(request):
-    """Display a list of parts with search, filtering, and custom field filtering."""
-    search_query = request.GET.get('search', '')
-    category_filter = request.GET.get('category', '')
-    manufacturer_filter = request.GET.get('manufacturer', '')
+    """Display a list of parts with advanced search and filtering."""
+    from .search_utils import parse_query, apply_tokens, apply_generics
     
-    parts = Part.objects.select_related('category', 'primary_vendor').prefetch_related('attribute_values__attribute').all()
+    # Map tokens → lookups
+    PARTS_KEY_MAP = {
+        'number': 'part_number__icontains',
+        'name': 'name__icontains',
+        'mfr': 'manufacturer__icontains',
+        'manufacturer': 'manufacturer__icontains',
+        'category': 'category__name__icontains',
+        'unit': 'unit__icontains',
+        'type': 'type__icontains',
+        'vendor': 'primary_vendor__name__icontains',
+    }
     
-    # Apply basic filters
-    if search_query:
-        parts = parts.filter(
-            Q(part_number__icontains=search_query) |
-            Q(name__icontains=search_query)
-        )
+    PARTS_GENERIC_FIELDS = [
+        'part_number__icontains',
+        'name__icontains',
+        'manufacturer__icontains',
+        'category__name__icontains',
+        'unit__icontains',
+        'type__icontains',
+        'primary_vendor__name__icontains',
+    ]
     
-    if category_filter:
-        parts = parts.filter(category_id=category_filter)
+    # Get search query and sorting parameters
+    qtext = request.GET.get('q', '').strip()
+    sort_field = request.GET.get('sort', 'part_number')
+    sort_order = request.GET.get('order', 'asc')
     
-    if manufacturer_filter:
-        parts = parts.filter(manufacturer=manufacturer_filter)
+    # Base queryset with select_related for performance
+    parts = Part.objects.select_related('category', 'primary_vendor').prefetch_related('attribute_values__attribute', 'vendor_links__vendor').all()
     
-    # Apply custom field filters
-    custom_filters = {}
-    for key, value in request.GET.items():
-        if key.startswith('attr_') and value:
-            attr_id = key.replace('attr_', '')
-            custom_filters[attr_id] = value
+    # Apply advanced search if query provided
+    if qtext:
+        tokens, generic = parse_query(qtext)
+        parts = apply_tokens(parts, tokens, PARTS_KEY_MAP)
+        parts = apply_generics(parts, generic, PARTS_GENERIC_FIELDS)
+        parts = parts.distinct()
     
-    if custom_filters:
-        # Build complex query for custom field filtering
-        for attr_id, filter_value in custom_filters.items():
-            # This is a simplified version - you'd need more complex logic for different operators
-            parts = parts.filter(
-                attribute_values__attribute_id=attr_id,
-                attribute_values__value_text__icontains=filter_value
-            )
-    
-    # Get unique values for filter dropdowns
-    categories = PartCategory.objects.all().order_by('name')
-    manufacturers = Part.objects.values_list('manufacturer', flat=True).distinct().order_by('manufacturer')
-    
-    # Get available attributes for filtering
-    attributes = PartAttribute.objects.select_related('category').all().order_by('category__name', 'name')
+    # Apply sorting
+    if sort_field in ['part_number', 'name', 'manufacturer', 'type', 'created_at']:
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        parts = parts.order_by(sort_field)
+    else:
+        parts = parts.order_by('part_number')
     
     # Pagination
     paginator = Paginator(parts, 25)
@@ -384,21 +385,9 @@ def parts_list(request):
         'page_obj': page_obj,
         'parts': page_obj.object_list,
         'total_count': paginator.count,
-        'search_query': search_query,
-        'categories': categories,
-        'manufacturers': manufacturers,
-        'attributes': attributes,
-        'selected_category': category_filter,
-        'selected_manufacturer': manufacturer_filter,
-        'custom_filters': custom_filters,
-        'current_filters': {
-            'part_number': request.GET.get('part_number', ''),
-            'name': request.GET.get('name', ''),
-            'category': category_filter,
-            'manufacturer': manufacturer_filter,
-        },
-        'current_sort': request.GET.get('sort', 'part_number'),
-        'current_order': request.GET.get('order', 'asc'),
+        'q': qtext,
+        'current_sort': sort_field,
+        'current_order': sort_order,
     }
     
     return render(request, 'inventory/parts_list.html', context)
@@ -441,14 +430,50 @@ def part_detail(request, part_id):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
+def part_create(request):
+    """Create a new part with vendor relationships."""
+    if request.method == 'POST':
+        form = PartForm(request.POST)
+        vset = PartVendorFormSet(request.POST, prefix='vendors')
+        if form.is_valid() and vset.is_valid():
+            with transaction.atomic():
+                part = form.save()
+                vset.instance = part
+                vset.save()
+            messages.success(request, "Part created successfully.")
+            return redirect('inventory:part_detail', part_id=part.id)
+    else:
+        form = PartForm()
+        vset = PartVendorFormSet(prefix='vendors')
+    
+    vendors = Vendor.objects.all().order_by('name')
+    return render(request, 'inventory/parts/part_form.html', {
+        'form': form, 
+        'vset': vset, 
+        'mode': 'create',
+        'title': 'Create New Part',
+        'vendors': vendors
+    })
+
+
+@login_required
 @require_http_methods(["GET"])
 @login_required
 def part_edit(request, pk):
-    """Display the part edit form with basic info and specifications."""
+    """Display the part edit form with basic info, specifications, and vendor relationships."""
     part = get_object_or_404(Part, pk=pk)
     form = PartForm(instance=part)
     specs_form = PartSpecsForm(part=part)
-    return render(request, "inventory/parts/edit.html", {"part": part, "form": form, "specs_form": specs_form})
+    vset = PartVendorFormSet(instance=part, prefix='vendors')
+    vendors = Vendor.objects.all().order_by('name')
+    return render(request, "inventory/parts/edit.html", {
+        "part": part, 
+        "form": form, 
+        "specs_form": specs_form,
+        "vset": vset,
+        "vendors": vendors
+    })
 
 
 @login_required
@@ -456,15 +481,22 @@ def part_edit(request, pk):
 @transaction.atomic
 @login_required
 def part_update(request, pk):
-    """Handle part update form submission with basic info and specifications."""
+    """Handle part update form submission with basic info, specifications, and vendor relationships."""
     part = get_object_or_404(Part, pk=pk)
     old_category = part.category_id
     form = PartForm(request.POST, instance=part)
+    vset = PartVendorFormSet(request.POST, instance=part, prefix='vendors')
+    
     # Use the current (possibly changed) category to build specs_form
     # but guard confirmation.
-    if not form.is_valid():
+    if not form.is_valid() or not vset.is_valid():
         specs_form = PartSpecsForm(request.POST, part=part)
-        return render(request, "inventory/parts/edit.html", {"part": part, "form": form, "specs_form": specs_form}, status=400)
+        return render(request, "inventory/parts/edit.html", {
+            "part": part, 
+            "form": form, 
+            "specs_form": specs_form,
+            "vset": vset
+        }, status=400)
 
     new_category = form.cleaned_data["category"].id
     changing = (new_category != old_category)
@@ -473,15 +505,28 @@ def part_update(request, pk):
     if changing and request.POST.get("confirm_category_change") != "1":
         messages.error(request, "Please review the category change preview and confirm before saving.")
         specs_form = PartSpecsForm(request.POST, part=part)
-        return render(request, "inventory/parts/edit.html", {"part": part, "form": form, "specs_form": specs_form}, status=400)
+        return render(request, "inventory/parts/edit.html", {
+            "part": part, 
+            "form": form, 
+            "specs_form": specs_form,
+            "vset": vset
+        }, status=400)
 
     # Save basic fields (including category)
     form.save()
+    
+    # Save vendor relationships
+    vset.save()
 
     # Build specs form for the (new) category and validate
     specs_form = PartSpecsForm(request.POST, part=part)
     if not specs_form.is_valid():
-        return render(request, "inventory/parts/edit.html", {"part": part, "form": form, "specs_form": specs_form}, status=400)
+        return render(request, "inventory/parts/edit.html", {
+            "part": part, 
+            "form": form, 
+            "specs_form": specs_form,
+            "vset": vset
+        }, status=400)
 
     # If changing: carry over values with the same code; drop the rest
     if changing:
@@ -3988,7 +4033,7 @@ def engine_supercession_remove(request, engine_id, superseded_id):
 @login_required
 def vendor_index(request):
     """Display a list of vendors with filtering, sorting, and pagination."""
-    vendors = Vendor.objects.all()
+    vendors = Vendor.objects.prefetch_related('contacts').all()
     
     # Apply filters
     name_filter = request.GET.get('name', '').strip()
@@ -4004,8 +4049,11 @@ def vendor_index(request):
             Q(name__icontains=search_filter) |
             Q(contact_name__icontains=search_filter) |
             Q(email__icontains=search_filter) |
-            Q(phone__icontains=search_filter)
-        )
+            Q(phone__icontains=search_filter) |
+            Q(contacts__full_name__icontains=search_filter) |
+            Q(contacts__email__icontains=search_filter) |
+            Q(contacts__phone__icontains=search_filter)
+        ).distinct()
     
     # Apply sorting
     sort_by = request.GET.get('sort', 'name')
@@ -4051,11 +4099,22 @@ def vendor_index(request):
 def vendor_create(request):
     """Create a new vendor."""
     form = VendorForm(request.POST or None)
-    if request.method == "POST" and form.is_valid():
-        v = form.save()
-        messages.success(request, "Vendor created.")
-        return redirect("inventory:vendor_detail", vendor_id=v.id)
-    return render(request, "inventory/vendors/form.html", {"form": form, "is_create": True})
+    formset = VendorContactFormSet(request.POST or None)
+    
+    if request.method == "POST":
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                vendor = form.save()
+                formset.instance = vendor
+                formset.save()
+            messages.success(request, "Vendor created.")
+            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    
+    return render(request, "inventory/vendors/form.html", {
+        "form": form, 
+        "formset": formset,
+        "is_create": True
+    })
 
 
 @login_required
@@ -4065,11 +4124,22 @@ def vendor_edit(request, vendor_id):
     """Edit an existing vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
     form = VendorForm(request.POST or None, instance=vendor)
-    if request.method == "POST" and form.is_valid():
-        form.save()
-        messages.success(request, "Vendor updated.")
-        return redirect("inventory:vendor_detail", vendor_id=vendor.id)
-    return render(request, "inventory/vendors/form.html", {"form": form, "vendor": vendor, "is_create": False})
+    formset = VendorContactFormSet(request.POST or None, instance=vendor)
+    
+    if request.method == "POST":
+        if form.is_valid() and formset.is_valid():
+            with transaction.atomic():
+                form.save()
+                formset.save()
+            messages.success(request, "Vendor updated.")
+            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    
+    return render(request, "inventory/vendors/form.html", {
+        "form": form, 
+        "formset": formset,
+        "vendor": vendor, 
+        "is_create": False
+    })
 
 
 @login_required
@@ -4086,7 +4156,7 @@ def vendor_delete(request, vendor_id):
 @login_required
 def vendor_detail(request, vendor_id):
     """Display vendor details."""
-    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    vendor = get_object_or_404(Vendor.objects.prefetch_related('contacts'), pk=vendor_id)
     return render(request, "inventory/vendors/detail.html", {"vendor": vendor})
 
 

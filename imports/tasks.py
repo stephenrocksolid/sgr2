@@ -11,7 +11,7 @@ from django.contrib.auth.models import User
 from django.db.models import Q
 from openpyxl import load_workbook
 from .models import ImportBatch, ImportLog, SavedImportMapping, ImportRow
-from inventory.models import Machine, Engine, Part, SGEngine, Vendor, PartVendor, MachineEngine, EnginePart, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice
+from inventory.models import Machine, Engine, Part, SGEngine, Vendor, SGVendor, PartVendor, MachineEngine, EnginePart, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice
 
 def get_valid_model_fields(model_class):
     """Get a set of valid field names for a Django model."""
@@ -28,6 +28,40 @@ def filter_valid_fields(data, model_class):
         print(f"Warning: Filtered out invalid fields for {model_class.__name__}: {list(filtered_out.keys())}")
     
     return filtered_data
+
+def normalize(s):
+    """Normalize string for comparison."""
+    return (s or '').strip()
+
+def ci_get_or_create_vendor(name):
+    """Get or create vendor by case-insensitive name."""
+    n = normalize(name)
+    if not n:
+        return None
+    
+    v = Vendor.objects.filter(name__iexact=n).first()
+    return v or Vendor.objects.create(name=n)
+
+def _nz(s):
+    """Normalize string for comparison."""
+    return (s or "").strip().lower()
+
+def build_engine_key(row, mapping):
+    """
+    Returns (make, model, identifier) normalized from the row using Step-3 mapping.
+    Supports either 'sg_engine_identifier' or 'engine_identifier' or 'engine_id' as the mapped key.
+    """
+    mk_key = mapping.get('engine_make')    # mapped header name
+    md_key = mapping.get('engine_model')
+    id_key = mapping.get('sg_engine_identifier') or mapping.get('engine_identifier') or mapping.get('engine_id')
+    make = _nz(row.get(mk_key))
+    model = _nz(row.get(md_key))
+    ident = _nz(row.get(id_key))
+    return (make, model, ident)
+
+def is_valid_engine_key(tup):
+    """Require all three pieces to be non-empty."""
+    return all(bool(x) for x in tup)
 
 def validate_and_truncate_fields(data, model_class, batch=None, row_number=None):
     """Validate and truncate field values to match model constraints."""
@@ -200,6 +234,14 @@ def process_csv_import(batch, mapping, task_instance=None):
     success_count = 0
     error_count = 0
     
+    # Preload existing engine keys for fast duplicate detection
+    existing_engine_keys = set()
+    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'sg_engine_identifier'):
+        existing_engine_keys.add((_nz(make), _nz(model), _nz(ident)))
+    
+    # Track keys we create/update in this run to avoid dupes within the batch
+    batch_engine_keys = set()
+    
     # Use streaming approach to avoid loading entire file into memory
     chunk_size = mapping.chunk_size or 1000  # Default to 1000 if not set
     
@@ -238,7 +280,8 @@ def process_csv_import(batch, mapping, task_instance=None):
             # Process chunk when it reaches the chunk size
             if len(chunk_data) >= chunk_size:
                 chunk_success, chunk_errors = process_data_chunk(
-                    batch, mapping, headers, chunk_data, row_number - len(chunk_data) + 1, task_instance
+                    batch, mapping, headers, chunk_data, row_number - len(chunk_data) + 1, task_instance,
+                    existing_engine_keys, batch_engine_keys
                 )
                 
                 success_count += chunk_success
@@ -281,6 +324,14 @@ def process_xlsx_import(batch, mapping, task_instance=None):
     """Process XLSX import in chunks with streaming."""
     success_count = 0
     error_count = 0
+    
+    # Preload existing engine keys for fast duplicate detection
+    existing_engine_keys = set()
+    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'sg_engine_identifier'):
+        existing_engine_keys.add((_nz(make), _nz(model), _nz(ident)))
+    
+    # Track keys we create/update in this run to avoid dupes within the batch
+    batch_engine_keys = set()
     
     # Use streaming approach for XLSX
     chunk_size = mapping.chunk_size or 1000  # Default to 1000 if not set
@@ -361,7 +412,7 @@ def process_xlsx_import(batch, mapping, task_instance=None):
     
     return success_count, error_count
 
-def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_instance=None):
+def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_instance=None, existing_engine_keys=None, batch_engine_keys=None):
     """Process a chunk of data rows with transaction.atomic() per chunk and bulk operations."""
     success_count = 0
     error_count = 0
@@ -396,16 +447,19 @@ def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_inst
                 import_row.normalized_machine_data = normalized_data.get('machine', {})
                 import_row.normalized_engine_data = normalized_data.get('engine', {})
                 import_row.normalized_part_data = normalized_data.get('part', {})
+                import_row.normalized_vendor_data = normalized_data.get('vendor', {})
                 
                 # Process each section based on mapping
                 if mapping.machine_mapping and mapping.machine_mapping != {}:
                     process_machine_row(batch, mapping, normalized_data, import_row)
                 
                 if mapping.engine_mapping and mapping.engine_mapping != {}:
-                    process_engine_row(batch, mapping, normalized_data, import_row)
+                    process_engine_row(batch, mapping, normalized_data, import_row, existing_engine_keys, batch_engine_keys)
                 
                 if mapping.part_mapping and mapping.part_mapping != {}:
                     process_part_row(batch, mapping, normalized_data, import_row)
+                
+                # Vendor processing is now handled within engine/part processing
                 
                 # Create relationships
                 create_relationships(batch, mapping, normalized_data, import_row)
@@ -540,32 +594,26 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
                 normalized_value = normalize_value(value, 'uppercase')
             elif field_name in ['name', 'category', 'manufacturer', 'unit', 'type', 'manufacturer_type']:
                 normalized_value = normalize_value(value, 'string')
+            elif field_name == 'weight':
+                normalized_value = normalize_value(value, 'decimal')
             else:
                 normalized_value = normalize_value(value, 'string')
             
             if normalized_value is not None:
                 normalized['part'][field_name] = normalized_value
     
-    # Handle vendor data (optional columns)
-    vendor_fields = ['vendor_name', 'vendor_sku', 'vendor_cost', 'vendor_stock_qty', 'vendor_lead_time_days', 'vendor_notes', 'primary_vendor_name']
-    for field_name in vendor_fields:
-        if field_name in row_data:
-            value = row_data[field_name]
+    # Normalize vendor data
+    for field_name, header_name in mapping.vendor_mapping.items():
+        if header_name in row_data:
+            value = row_data[header_name]
             
-            if field_name == 'vendor_name':
+            # Determine field type for normalization
+            if field_name in ['vendor_name', 'vendor_website', 'vendor_contact_name', 'vendor_contact_email', 'vendor_contact_phone', 'vendor_part_number']:
                 normalized_value = normalize_value(value, 'string')
-            elif field_name == 'vendor_sku':
-                normalized_value = normalize_value(value, 'string')
-            elif field_name == 'vendor_cost':
+            elif field_name in ['vendor_price']:
                 normalized_value = normalize_value(value, 'decimal')
-            elif field_name == 'vendor_stock_qty':
+            elif field_name in ['vendor_stock_qty']:
                 normalized_value = normalize_value(value, 'integer')
-            elif field_name == 'vendor_lead_time_days':
-                normalized_value = normalize_value(value, 'integer')
-            elif field_name == 'vendor_notes':
-                normalized_value = normalize_value(value, 'string')
-            elif field_name == 'primary_vendor_name':
-                normalized_value = normalize_value(value, 'string')
             else:
                 normalized_value = normalize_value(value, 'string')
             
@@ -645,8 +693,8 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
     import_row.machine_id = machine.id
     import_row.save()
 
-def process_engine_row(batch, mapping, normalized_data, import_row):
-    """Process an engine row with deduplication rules."""
+def process_engine_row(batch, mapping, normalized_data, import_row, existing_engine_keys=None, batch_engine_keys=None):
+    """Process an engine row with deduplication rules based on (make, model, identifier) triple."""
     engine_data = normalized_data.get('engine', {})
     
     if not engine_data:
@@ -678,37 +726,48 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
         )
         engine_data['sg_engine'] = sg_engine
     
-    # Apply deduplication rules: (engine_make, engine_model[, cpl_number]) heuristic
-    dedupe_filters = {
-        'engine_make__iexact': engine_data['engine_make'],
-        'engine_model__iexact': engine_data['engine_model']
-    }
+    # Build engine key from row data using mapping
+    row_data = {}
+    for field_name, header_name in mapping.engine_mapping.items():
+        if header_name in normalized_data.get('engine', {}):
+            row_data[header_name] = normalized_data['engine'][header_name]
     
-    # Add CPL number to dedupe if available
-    if engine_data.get('cpl_number'):
-        dedupe_filters['cpl_number__iexact'] = engine_data['cpl_number']
+    eng_key = build_engine_key(row_data, mapping.engine_mapping)
     
-    # Check for existing engine
-    existing_engine = Engine.objects.filter(**dedupe_filters).first()
+    # Apply "Skip Duplicates" logic based on (make, model, identifier) triple
+    skip_dupes = mapping.skip_duplicates
+    update_existing = mapping.update_existing
     
-    if existing_engine:
-        if mapping.skip_duplicates:
-            # Skip duplicate
-            import_row.engine_id = existing_engine.id
-            import_row.save()
-            return
-        elif mapping.update_existing:
-            # Update existing
-            filtered_engine_data = filter_valid_fields(engine_data, Engine)
-            validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
-            for field, value in validated_engine_data.items():
-                setattr(existing_engine, field, value)
-            existing_engine.save()
-            import_row.engine_updated = True
-            import_row.engine_id = existing_engine.id
-            import_row.save()
-            return
+    if skip_dupes and is_valid_engine_key(eng_key):
+        if eng_key in (batch_engine_keys or set()) or eng_key in (existing_engine_keys or set()):
+            if update_existing:
+                # Fetch target and update instead of skipping
+                target = Engine.objects.filter(
+                    engine_make__iexact=eng_key[0],
+                    engine_model__iexact=eng_key[1],
+                    sg_engine_identifier__iexact=eng_key[2],
+                ).first()
+                if target:
+                    # Update existing engine
+                    filtered_engine_data = filter_valid_fields(engine_data, Engine)
+                    validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
+                    for field, value in validated_engine_data.items():
+                        setattr(target, field, value)
+                    target.save()
+                    import_row.engine_updated = True
+                    import_row.engine_duplicate_updated = True
+                    import_row.engine_id = target.id
+                    import_row.save()
+                # Do not create a new Engine
+                return
+            else:
+                # Skip duplicate
+                import_row.engine_id = None  # Mark as skipped
+                import_row.engine_duplicate_skipped = True
+                import_row.save()
+                return
     
+    # Not a duplicate (or skip_dupes off) → create new engine
     # Filter out fields that don't exist on the Engine model
     filtered_engine_data = filter_valid_fields(engine_data, Engine)
     
@@ -717,6 +776,22 @@ def process_engine_row(batch, mapping, normalized_data, import_row):
     
     # Create new engine
     engine = Engine.objects.create(**validated_engine_data)
+    
+    # Attach vendor if present in row data
+    vendor_data = normalized_data.get('vendor', {})
+    if vendor_data.get('vendor_name'):
+        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+        if vendor:
+            engine.vendor = vendor
+            engine.save(update_fields=['vendor'])
+    
+    # After save, remember key so later rows see it as duplicate
+    if is_valid_engine_key(eng_key):
+        if batch_engine_keys is not None:
+            batch_engine_keys.add(eng_key)
+        if existing_engine_keys is not None:
+            existing_engine_keys.add(eng_key)
+    
     import_row.engine_created = True
     import_row.engine_id = engine.id
     import_row.save()
@@ -760,6 +835,40 @@ def process_part_row(batch, mapping, normalized_data, import_row):
             for field, value in validated_part_data.items():
                 setattr(existing_part, field, value)
             existing_part.save()
+            
+            # Update vendor pricing if present
+            vendor_data = normalized_data.get('vendor', {})
+            if vendor_data.get('vendor_name'):
+                vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+                if vendor:
+                    existing_part.vendor = vendor
+                    existing_part.save(update_fields=['vendor'])
+                    
+                    # Create or update PartVendor relationship with pricing
+                    part_vendor, created = PartVendor.objects.get_or_create(
+                        part=existing_part, 
+                        vendor=vendor,
+                        defaults={
+                            'vendor_part_number': vendor_data.get('vendor_part_number', ''),
+                            'price': vendor_data.get('vendor_price'),
+                            'stock_qty': vendor_data.get('vendor_stock_qty'),
+                        }
+                    )
+                    
+                    # Update existing PartVendor if not created
+                    if not created:
+                        if vendor_data.get('vendor_part_number'):
+                            part_vendor.vendor_part_number = vendor_data['vendor_part_number']
+                        if vendor_data.get('vendor_price') is not None:
+                            part_vendor.price = vendor_data['vendor_price']
+                        if vendor_data.get('vendor_stock_qty') is not None:
+                            part_vendor.stock_qty = vendor_data['vendor_stock_qty']
+                        part_vendor.save()
+                    
+                    # Track part vendor relationship creation
+                    if created:
+                        import_row.part_vendor_created = True
+            
             import_row.part_updated = True
             import_row.part_id = existing_part.id
             import_row.save()
@@ -775,6 +884,40 @@ def process_part_row(batch, mapping, normalized_data, import_row):
     
     # Create new part
     part = Part.objects.create(**validated_part_data)
+    
+    # Attach vendor if present in row data
+    vendor_data = normalized_data.get('vendor', {})
+    if vendor_data.get('vendor_name'):
+        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+        if vendor:
+            part.vendor = vendor
+            part.save(update_fields=['vendor'])
+            
+            # Create or update PartVendor relationship with pricing
+            part_vendor, created = PartVendor.objects.get_or_create(
+                part=part, 
+                vendor=vendor,
+                defaults={
+                    'vendor_part_number': vendor_data.get('vendor_part_number', ''),
+                    'price': vendor_data.get('vendor_price'),
+                    'stock_qty': vendor_data.get('vendor_stock_qty'),
+                }
+            )
+            
+            # Update existing PartVendor if not created
+            if not created:
+                if vendor_data.get('vendor_part_number'):
+                    part_vendor.vendor_part_number = vendor_data['vendor_part_number']
+                if vendor_data.get('vendor_price') is not None:
+                    part_vendor.price = vendor_data['vendor_price']
+                if vendor_data.get('vendor_stock_qty') is not None:
+                    part_vendor.stock_qty = vendor_data['vendor_stock_qty']
+                part_vendor.save()
+            
+            # Track part vendor relationship creation
+            if created:
+                import_row.part_vendor_created = True
+    
     import_row.part_created = True
     import_row.part_id = part.id
     import_row.save()
@@ -919,6 +1062,7 @@ def apply_part_attributes_from_row(part, row_dict, mapping, batch, import_row):
             )
             continue
 
+
 def create_relationships(batch, mapping, normalized_data, import_row):
     """Create Machine↔Engine and Engine↔Part relationships."""
     
@@ -949,6 +1093,8 @@ def create_relationships(batch, mapping, normalized_data, import_row):
         
         if created:
             import_row.engine_part_created = True
+    
+    # Engine↔Vendor relationship is now handled directly in process_engine_row
     
     # Create Machine↔Part relationship (stub for future implementation)
     machine_part_data = normalized_data.get('machine_part_links', {})

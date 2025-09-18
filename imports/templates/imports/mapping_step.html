@@ -100,10 +100,10 @@
                         </div>
                     </div>
 
-                    <!-- Engines Section -->
+                    <!-- Engine Fields (Core) -->
                     <div class="mapping-section-card">
                         <h3>Engine Fields</h3>
-                        <p>Map fields for engine data (optional)</p>
+                        <p>Map fields for engine data (core)</p>
                         
                         {% if engine_suggestions %}
                         <div class="auto-suggestions">
@@ -124,6 +124,7 @@
                         
                         <div class="field-mappings">
                             {% for field in engine_form %}
+                                {% if field.name in engine_core_keys %}
                                 <div class="form-group">
                                     <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                     {{ field }}
@@ -135,6 +136,9 @@
                                         </div>
                                     {% endif %}
                                 </div>
+                                {% endif %}
+                            {% empty %}
+                                <p>No engine fields detected.</p>
                             {% endfor %}
                         </div>
                     </div>
@@ -160,6 +164,28 @@
                             {% endfor %}
                         </div>
                     </div>
+
+                    <!-- Vendors Section -->
+                    <div class="mapping-section-card">
+                        <h3>Vendor Fields</h3>
+                        <p>Map fields for vendor data (optional)</p>
+                        
+                        <div class="field-mappings">
+                            {% for field in vendor_form %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="field-error">
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
 
                 <!-- More Engine Fields Section -->
@@ -169,6 +195,7 @@
                     
                     <div class="field-mappings three-columns">
                         {% for field in additional_engine_form %}
+                            {% if field.name in engine_more_keys %}
                             <div class="form-group">
                                 <label for="{{ field.id_for_label }}">{{ field.label }}</label>
                                 {{ field }}
@@ -180,6 +207,9 @@
                                     </div>
                                 {% endif %}
                             </div>
+                            {% endif %}
+                        {% empty %}
+                            <p>None</p>
                         {% endfor %}
                     </div>
                 </div>

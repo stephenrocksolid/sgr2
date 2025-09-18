@@ -3,11 +3,20 @@ from django import template
 register = template.Library()
 
 @register.filter
-def get_item(d, key):
-    """Get an item from a dictionary by key."""
-    if not d:
+def get_item(obj, key):
+    """Get an item from a dictionary or Django form by key."""
+    if not obj:
         return None
-    return d.get(str(key))
+    
+    # Handle Django forms
+    if hasattr(obj, 'fields'):
+        return obj.fields.get(str(key))
+    
+    # Handle dictionaries
+    if hasattr(obj, 'get'):
+        return obj.get(str(key))
+    
+    return None
 
 @register.filter
 def underscore_to_space(value):

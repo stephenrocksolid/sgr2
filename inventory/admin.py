@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     SGEngine, Engine, EngineSupercession, Machine, MachineEngine, MachinePart,
-    Vendor, Part, EnginePart, PartVendor, PartCategory, PartAttribute, 
+    Vendor, VendorContact, Part, EnginePart, PartVendor, PartCategory, PartAttribute, 
     PartAttributeChoice, PartAttributeValue, BuildList, Kit, KitItem
 )
 
@@ -179,6 +179,12 @@ class MachinePartInline(admin.TabularInline):
     autocomplete_fields = ['part']
 
 
+class VendorContactInline(admin.TabularInline):
+    model = VendorContact
+    extra = 1
+    fields = ['full_name', 'email', 'phone', 'title', 'notes']
+
+
 @admin.register(Vendor)
 class VendorAdmin(admin.ModelAdmin):
     list_display = ['name', 'contact_name', 'email', 'phone', 'website', 'created_at']
@@ -186,6 +192,16 @@ class VendorAdmin(admin.ModelAdmin):
     search_fields = ['name', 'contact_name', 'email', 'phone']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     ordering = ['name']
+    inlines = [VendorContactInline]
+
+
+@admin.register(VendorContact)
+class VendorContactAdmin(admin.ModelAdmin):
+    list_display = ['full_name', 'vendor', 'email', 'phone', 'title', 'created']
+    list_filter = ['created', 'vendor']
+    search_fields = ['full_name', 'email', 'phone', 'vendor__name']
+    readonly_fields = ['created', 'updated']
+    autocomplete_fields = ['vendor']
 
 
 class EnginePartInline(admin.TabularInline):
@@ -196,8 +212,8 @@ class EnginePartInline(admin.TabularInline):
 
 class PartVendorInline(admin.TabularInline):
     model = PartVendor
-    extra = 1
-    fields = ['vendor', 'vendor_sku', 'cost', 'stock_qty', 'lead_time_days', 'notes']
+    extra = 0
+    fields = ['vendor', 'vendor_part_number', 'vendor_sku', 'price', 'cost', 'stock_qty', 'lead_time_days', 'notes']
     autocomplete_fields = ['vendor']
     
     def get_actions(self, request):
@@ -221,7 +237,7 @@ class PartVendorInline(admin.TabularInline):
 
 @admin.register(Part)
 class PartAdmin(admin.ModelAdmin):
-    list_display = ['part_number', 'name', 'category', 'manufacturer', 'primary_vendor', 'created_at']
+    list_display = ['part_number', 'name', 'category', 'manufacturer', 'weight', 'primary_vendor', 'created_at']
     list_filter = ['category', 'manufacturer', 'type', 'created_at']
     search_fields = ['part_number', 'name', 'manufacturer', 'category']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
@@ -244,13 +260,13 @@ class EnginePartAdmin(admin.ModelAdmin):
 
 @admin.register(PartVendor)
 class PartVendorAdmin(admin.ModelAdmin):
-    list_display = ['part', 'vendor', 'vendor_sku', 'cost', 'stock_qty', 'lead_time_days', 'notes', 'created_at']
-    list_filter = ['created_at']
+    list_display = ['part', 'vendor', 'vendor_part_number', 'vendor_sku', 'price', 'cost', 'stock_qty', 'lead_time_days', 'updated']
+    list_filter = ['created_at', 'updated']
     search_fields = [
         'part__part_number', 'part__name',
-        'vendor__name', 'vendor_sku'
+        'vendor__name', 'vendor_part_number', 'vendor_sku'
     ]
-    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by', 'updated']
     autocomplete_fields = ['part', 'vendor']
     
     actions = ['set_as_primary_vendor']

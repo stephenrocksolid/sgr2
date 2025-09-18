@@ -91,6 +91,7 @@ class SavedImportMapping(models.Model):
     machine_mapping = models.JSONField(default=dict)  # field_name -> header_name
     engine_mapping = models.JSONField(default=dict)
     part_mapping = models.JSONField(default=dict)
+    vendor_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
     part_attribute_mappings = models.JSONField(default=dict, blank=True)  # attr_id -> header_name
     
     # Processing options
@@ -110,11 +111,12 @@ class SavedImportMapping(models.Model):
         return self.name
     
     def get_mapping_for_section(self, section):
-        """Get mapping for a specific section (machines, engines, parts)."""
+        """Get mapping for a specific section (machines, engines, parts, vendors)."""
         mapping_fields = {
             'machines': self.machine_mapping,
             'engines': self.engine_mapping,
             'parts': self.part_mapping,
+            'vendors': self.vendor_mapping,
         }
         return mapping_fields.get(section, {})
 
@@ -131,6 +133,7 @@ class ImportRow(models.Model):
     normalized_machine_data = models.JSONField(default=dict, blank=True)
     normalized_engine_data = models.JSONField(default=dict, blank=True)
     normalized_part_data = models.JSONField(default=dict, blank=True)
+    normalized_vendor_data = models.JSONField(default=dict, blank=True)
     
     # Processing results
     machine_created = models.BooleanField(default=False)
@@ -145,10 +148,19 @@ class ImportRow(models.Model):
     part_updated = models.BooleanField(default=False)
     part_id = models.IntegerField(null=True, blank=True)
     
+    vendor_created = models.BooleanField(default=False)
+    vendor_updated = models.BooleanField(default=False)
+    vendor_id = models.IntegerField(null=True, blank=True)
+    
     # Relationships created
     machine_engine_created = models.BooleanField(default=False)
     engine_part_created = models.BooleanField(default=False)
     part_vendor_created = models.BooleanField(default=False)
+    engine_vendor_linked = models.BooleanField(default=False)
+    
+    # Duplicate tracking
+    engine_duplicate_skipped = models.BooleanField(default=False)
+    engine_duplicate_updated = models.BooleanField(default=False)
     
     # Error tracking
     has_errors = models.BooleanField(default=False)

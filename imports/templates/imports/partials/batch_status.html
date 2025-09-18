@@ -71,10 +71,30 @@
                         </div>
                     </div>
                     <div class="col-md-2">
+                        <div class="border-end">
+                            <h5 class="text-success">{{ rows_stats.vendor_created }}</h5>
+                            <small class="text-muted">Vendors Created</small>
+                        </div>
+                    </div>
+                    <div class="col-md-2">
                         <h5 class="text-info">{{ rows_stats.relationships_created }}</h5>
                         <small class="text-muted">Relationships</small>
                     </div>
                 </div>
+                
+                <!-- Duplicate Statistics Row -->
+                {% if rows_stats.engine_duplicates_skipped > 0 or rows_stats.engine_duplicates_updated > 0 %}
+                <div class="row text-center mt-3 pt-3 border-top">
+                    <div class="col-md-6">
+                        <h5 class="text-warning">{{ rows_stats.engine_duplicates_skipped }}</h5>
+                        <small class="text-muted">Engine Duplicates Skipped</small>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="text-info">{{ rows_stats.engine_duplicates_updated }}</h5>
+                        <small class="text-muted">Engine Duplicates Updated</small>
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

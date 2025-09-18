@@ -12,7 +12,7 @@ from django.db.models import Count, Q
 from .models import ImportBatch, SavedImportMapping, ImportLog, ImportRow
 from .forms import (
     ImportFileUploadForm, CSVOptionsForm, XLSXOptionsForm, 
-    ImportMappingForm, AdditionalEngineMappingForm, SavedMappingForm, ProcessingOptionsForm
+    ImportMappingForm, AdditionalEngineMappingForm, VendorMappingForm, SavedMappingForm, ProcessingOptionsForm
 )
 from .utils import (
     process_csv_file, process_xlsx_file, get_xlsx_worksheet_data,
@@ -170,6 +170,7 @@ def mapping_step(request, batch_id):
         machine_mapping = create_mapping_dict(request.POST, 'machines')
         engine_mapping = create_mapping_dict(request.POST, 'engines')
         part_mapping = create_mapping_dict(request.POST, 'parts')
+        vendor_mapping = create_mapping_dict(request.POST, 'vendors')
         
         # Handle part attribute mappings
         part_attribute_mappings = {}
@@ -197,6 +198,7 @@ def mapping_step(request, batch_id):
             mapping.machine_mapping = machine_mapping
             mapping.engine_mapping = engine_mapping
             mapping.part_mapping = part_mapping
+            mapping.vendor_mapping = vendor_mapping
             mapping.part_attribute_mappings = part_attribute_mappings
             mapping.save()
             
@@ -226,6 +228,9 @@ def mapping_step(request, batch_id):
         discovered_headers=batch.discovered_headers,
         section='parts'
     )
+    vendor_form = VendorMappingForm(
+        discovered_headers=batch.discovered_headers
+    )
     
     # Get auto-suggestions for engine fields
     from .utils import suggest_engine_field_mappings
@@ -243,9 +248,13 @@ def mapping_step(request, batch_id):
         'engine_form': engine_form,
         'additional_engine_form': additional_engine_form,
         'part_form': part_form,
+        'vendor_form': vendor_form,
         'all_attrs': all_attrs,
         'saved_mappings': saved_mappings,
         'engine_suggestions': engine_suggestions,
+        # Engine field grouping for template
+        'engine_core_keys': getattr(engine_form, 'engine_core_keys', []),
+        'engine_more_keys': getattr(additional_engine_form, 'engine_more_keys', []),
         'step': 2,
         'total_steps': 3,
     }
@@ -366,13 +375,19 @@ def batch_status(request, batch_id):
         machine_created=Count('id', filter=Q(machine_created=True)),
         engine_created=Count('id', filter=Q(engine_created=True)),
         part_created=Count('id', filter=Q(part_created=True)),
+        vendor_created=Count('id', filter=Q(vendor_created=True)),
         machine_updated=Count('id', filter=Q(machine_updated=True)),
         engine_updated=Count('id', filter=Q(engine_updated=True)),
         part_updated=Count('id', filter=Q(part_updated=True)),
+        vendor_updated=Count('id', filter=Q(vendor_updated=True)),
+        engine_duplicates_skipped=Count('id', filter=Q(engine_duplicate_skipped=True)),
+        engine_duplicates_updated=Count('id', filter=Q(engine_duplicate_updated=True)),
+        part_vendor_created=Count('id', filter=Q(part_vendor_created=True)),
         relationships_created=Count('id', filter=Q(
             Q(machine_engine_created=True) | 
             Q(engine_part_created=True) | 
-            Q(part_vendor_created=True)
+            Q(part_vendor_created=True) |
+            Q(engine_vendor_linked=True)
         ))
     )
     
@@ -413,13 +428,18 @@ def batch_detail(request, batch_id):
         machine_created=Count('id', filter=Q(machine_created=True)),
         engine_created=Count('id', filter=Q(engine_created=True)),
         part_created=Count('id', filter=Q(part_created=True)),
+        vendor_created=Count('id', filter=Q(vendor_created=True)),
         machine_updated=Count('id', filter=Q(machine_updated=True)),
         engine_updated=Count('id', filter=Q(engine_updated=True)),
         part_updated=Count('id', filter=Q(part_updated=True)),
+        vendor_updated=Count('id', filter=Q(vendor_updated=True)),
+        engine_duplicates_skipped=Count('id', filter=Q(engine_duplicate_skipped=True)),
+        engine_duplicates_updated=Count('id', filter=Q(engine_duplicate_updated=True)),
         relationships_created=Count('id', filter=Q(
             Q(machine_engine_created=True) | 
             Q(engine_part_created=True) | 
-            Q(part_vendor_created=True)
+            Q(part_vendor_created=True) |
+            Q(engine_vendor_linked=True)
         ))
     )
     
@@ -516,12 +536,13 @@ def saved_mappings_list(request):
 @login_required
 def unmatched_index(request):
     """Main unmatched items dashboard."""
-    from inventory.models import Engine, Machine, Part
+    from inventory.models import Engine, Machine, Part, Vendor
     
     # Get counts of unmatched items
     unmatched_engines = Engine.objects.filter(sg_engine__isnull=True).count()
     unmatched_machines = Machine.objects.filter(engines__isnull=True).count()
     unmatched_parts = Part.objects.filter(engines__isnull=True).count()
+    unmatched_vendors = Vendor.objects.filter(sg_vendor__isnull=True).count()
     
     # Get recent import rows with errors
     error_rows = ImportRow.objects.filter(has_errors=True).order_by('-created_at')[:10]
@@ -530,6 +551,7 @@ def unmatched_index(request):
         'unmatched_engines': unmatched_engines,
         'unmatched_machines': unmatched_machines,
         'unmatched_parts': unmatched_parts,
+        'unmatched_vendors': unmatched_vendors,
         'error_rows': error_rows,
     }
     return render(request, 'imports/unmatched_index.html', context)
@@ -587,6 +609,58 @@ def unmatched_parts(request):
         'total_unmatched': parts.count(),
     }
     return render(request, 'imports/unmatched_parts.html', context)
+
+@login_required
+def unmatched_vendors(request):
+    """Show vendors that need SG Vendor matching."""
+    from inventory.models import Vendor, SGVendor
+    from django.db.models import Count
+    
+    # Get vendors without SG Vendor links with counts
+    vendors = (Vendor.objects
+               .filter(sg_vendor__isnull=True)
+               .annotate(num_engines=Count('engines', distinct=True),
+                        num_parts=Count('parts', distinct=True))
+               .order_by('name'))
+    
+    # Get all SG Vendors for the dropdown
+    sg_vendors = SGVendor.objects.all().order_by('name')
+    
+    # Pagination
+    paginator = Paginator(vendors, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'total_unmatched': vendors.count(),
+        'sg_vendors': sg_vendors,
+    }
+    return render(request, 'imports/unmatched_vendors.html', context)
+
+@login_required
+def match_vendor(request):
+    """Match a vendor to an SG Vendor."""
+    if request.method == 'POST':
+        vendor_id = request.POST.get('vendor_id')
+        sg_vendor_id = request.POST.get('sg_vendor_id')
+        
+        if vendor_id and sg_vendor_id:
+            try:
+                from inventory.models import Vendor, SGVendor
+                vendor = Vendor.objects.get(id=vendor_id)
+                sg_vendor = SGVendor.objects.get(id=sg_vendor_id)
+                
+                vendor.sg_vendor = sg_vendor
+                vendor.save()
+                
+                messages.success(request, f'Successfully matched "{vendor.name}" to "{sg_vendor.name}"')
+            except (Vendor.DoesNotExist, SGVendor.DoesNotExist):
+                messages.error(request, 'Invalid vendor or SG vendor selected')
+        else:
+            messages.error(request, 'Please select both a vendor and an SG vendor')
+    
+    return redirect('imports:unmatched_vendors')
 
 @login_required
 def models_for_make(request):

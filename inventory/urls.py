@@ -72,6 +72,7 @@ urlpatterns = [
     
     # Part views
     path('parts/', views.parts_list, name='parts_list'),
+    path('parts/new/', views.part_create, name='part_create'),
     path('parts/<int:part_id>/', views.part_detail, name='part_detail'),
     
     # Part edit routes

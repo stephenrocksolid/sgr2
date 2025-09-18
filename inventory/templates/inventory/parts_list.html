@@ -213,6 +213,127 @@
         border-color: var(--red-600);
     }
     
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: var(--gray-900);
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--gray-500);
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-close:hover {
+        color: var(--gray-700);
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--gray-200);
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    
+    /* Search Condition Styles */
+    .search-condition {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--border-radius);
+    }
+    
+    .search-condition select,
+    .search-condition input {
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .field-select {
+        min-width: 120px;
+    }
+    
+    .operator-select {
+        min-width: 100px;
+    }
+    
+    .value-input {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .remove-condition {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Flex utilities */
+    .flex {
+        display: flex;
+    }
+    
+    .gap-2 {
+        gap: 0.5rem;
+    }
+    
+    .items-center {
+        align-items: center;
+    }
+    
+    .w-full {
+        width: 100%;
+    }
+    
     @media (max-width: 768px) {
         .filter-grid {
             grid-template-columns: 1fr;
@@ -226,6 +347,26 @@
         .export-section {
             justify-content: center;
         }
+        
+        .search-condition {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .search-condition select,
+        .search-condition input {
+            width: 100%;
+        }
+    }
+    
+    .vendor-info {
+        font-size: 0.875rem;
+        line-height: 1.4;
+    }
+    
+    .vendor-info small {
+        color: var(--gray-600);
+        font-size: 0.75rem;
     }
 </style>
 {% endblock %}
@@ -235,64 +376,17 @@
     <h1>Parts</h1>
     <p>Manage your parts inventory and vendor relationships</p>
     <div class="page-actions">
+        <a href="{% url 'inventory:part_create' %}" class="btn btn-primary">Create Part</a>
         <a href="{% url 'inventory:part_categories_list' %}" class="btn btn-outline-primary">Manage Categories</a>
     </div>
 </div>
 
-<!-- Filters Section -->
+<!-- Search Section -->
 <div class="filters-section">
-    <form method="get" id="filter-form">
-        <div class="filter-grid">
-            <div class="filter-group">
-                <label for="part_number">Part Number</label>
-                <input type="text" name="part_number" id="part_number" value="{{ current_filters.part_number }}" 
-                       placeholder="Search part number...">
-            </div>
-            
-            <div class="filter-group">
-                <label for="name">Part Name</label>
-                <input type="text" name="name" id="name" value="{{ current_filters.name }}" 
-                       placeholder="Search part name...">
-            </div>
-            
-            <div class="filter-group">
-                <label for="manufacturer">Manufacturer</label>
-                <select name="manufacturer" id="manufacturer">
-                    <option value="">All Manufacturers</option>
-                    {% for manufacturer in manufacturers %}
-                        <option value="{{ manufacturer }}" {% if current_filters.manufacturer == manufacturer %}selected{% endif %}>
-                            {{ manufacturer }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <label for="category">Category</label>
-                <select name="category" id="category">
-                    <option value="">All Categories</option>
-                    {% for category in categories %}
-                        <option value="{{ category.id }}" {% if current_filters.category == category.id|stringformat:"s" %}selected{% endif %}>
-                            {{ category.name }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        
-        <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <a href="{% url 'inventory:parts_list' %}" class="btn btn-secondary">Clear Filters</a>
-        </div>
-        
-        <!-- Custom Field Filters -->
-        <div class="custom-filters-section">
-            <h4>Custom Field Filters</h4>
-            <div id="custom-filters-container">
-                <!-- Custom filters will be added here dynamically -->
-            </div>
-            <button type="button" id="add-filter-btn" class="btn btn-outline-primary">Add Filter</button>
-        </div>
+    <form method="get" class="flex gap-2 items-center" hx-get="{% url 'inventory:parts_list' %}" hx-target="#parts-table" hx-trigger="keyup changed delay:500ms from:#q">
+        <input id="q" name="q" value="{{ q }}" class="form-control w-full" placeholder='Search parts…  number:AB1071 name:"valve kit" mfr:cummins category:filters vendor:"SG Supply"'>
+        <button class="btn btn-dark">Search</button>
+        <button type="button" class="btn btn-light" data-open="adv-search">Advanced</button>
         
         <!-- Hidden fields to preserve sorting -->
         <input type="hidden" name="sort" value="{{ current_sort }}">
@@ -309,9 +403,47 @@
 
 </div>
 
+<!-- Advanced Search Modal -->
+<div id="adv-search" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Advanced Search</h3>
+            <button type="button" class="modal-close" data-close="adv-search">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="search-conditions">
+                <div class="search-condition">
+                    <select class="field-select">
+                        <option value="number">Part Number</option>
+                        <option value="name">Name</option>
+                        <option value="mfr">Manufacturer</option>
+                        <option value="category">Category</option>
+                        <option value="unit">Unit</option>
+                        <option value="type">Type</option>
+                        <option value="vendor">Vendor</option>
+                    </select>
+                    <select class="operator-select">
+                        <option value="contains">contains</option>
+                        <option value="is">is</option>
+                        <option value="startswith">starts with</option>
+                        <option value="endswith">ends with</option>
+                    </select>
+                    <input type="text" class="value-input" placeholder="Enter value...">
+                    <button type="button" class="btn btn-sm btn-danger remove-condition">Remove</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="add-condition">Add Condition</button>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="adv-search">Cancel</button>
+            <button type="button" class="btn btn-primary" id="apply-advanced-search">Apply Search</button>
+        </div>
+    </div>
+</div>
+
 <!-- Parts Table -->
 <div class="table-wrap">
-    <table class="table sticky">
+    <table id="parts-table" class="table sticky">
         <thead>
             <tr>
                 <th>
@@ -371,6 +503,7 @@
                     </a>
                 </th>
                 <th>Preferred Vendor</th>
+                <th>Vendors</th>
                 <th>
                     <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=created_at&order={% if current_sort == 'created_at' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
                        class="sort-link">
@@ -393,12 +526,32 @@
                     <td>{{ part.manufacturer|default:"—" }}</td>
                     <td>{{ part.unit|default:"—" }}</td>
                     <td>{{ part.type|default:"—" }}</td>
-                    <td>{{ part.preferred_vendor.name|default:"—" }}</td>
+                    <td>{{ part.primary_vendor.name|default:"—" }}</td>
+                    <td>
+                        {% with vendor_count=part.vendor_links.count %}
+                            {% if vendor_count > 0 %}
+                                <span class="vendor-info" title="{% for link in part.vendor_links.all %}{{ link.vendor.name }}: ${{ link.price|default:"—" }} (qty {{ link.stock_qty|default:"—" }}){% if not forloop.last %}, {% endif %}{% endfor %}">
+                                    {{ vendor_count }} vendor{{ vendor_count|pluralize }}
+                                    {% if part.primary_vendor %}
+                                        <br><small>{{ part.primary_vendor.name }} — ${{ part.primary_vendor.part_links.get.price|default:"—" }} (qty {{ part.primary_vendor.part_links.get.stock_qty|default:"—" }})</small>
+                                    {% else %}
+                                        {% with lowest_price=part.vendor_links.all|dictsort:"price"|first %}
+                                            {% if lowest_price %}
+                                                <br><small>{{ lowest_price.vendor.name }} — ${{ lowest_price.price }} (qty {{ lowest_price.stock_qty|default:"—" }})</small>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% endif %}
+                                </span>
+                            {% else %}
+                                —
+                            {% endif %}
+                        {% endwith %}
+                    </td>
                     <td>{{ part.created_at|date:"M j, Y" }}</td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                    <td colspan="9" style="text-align: center; padding: 2rem; color: var(--gray-500);">
                         No parts found matching your criteria.
                     </td>
                 </tr>
@@ -537,21 +690,113 @@
             }
         }
         
-        function updateValueControl(attributeSelect, filterRow) {
-            const attributeId = attributeSelect.value;
-            const valueContainer = filterRow.querySelector('.filter-value-container');
-            
-            if (attributeId) {
-                // Load the value control via HTMX
-                fetch(`{% url 'inventory:filter_value_control' %}?attribute_id=${attributeId}`)
-                    .then(response => response.text())
-                    .then(html => {
-                        valueContainer.innerHTML = html;
-                    });
-            } else {
-                valueContainer.innerHTML = '<div class="filter-value-placeholder">Select field to see value options</div>';
-            }
+        // Modal functionality
+        const modal = document.getElementById('adv-search');
+        const openBtn = document.querySelector('[data-open="adv-search"]');
+        const closeBtn = document.querySelector('[data-close="adv-search"]');
+        
+        function openModal() {
+            modal.style.display = 'flex';
         }
+        
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+        
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Add condition functionality
+        const addConditionBtn = document.getElementById('add-condition');
+        const conditionsContainer = document.getElementById('search-conditions');
+        
+        function createConditionElement() {
+            const conditionDiv = document.createElement('div');
+            conditionDiv.className = 'search-condition';
+            conditionDiv.innerHTML = `
+                <select class="field-select">
+                    <option value="number">Part Number</option>
+                    <option value="name">Name</option>
+                    <option value="mfr">Manufacturer</option>
+                    <option value="category">Category</option>
+                    <option value="unit">Unit</option>
+                    <option value="type">Type</option>
+                    <option value="vendor">Vendor</option>
+                </select>
+                <select class="operator-select">
+                    <option value="contains">contains</option>
+                    <option value="is">is</option>
+                    <option value="startswith">starts with</option>
+                    <option value="endswith">ends with</option>
+                </select>
+                <input type="text" class="value-input" placeholder="Enter value...">
+                <button type="button" class="btn btn-sm btn-danger remove-condition">Remove</button>
+            `;
+            
+            // Add remove functionality
+            const removeBtn = conditionDiv.querySelector('.remove-condition');
+            removeBtn.addEventListener('click', function() {
+                conditionDiv.remove();
+            });
+            
+            return conditionDiv;
+        }
+        
+        addConditionBtn.addEventListener('click', function() {
+            const newCondition = createConditionElement();
+            conditionsContainer.appendChild(newCondition);
+        });
+        
+        // Remove condition functionality for existing conditions
+        document.querySelectorAll('.remove-condition').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.search-condition').remove();
+            });
+        });
+        
+        // Apply advanced search
+        const applyBtn = document.getElementById('apply-advanced-search');
+        const searchInput = document.getElementById('q');
+        
+        applyBtn.addEventListener('click', function() {
+            const conditions = document.querySelectorAll('.search-condition');
+            const queryParts = [];
+            
+            conditions.forEach(condition => {
+                const field = condition.querySelector('.field-select').value;
+                const operator = condition.querySelector('.operator-select').value;
+                const value = condition.querySelector('.value-input').value.trim();
+                
+                if (value) {
+                    let queryPart = `${field}:`;
+                    
+                    // Handle operators (for now, we'll just use the value as-is since backend uses icontains)
+                    if (operator === 'is') {
+                        queryPart += `"${value}"`;
+                    } else {
+                        queryPart += value;
+                    }
+                    
+                    queryParts.push(queryPart);
+                }
+            });
+            
+            const query = queryParts.join(' ');
+            searchInput.value = query;
+            
+            // Submit the form
+            const form = searchInput.closest('form');
+            form.submit();
+            
+            closeModal();
+        });
     });
 </script>
 {% endblock %}

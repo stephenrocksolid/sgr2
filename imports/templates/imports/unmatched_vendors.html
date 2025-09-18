@@ -1,0 +1,382 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Unmatched Vendors - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+    }
+    
+    .modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 2rem;
+        border-radius: var(--border-radius);
+        width: 90%;
+        max-width: 600px;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--gray-200);
+    }
+    
+    .modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .close {
+        font-size: 1.5rem;
+        font-weight: bold;
+        cursor: pointer;
+        color: var(--gray-500);
+    }
+    
+    .close:hover {
+        color: var(--gray-700);
+    }
+    
+    .actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .form-select {
+        min-width: 200px;
+    }
+    
+    .btn-sm {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+    }
+    
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c82333;
+        border-color: #bd2130;
+    }
+    
+    .btn-dark {
+        background-color: #343a40;
+        border-color: #343a40;
+        color: white;
+    }
+    
+    .btn-dark:hover {
+        background-color: #23272b;
+        border-color: #1d2124;
+    }
+    
+    .inline {
+        display: inline;
+    }
+    
+    .text-center {
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Unmatched Vendors</h1>
+    <p class="lead">Vendors that need SG Vendor matching ({{ total_unmatched }} total)</p>
+</div>
+
+{% if page_obj %}
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>Vendor Name</th>
+                <th class="text-center"># Engines</th>
+                <th class="text-center"># Parts</th>
+                <th>Website</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for vendor in page_obj %}
+            <tr>
+                <td><strong>{{ vendor.name }}</strong></td>
+                <td class="text-center">{{ vendor.num_engines }}</td>
+                <td class="text-center">{{ vendor.num_parts }}</td>
+                <td>{{ vendor.website|default:"—" }}</td>
+                <td>{{ vendor.created|date:"M j, Y g:i A" }}</td>
+                <td class="actions">
+                    <form method="post" action="{% url 'imports:match_vendor' %}" class="inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="vendor_id" value="{{ vendor.id }}">
+                        <select name="sg_vendor_id" class="form-select form-select-sm" required>
+                            <option value="">Select SG Vendor</option>
+                            {% for sgv in sg_vendors %}
+                                <option value="{{ sgv.id }}">{{ sgv.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-sm btn-dark">Match Vendor</button>
+                    </form>
+                    <button class="btn btn-sm btn-danger" onclick="openSearchModal({{ vendor.id }}, '{{ vendor.name|escapejs }}')">Search</button>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="page-link">&laquo; Previous</a>
+    {% endif %}
+    
+    <span class="page-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <p>No unmatched vendors found!</p>
+    <a href="{% url 'imports:unmatched_index' %}" class="btn btn-primary">Back to Unmatched Items</a>
+</div>
+{% endif %}
+
+<!-- Search Modal -->
+<div id="searchModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Search SG Vendors</h3>
+            <span class="close" onclick="closeSearchModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label for="searchQuery">Search for SG Vendor:</label>
+                <input type="text" id="searchQuery" class="form-control" placeholder="Enter vendor name...">
+                <button onclick="searchSGVendors()" class="btn btn-primary mt-2">Search</button>
+            </div>
+            <div id="searchResults" class="mt-3">
+                <!-- Search results will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New SG Vendor Modal -->
+<div id="newSGVendorModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 class="modal-title">Create New SG Vendor</h3>
+            <span class="close" onclick="closeNewSGVendorModal()">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="newSGVendorForm">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="sgVendorName">SG Vendor Name:</label>
+                    <input type="text" id="sgVendorName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="sgVendorWebsite">Website (optional):</label>
+                    <input type="url" id="sgVendorWebsite" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label for="sgVendorNotes">Notes (optional):</label>
+                    <textarea id="sgVendorNotes" class="form-control" rows="3"></textarea>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeNewSGVendorModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create SG Vendor</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="bulk-actions mt-4">
+    <a href="{% url 'imports:unmatched_index' %}" class="btn btn-secondary">Back to Unmatched</a>
+    <button class="btn btn-primary" onclick="openNewSGVendorModal()">New SG Vendor</button>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentVendorId = null;
+let currentVendorName = '';
+
+function openSearchModal(vendorId, vendorName) {
+    currentVendorId = vendorId;
+    currentVendorName = vendorName;
+    document.getElementById('searchModal').style.display = 'block';
+    document.getElementById('searchQuery').value = vendorName;
+    searchSGVendors();
+}
+
+function closeSearchModal() {
+    document.getElementById('searchModal').style.display = 'none';
+    currentVendorId = null;
+    currentVendorName = '';
+}
+
+function openNewSGVendorModal() {
+    document.getElementById('newSGVendorModal').style.display = 'block';
+}
+
+function closeNewSGVendorModal() {
+    document.getElementById('newSGVendorModal').style.display = 'none';
+    document.getElementById('newSGVendorForm').reset();
+}
+
+function searchSGVendors() {
+    const query = document.getElementById('searchQuery').value;
+    const resultsDiv = document.getElementById('searchResults');
+    
+    if (!query.trim()) {
+        resultsDiv.innerHTML = '<p>Please enter a search term.</p>';
+        return;
+    }
+    
+    resultsDiv.innerHTML = '<p>Searching...</p>';
+    
+    fetch(`/sg-vendors/search/?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.length === 0) {
+                resultsDiv.innerHTML = '<p>No SG Vendors found. <button class="btn btn-sm btn-primary" onclick="createAndMatchSGVendor(\'' + query + '\')">Create & Match</button></p>';
+            } else {
+                let html = '<div class="list-group">';
+                data.forEach(sgv => {
+                    html += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${sgv.name}</strong>
+                                ${sgv.website ? `<br><small class="text-muted">${sgv.website}</small>` : ''}
+                            </div>
+                            <button class="btn btn-sm btn-primary" onclick="matchVendorToSGVendor(${sgv.id}, '${sgv.name}')">Match</button>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                resultsDiv.innerHTML = html;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            resultsDiv.innerHTML = '<p>Error searching SG Vendors.</p>';
+        });
+}
+
+function matchVendorToSGVendor(sgVendorId, sgVendorName) {
+    if (!currentVendorId) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "imports:match_vendor" %}';
+    
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    
+    const vendorInput = document.createElement('input');
+    vendorInput.type = 'hidden';
+    vendorInput.name = 'vendor_id';
+    vendorInput.value = currentVendorId;
+    
+    const sgVendorInput = document.createElement('input');
+    sgVendorInput.type = 'hidden';
+    sgVendorInput.name = 'sg_vendor_id';
+    sgVendorInput.value = sgVendorId;
+    
+    form.appendChild(csrfInput);
+    form.appendChild(vendorInput);
+    form.appendChild(sgVendorInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function createAndMatchSGVendor(name) {
+    document.getElementById('sgVendorName').value = name;
+    closeSearchModal();
+    openNewSGVendorModal();
+}
+
+document.getElementById('newSGVendorForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData();
+    formData.append('name', document.getElementById('sgVendorName').value);
+    formData.append('website', document.getElementById('sgVendorWebsite').value);
+    formData.append('notes', document.getElementById('sgVendorNotes').value);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch('/sg-vendors/create/', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeNewSGVendorModal();
+            if (currentVendorId) {
+                matchVendorToSGVendor(data.sg_vendor_id, data.name);
+            } else {
+                location.reload();
+            }
+        } else {
+            alert('Error creating SG Vendor: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error creating SG Vendor');
+    });
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const searchModal = document.getElementById('searchModal');
+    const newSGVendorModal = document.getElementById('newSGVendorModal');
+    
+    if (event.target === searchModal) {
+        closeSearchModal();
+    }
+    if (event.target === newSGVendorModal) {
+        closeNewSGVendorModal();
+    }
+}
+</script>
+{% endblock %}

@@ -102,6 +102,10 @@
         grid-column: 1 / -1;
     }
     
+    .contacts-section {
+        grid-column: 1 / -1;
+    }
+    
     .parts-table {
         margin-top: 1rem;
     }
@@ -140,6 +144,51 @@
     .spinner-border {
         width: 2rem;
         height: 2rem;
+    }
+    
+    .contacts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    
+    .contact-card {
+        background: var(--gray-50);
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        padding: 1rem;
+    }
+    
+    .contact-header {
+        margin-bottom: 0.75rem;
+    }
+    
+    .contact-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0 0 0.25rem 0;
+    }
+    
+    .contact-title {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        font-style: italic;
+    }
+    
+    .contact-details {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .contact-detail {
+        font-size: 0.875rem;
+        color: var(--gray-700);
+    }
+    
+    .contact-detail strong {
+        color: var(--gray-900);
     }
     
     @media (max-width: 768px) {
@@ -193,28 +242,6 @@
                 <span class="field-value">{{ vendor.name }}</span>
             </div>
             <div class="field-row">
-                <span class="field-label">Contact Name:</span>
-                <span class="field-value {% if not vendor.contact_name %}empty{% endif %}">
-                    {{ vendor.contact_name|default:"Not specified" }}
-                </span>
-            </div>
-            <div class="field-row">
-                <span class="field-label">Email:</span>
-                <span class="field-value {% if not vendor.email %}empty{% endif %}">
-                    {% if vendor.email %}
-                        <a href="mailto:{{ vendor.email }}" class="link-secondary">{{ vendor.email }}</a>
-                    {% else %}
-                        Not specified
-                    {% endif %}
-                </span>
-            </div>
-            <div class="field-row">
-                <span class="field-label">Phone:</span>
-                <span class="field-value {% if not vendor.phone %}empty{% endif %}">
-                    {{ vendor.phone|default:"Not specified" }}
-                </span>
-            </div>
-            <div class="field-row">
                 <span class="field-label">Website:</span>
                 <span class="field-value {% if not vendor.website %}empty{% endif %}">
                     {% if vendor.website %}
@@ -237,6 +264,74 @@
                 </span>
             </div>
         </div>
+    </div>
+    
+    <!-- Contacts -->
+    <div class="detail-section contacts-section">
+        <h2 class="section-title">Contacts</h2>
+        {% if vendor.contacts.exists %}
+            <div class="contacts-grid">
+                {% for contact in vendor.contacts.all %}
+                    <div class="contact-card">
+                        <div class="contact-header">
+                            <h3 class="contact-name">{{ contact.full_name }}</h3>
+                            {% if contact.title %}
+                                <span class="contact-title">{{ contact.title }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="contact-details">
+                            {% if contact.email %}
+                                <div class="contact-detail">
+                                    <strong>Email:</strong> 
+                                    <a href="mailto:{{ contact.email }}" class="link-secondary">{{ contact.email }}</a>
+                                </div>
+                            {% endif %}
+                            {% if contact.phone %}
+                                <div class="contact-detail">
+                                    <strong>Phone:</strong> {{ contact.phone }}
+                                </div>
+                            {% endif %}
+                            {% if contact.notes %}
+                                <div class="contact-detail">
+                                    <strong>Notes:</strong> {{ contact.notes|linebreaksbr }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="field-value empty">No contacts specified</div>
+        {% endif %}
+        
+        <!-- Legacy contact info (if exists) -->
+        {% if vendor.contact_name or vendor.email or vendor.phone %}
+            <div class="legacy-contact-info" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--gray-200);">
+                <h4 style="color: var(--gray-600); font-size: 0.875rem; margin-bottom: 0.5rem;">Legacy Contact Information</h4>
+                <div class="field-grid">
+                    {% if vendor.contact_name %}
+                        <div class="field-row">
+                            <span class="field-label">Contact Name:</span>
+                            <span class="field-value">{{ vendor.contact_name }}</span>
+                        </div>
+                    {% endif %}
+                    {% if vendor.email %}
+                        <div class="field-row">
+                            <span class="field-label">Email:</span>
+                            <span class="field-value">
+                                <a href="mailto:{{ vendor.email }}" class="link-secondary">{{ vendor.email }}</a>
+                            </span>
+                        </div>
+                    {% endif %}
+                    {% if vendor.phone %}
+                        <div class="field-row">
+                            <span class="field-label">Phone:</span>
+                            <span class="field-value">{{ vendor.phone }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
     </div>
     
     <!-- Parts Supplied -->

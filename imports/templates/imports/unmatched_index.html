@@ -25,6 +25,11 @@
         <div class="stat-label">Parts Without Engines</div>
         <a href="{% url 'imports:unmatched_parts' %}" class="btn btn-sm btn-primary mt-2">View Parts</a>
     </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ unmatched_vendors }}</div>
+        <div class="stat-label">Unmatched Vendors</div>
+        <a href="{% url 'imports:unmatched_vendors' %}" class="btn btn-sm btn-primary mt-2">View Vendors</a>
+    </div>
 </div>
 
 {% if error_rows %}

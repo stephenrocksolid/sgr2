@@ -208,39 +208,8 @@
                         {% endif %}
                     </a>
                 </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=contact_name&order={% if current_sort == 'contact_name' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Contact Name
-                        {% if current_sort == 'contact_name' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=email&order={% if current_sort == 'email' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Email
-                        {% if current_sort == 'email' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=phone&order={% if current_sort == 'phone' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Phone
-                        {% if current_sort == 'phone' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
+                <th>Primary Contact</th>
+                <th>All Contacts</th>
                 <th>Website</th>
                 <th>
                     <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=created_at&order={% if current_sort == 'created_at' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
@@ -259,15 +228,37 @@
             {% for vendor in vendors %}
                 <tr class="clickable-row" onclick="window.location.href='{% url 'inventory:vendor_detail' vendor.id %}'">
                     <td>{{ vendor.name }}</td>
-                    <td>{{ vendor.contact_name|default:"—" }}</td>
                     <td>
-                        {% if vendor.email %}
-                            <a href="mailto:{{ vendor.email }}" class="link-secondary">{{ vendor.email }}</a>
+                        {% if vendor.contact_name %}
+                            {{ vendor.contact_name }}
+                            {% if vendor.email %}
+                                <br><a href="mailto:{{ vendor.email }}" class="link-secondary">{{ vendor.email }}</a>
+                            {% endif %}
+                            {% if vendor.phone %}
+                                <br>{{ vendor.phone }}
+                            {% endif %}
                         {% else %}
                             —
                         {% endif %}
                     </td>
-                    <td>{{ vendor.phone|default:"—" }}</td>
+                    <td>
+                        {% if vendor.contacts.exists %}
+                            {% with first_contact=vendor.contacts.first %}
+                                {{ first_contact.full_name }}
+                                {% if first_contact.email %}
+                                    <br><a href="mailto:{{ first_contact.email }}" class="link-secondary">{{ first_contact.email }}</a>
+                                {% endif %}
+                                {% if first_contact.phone %}
+                                    <br>{{ first_contact.phone }}
+                                {% endif %}
+                            {% endwith %}
+                            {% if vendor.contacts.count > 1 %}
+                                <br><small class="text-muted">(+{{ vendor.contacts.count|add:"-1" }} more)</small>
+                            {% endif %}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>
                         {% if vendor.website %}
                             <a href="{{ vendor.website }}" target="_blank" class="link-secondary">Site</a>
@@ -279,7 +270,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--gray-500);">
                         No vendors found matching your criteria.
                     </td>
                 </tr>

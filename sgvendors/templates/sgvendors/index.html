@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}SG Vendors - SGR Part Manager{% endblock %}
+
+{% block extra_css %}
+<style>
+    .filters-section {
+        background: var(--gray-50);
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: var(--border-radius);
+        border: 1px solid var(--gray-200);
+    }
+    
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--gray-700);
+    }
+    
+    .filter-group input,
+    .filter-group select {
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .filter-actions {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    .results-info {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .clickable-row {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .clickable-row:hover {
+        background-color: var(--gray-50);
+    }
+    
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 2rem;
+        gap: 0.5rem;
+    }
+    
+    .page-link {
+        padding: 0.5rem 1rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        color: var(--gray-700);
+        text-decoration: none;
+        transition: all 0.2s;
+    }
+    
+    .page-link:hover {
+        background-color: var(--gray-100);
+        border-color: var(--gray-400);
+    }
+    
+    .page-link.current {
+        background-color: var(--primary);
+        color: white;
+        border-color: var(--primary);
+    }
+    
+    .page-info {
+        padding: 0.5rem 1rem;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>SG Vendors</h1>
+    <p>Manage your canonical Spring Garden vendor entries</p>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section">
+    <form method="get" id="filter-form">
+        <div class="filter-grid">
+            <div class="filter-group">
+                <label for="search">Search</label>
+                <input type="text" name="search" id="search" value="{{ search }}" 
+                       placeholder="Search SG vendors by name, website, notes...">
+            </div>
+        </div>
+        
+        <div class="filter-actions">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <a href="{% url 'sgvendors:index' %}" class="btn btn-secondary">Clear Filters</a>
+            <a href="{% url 'sgvendors:create' %}" class="btn btn-primary">Add SG Vendor</a>
+        </div>
+    </form>
+</div>
+
+<!-- Results Header -->
+<div class="results-header">
+    <div class="results-info">
+        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }} SG Vendors
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="table-wrap">
+    <table>
+        <thead>
+            <tr>
+                <th>SG Vendor Name</th>
+                <th>Website</th>
+                <th># Linked Vendors</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for sg_vendor in page_obj %}
+                <tr class="clickable-row" onclick="window.location.href='{% url 'sgvendors:detail' sg_vendor.id %}'">
+                    <td><strong>{{ sg_vendor.name }}</strong></td>
+                    <td>
+                        {% if sg_vendor.website %}
+                            <a href="{{ sg_vendor.website }}" target="_blank" class="link-secondary">Site</a>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td>{{ sg_vendor.linked_vendors_count }}</td>
+                    <td>{{ sg_vendor.created|date:"M j, Y" }}</td>
+                    <td>
+                        <a href="{% url 'sgvendors:edit' sg_vendor.id %}" class="btn btn-sm btn-primary" onclick="event.stopPropagation();">
+                            Edit
+                        </a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                        No SG vendors found matching your criteria.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if search %}&search={{ search }}{% endif %}" class="page-link">&laquo; Previous</a>
+    {% endif %}
+    
+    <span class="page-info">
+        Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+    </span>
+    
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if search %}&search={{ search }}{% endif %}" class="page-link">Next &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

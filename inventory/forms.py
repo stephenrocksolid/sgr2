@@ -1,5 +1,6 @@
 from django import forms
-from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, KitItem, PartAttribute, PartAttributeValue, Vendor, PartVendor
+from django.forms import inlineformset_factory
+from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, KitItem, PartAttribute, PartAttributeValue, Vendor, VendorContact, PartVendor
 from decimal import Decimal, InvalidOperation
 
 
@@ -589,7 +590,7 @@ class PartForm(forms.ModelForm):
         model = Part
         fields = [
             "part_number", "name", "category", "manufacturer", "unit",
-            "type", "manufacturer_type", "primary_vendor"
+            "type", "manufacturer_type", "weight", "primary_vendor"
         ]
         widgets = {
             "part_number": forms.TextInput(attrs={"class": "form-control"}),
@@ -599,6 +600,7 @@ class PartForm(forms.ModelForm):
             "unit": forms.TextInput(attrs={"class": "form-control"}),
             "type": forms.TextInput(attrs={"class": "form-control"}),
             "manufacturer_type": forms.TextInput(attrs={"class": "form-control"}),
+            "weight": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": "0"}),
             "primary_vendor": forms.Select(attrs={"class": "form-control"}),
         }
 
@@ -650,34 +652,60 @@ class PartSpecsForm(forms.Form):
 
 
 class VendorForm(forms.ModelForm):
+    website = forms.CharField(max_length=200, required=False, widget=forms.TextInput())
+    
     class Meta:
         model = Vendor
-        fields = ["name", "contact_name", "email", "phone", "website", "address", "notes"]
+        fields = ['name', 'address', 'notes']  # Exclude website from model fields
         widgets = {
             "notes": forms.Textarea(attrs={"rows": 3}),
             "address": forms.Textarea(attrs={"rows": 2}),
         }
+    
+    def save(self, commit=True):
+        """Override save to handle website field manually."""
+        instance = super().save(commit=False)
+        instance.website = self.cleaned_data.get('website', '')
+        if commit:
+            instance.save()
+        return instance
+
+
+class VendorContactForm(forms.ModelForm):
+    class Meta:
+        model = VendorContact
+        fields = ['full_name', 'email', 'phone', 'title', 'notes']
+        widgets = {
+            "notes": forms.Textarea(attrs={"rows": 2}),
+        }
+
+
+VendorContactFormSet = inlineformset_factory(
+    Vendor, VendorContact, form=VendorContactForm,
+    extra=1, can_delete=True, validate_max=False
+)
 
 
 class PartVendorForm(forms.ModelForm):
-    part_id = forms.ChoiceField(
-        label="Part",
-        required=True,
-        widget=forms.Select(attrs={"class": "form-control"})
-    )
+    """Form for PartVendor relationships."""
     
     class Meta:
         model = PartVendor
-        fields = ["vendor_sku", "cost", "stock_qty", "lead_time_days", "notes"]
-        widgets = {"notes": forms.Textarea(attrs={"rows": 2})}
-    
-    def __init__(self, *args, **kwargs):
-        parts = kwargs.pop('parts', [])
-        super().__init__(*args, **kwargs)
-        
-        # Set up the part choices
-        part_choices = [("", "Select a part…")]
-        for part in parts:
-            part_choices.append((part.id, f"{part.part_number} — {part.name}"))
-        self.fields['part_id'].choices = part_choices
+        fields = ['vendor', 'vendor_part_number', 'vendor_sku', 'price', 'cost', 'stock_qty', 'lead_time_days', 'notes']
+        widgets = {
+            'vendor': forms.Select(attrs={'class': 'form-control'}),
+            'vendor_part_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'vendor_sku': forms.TextInput(attrs={'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'cost': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01', 'min': '0'}),
+            'stock_qty': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0'}),
+            'lead_time_days': forms.NumberInput(attrs={'class': 'form-control', 'step': '1', 'min': '0'}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+# Create the formset for PartVendor
+PartVendorFormSet = inlineformset_factory(
+    Part, PartVendor, form=PartVendorForm, extra=1, can_delete=True
+)
 

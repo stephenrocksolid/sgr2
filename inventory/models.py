@@ -190,6 +190,7 @@ class Engine(AuditMixin):
     casting_comments = models.TextField(blank=True, null=True, verbose_name="Casting # Comments")
     
     # Engine relationships
+    vendor = models.ForeignKey('Vendor', null=True, blank=True, on_delete=models.SET_NULL, related_name='engines')
     interchanges = models.ManyToManyField(
         'self',
         symmetrical=True,
@@ -330,24 +331,75 @@ class MachinePart(AuditMixin):
         return f"{self.machine} - {self.part}"
 
 
+class SGVendor(models.Model):
+    """Canonical Spring Garden Vendor model for unifying vendor names."""
+    name = models.CharField(max_length=255, unique=False)
+    website = models.URLField(blank=True)
+    notes = models.TextField(blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ["name"]
+        indexes = [
+            Index(Lower('name'), name='idx_sgvendor_lower_name'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'), 
+                name='uq_sgvendor_lower_name',
+                violation_error_message='SG Vendor with this name already exists (case-insensitive)'
+            )
+        ]
+    
+    def __str__(self):
+        return self.name
+
+
 class Vendor(AuditMixin):
     """Vendor model."""
-    name = models.CharField(max_length=200, unique=True)
+    name = models.CharField(max_length=200, unique=False)  # Remove unique constraint, add case-insensitive constraint below
     contact_name = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
     website = models.URLField(blank=True)
     address = models.TextField(blank=True)
     notes = models.TextField(blank=True)
+    sg_vendor = models.ForeignKey('SGVendor', null=True, blank=True, on_delete=models.SET_NULL, related_name='vendors')
 
     class Meta:
         ordering = ["name"]
         indexes = [
             Index(Lower('name'), name='vendor_name_lower_idx'),
         ]
+        constraints = [
+            models.UniqueConstraint(
+                Lower('name'), 
+                name='uq_vendor_lower_name', 
+                violation_error_message='Vendor with this name already exists (case-insensitive)'
+            )
+        ]
 
     def __str__(self):
         return self.name
+
+
+class VendorContact(models.Model):
+    """Vendor contact model for multiple contacts per vendor."""
+    vendor = models.ForeignKey('Vendor', on_delete=models.CASCADE, related_name='contacts')
+    full_name = models.CharField(max_length=120)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    title = models.CharField(max_length=120, blank=True)
+    notes = models.TextField(blank=True)
+    created = models.DateTimeField(auto_now_add=True)
+    updated = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['full_name', 'id']
+
+    def __str__(self):
+        return f"{self.full_name} ({self.vendor.name})"
 
 
 class Part(AuditMixin):
@@ -359,6 +411,7 @@ class Part(AuditMixin):
     unit = models.CharField(max_length=50, blank=True)
     type = models.CharField(max_length=100, blank=True)
     manufacturer_type = models.CharField(max_length=100, blank=True)
+    weight = models.DecimalField(max_digits=10, decimal_places=3, null=True, blank=True, help_text="Weight in pounds")
     primary_vendor = models.ForeignKey(
         Vendor, 
         on_delete=models.SET_NULL, 
@@ -366,6 +419,7 @@ class Part(AuditMixin):
         blank=True,
         related_name='primary_parts'
     )
+    vendor = models.ForeignKey('Vendor', null=True, blank=True, on_delete=models.SET_NULL, related_name='parts')
     
     # Many-to-many relationships
     engines = models.ManyToManyField(Engine, through='EnginePart')
@@ -417,18 +471,24 @@ class PartVendor(AuditMixin):
     """Through model for Part-Vendor relationship."""
     part = models.ForeignKey(Part, on_delete=models.CASCADE, related_name="vendor_links")
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name="part_links")
-    vendor_sku = models.CharField(max_length=120, blank=True)
-    cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    vendor_part_number = models.CharField(max_length=120, blank=True)
+    vendor_sku = models.CharField(max_length=120, blank=True)  # Keep for backward compatibility
+    price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)  # Keep for backward compatibility
     stock_qty = models.IntegerField(null=True, blank=True)
     lead_time_days = models.IntegerField(null=True, blank=True)
     notes = models.TextField(blank=True)
+    updated = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [("part", "vendor")]
+        unique_together = (('part', 'vendor'),)
+        indexes = [
+            models.Index(fields=['part', 'vendor']),
+        ]
         ordering = ["vendor__name"]
 
     def __str__(self):
-        return f"{self.part} - {self.vendor}"
+        return f"{self.part_id} @ {self.vendor_id} (${self.price} / qty {self.stock_qty})"
 
 
 class BuildList(models.Model):

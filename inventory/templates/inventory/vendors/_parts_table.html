@@ -4,11 +4,14 @@
             <tr>
                 <th>Part</th>
                 <th>Part Number</th>
+                <th>Vendor Part Number</th>
                 <th>Vendor SKU</th>
+                <th>Price</th>
                 <th>Cost</th>
                 <th>Stock</th>
                 <th>Lead Time</th>
                 <th>Primary Vendor</th>
+                <th>Updated</th>
                 <th>Notes</th>
                 <th>Actions</th>
             </tr>
@@ -20,7 +23,9 @@
                         <strong>{{ link.part.name }}</strong>
                     </td>
                     <td>{{ link.part.part_number }}</td>
+                    <td>{{ link.vendor_part_number|default:"—" }}</td>
                     <td>{{ link.vendor_sku|default:"—" }}</td>
+                    <td>{% if link.price is not None %}${{ link.price }}{% else %}—{% endif %}</td>
                     <td>{% if link.cost is not None %}${{ link.cost }}{% else %}—{% endif %}</td>
                     <td>{{ link.stock_qty|default:"—" }}</td>
                     <td>{{ link.lead_time_days|default:"—" }} days</td>
@@ -31,6 +36,7 @@
                             No
                         {% endif %}
                     </td>
+                    <td>{{ link.updated|date:"M j, Y" }}</td>
                     <td>{{ link.notes|default:"—" }}</td>
                     <td class="text-right">
                         <form hx-post="{% url 'inventory:vendor_part_remove' vendor.id link.id %}"

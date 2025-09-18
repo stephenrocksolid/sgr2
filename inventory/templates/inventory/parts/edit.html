@@ -246,6 +246,14 @@
                     </div>
                     
                     <div class="form-group">
+                        <label class="form-label" for="{{ form.weight.id_for_label }}">Weight (lbs)</label>
+                        {{ form.weight }}
+                        {% for error in form.weight.errors %}
+                            <div class="form-error">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="form-group">
                         <label class="form-label" for="{{ form.manufacturer_type.id_for_label }}">Manufacturer Type</label>
                         {{ form.manufacturer_type }}
                         {% for error in form.manufacturer_type.errors %}
@@ -310,6 +318,56 @@
              </div>
          </div>
         
+        <!-- Vendor Relationships -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <h2 class="edit-card-title">Vendor Relationships</h2>
+                <p class="edit-card-subtitle">Pricing and stock information by vendor</p>
+            </div>
+            
+            <div class="edit-card-body">
+                {{ vset.management_form }}
+                
+                <table class="vendor-table" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                    <thead>
+                        <tr style="background-color: var(--gray-50);">
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor Part Number</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor SKU</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Price</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Cost</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Stock Qty</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Lead Time (days)</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Notes</th>
+                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Remove</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vendor-rows">
+                        {% for vendor_form in vset %}
+                            <tr class="vendor-row">
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor_part_number }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor_sku }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.price }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.cost }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.stock_qty }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.lead_time_days }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.notes }}</td>
+                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+                                    {% if vendor_form.DELETE %}
+                                        {{ vendor_form.DELETE }}
+                                    {% endif %}
+                                    <button type="button" class="remove-vendor-btn" onclick="removeVendorRow(this)" style="background-color: var(--error); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.75rem;">Remove</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                
+                <button type="button" class="add-vendor-btn" onclick="addVendorRow()" style="background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.875rem; margin-top: 1rem;">Add Vendor</button>
+            </div>
+        </div>
+        
         <!-- Form Actions -->
         <div class="edit-card">
             <div class="edit-card-body">
@@ -347,5 +405,77 @@
         });
     });
   });
+  
+  // Vendor formset functionality
+  let vendorRowCount = {{ vset.total_form_count }};
+
+  function addVendorRow() {
+      const tbody = document.getElementById('vendor-rows');
+      const newRow = document.createElement('tr');
+      newRow.className = 'vendor-row';
+      
+      newRow.innerHTML = `
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <select name="vendors-${vendorRowCount}-vendor" class="form-control">
+                  <option value="">Select vendor...</option>
+                  {% for vendor in vendors %}
+                      <option value="{{ vendor.id }}">{{ vendor.name }}</option>
+                  {% endfor %}
+              </select>
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="text" name="vendors-${vendorRowCount}-vendor_part_number" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="text" name="vendors-${vendorRowCount}-vendor_sku" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="number" name="vendors-${vendorRowCount}-price" step="0.01" min="0" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="number" name="vendors-${vendorRowCount}-cost" step="0.01" min="0" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="number" name="vendors-${vendorRowCount}-stock_qty" step="1" min="0" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="number" name="vendors-${vendorRowCount}-lead_time_days" step="1" min="0" class="form-control">
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <textarea name="vendors-${vendorRowCount}-notes" rows="2" class="form-control"></textarea>
+          </td>
+          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
+              <input type="hidden" name="vendors-${vendorRowCount}-id" value="">
+              <button type="button" class="remove-vendor-btn" onclick="removeVendorRow(this)" style="background-color: var(--error); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.75rem;">Remove</button>
+          </td>
+      `;
+      
+      tbody.appendChild(newRow);
+      vendorRowCount++;
+      
+      // Update the form count
+      const totalFormsInput = document.querySelector('input[name="vendors-TOTAL_FORMS"]');
+      if (totalFormsInput) {
+          totalFormsInput.value = vendorRowCount;
+      }
+  }
+
+  function removeVendorRow(button) {
+      const row = button.closest('tr');
+      const deleteInput = row.querySelector('input[name*="-DELETE"]');
+      if (deleteInput) {
+          deleteInput.checked = true;
+          row.style.display = 'none';
+      } else {
+          row.remove();
+          vendorRowCount--;
+          
+          // Update the form count
+          const totalFormsInput = document.querySelector('input[name="vendors-TOTAL_FORMS"]');
+          if (totalFormsInput) {
+              totalFormsInput.value = vendorRowCount;
+          }
+      }
+  }
 </script>
 {% endblock %}

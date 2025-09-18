@@ -35,6 +35,7 @@ urlpatterns = [
     path('core/', include('core.urls')),  # Core app URLs
     path('inventory/', include('inventory.urls')),  # Add back for sidebar navigation
     path('imports/', include('imports.urls')),
+    path('sg-vendors/', include('sgvendors.urls')),
 ]
 
 # Serve static and media files during development

@@ -88,6 +88,9 @@
                                 Update Existing Records
                             </label>
                             <div class="help-text">{{ form.update_existing.help_text }}</div>
+                            <div class="help-text" id="combined-help" style="display: none; color: #666; font-style: italic; margin-top: 5px;">
+                                When both options are enabled, duplicates are updated instead of created.
+                            </div>
                         </div>
 
                         <div class="form-actions">
@@ -442,6 +445,34 @@ document.addEventListener('DOMContentLoaded', function() {
     margin-top: var(--spacing-xl);
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const skipDuplicatesCheckbox = document.querySelector('input[name="skip_duplicates"]');
+    const updateExistingCheckbox = document.querySelector('input[name="update_existing"]');
+    const combinedHelp = document.getElementById('combined-help');
+    
+    function updateCombinedHelp() {
+        if (skipDuplicatesCheckbox && updateExistingCheckbox && combinedHelp) {
+            if (skipDuplicatesCheckbox.checked && updateExistingCheckbox.checked) {
+                combinedHelp.style.display = 'block';
+            } else {
+                combinedHelp.style.display = 'none';
+            }
+        }
+    }
+    
+    if (skipDuplicatesCheckbox) {
+        skipDuplicatesCheckbox.addEventListener('change', updateCombinedHelp);
+    }
+    if (updateExistingCheckbox) {
+        updateExistingCheckbox.addEventListener('change', updateCombinedHelp);
+    }
+    
+    // Initial check
+    updateCombinedHelp();
+});
+</script>
 {% endblock %}
 
 

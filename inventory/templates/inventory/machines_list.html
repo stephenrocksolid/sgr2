@@ -121,6 +121,127 @@
         border-color: var(--red-600);
     }
     
+    /* Modal Styles */
+    .modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-content {
+        background: white;
+        border-radius: var(--border-radius);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .modal-header h3 {
+        margin: 0;
+        color: var(--gray-900);
+    }
+    
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: var(--gray-500);
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .modal-close:hover {
+        color: var(--gray-700);
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid var(--gray-200);
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    
+    /* Search Condition Styles */
+    .search-condition {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 1rem;
+        padding: 0.75rem;
+        background: var(--gray-50);
+        border-radius: var(--border-radius);
+    }
+    
+    .search-condition select,
+    .search-condition input {
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .field-select {
+        min-width: 120px;
+    }
+    
+    .operator-select {
+        min-width: 100px;
+    }
+    
+    .value-input {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .remove-condition {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    /* Flex utilities */
+    .flex {
+        display: flex;
+    }
+    
+    .gap-2 {
+        gap: 0.5rem;
+    }
+    
+    .items-center {
+        align-items: center;
+    }
+    
+    .w-full {
+        width: 100%;
+    }
+    
     @media (max-width: 768px) {
         .filter-grid {
             grid-template-columns: 1fr;
@@ -134,6 +255,16 @@
         .export-section {
             justify-content: center;
         }
+        
+        .search-condition {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .search-condition select,
+        .search-condition input {
+            width: 100%;
+        }
     }
 </style>
 {% endblock %}
@@ -144,63 +275,12 @@
     <p>Manage your equipment inventory</p>
 </div>
 
-<!-- Filters Section -->
+<!-- Search Section -->
 <div class="filters-section">
-    <form method="get" id="filter-form">
-        <div class="filter-grid">
-            <div class="filter-group">
-                <label for="make">Make</label>
-                <select name="make" id="make">
-                    <option value="">All Makes</option>
-                    {% for make in makes %}
-                        <option value="{{ make }}" {% if current_filters.make == make %}selected{% endif %}>
-                            {{ make }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <label for="model">Model</label>
-                <input type="text" name="model" id="model" value="{{ current_filters.model }}" 
-                       placeholder="Search model...">
-            </div>
-            
-            <div class="filter-group">
-                <label for="year">Year</label>
-                <input type="number" name="year" id="year" value="{{ current_filters.year }}" 
-                       placeholder="Enter year..." min="1900" max="2030">
-            </div>
-            
-            <div class="filter-group">
-                <label for="machine_type">Machine Type</label>
-                <select name="machine_type" id="machine_type">
-                    <option value="">All Types</option>
-                    {% for machine_type in machine_types %}
-                        <option value="{{ machine_type }}" {% if current_filters.machine_type == machine_type %}selected{% endif %}>
-                            {{ machine_type }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="filter-group">
-                <label for="market_type">Market Type</label>
-                <select name="market_type" id="market_type">
-                    <option value="">All Markets</option>
-                    {% for market_type in market_types %}
-                        <option value="{{ market_type }}" {% if current_filters.market_type == market_type %}selected{% endif %}>
-                            {{ market_type }}
-                        </option>
-                    {% endfor %}
-                </select>
-            </div>
-        </div>
-        
-        <div class="filter-actions">
-            <button type="submit" class="btn btn-primary">Apply Filters</button>
-            <a href="{% url 'inventory:machines_list' %}" class="btn btn-secondary">Clear Filters</a>
-        </div>
+    <form method="get" class="flex gap-2 items-center" hx-get="{% url 'inventory:machines_list' %}" hx-target="#machine-table" hx-trigger="keyup changed delay:500ms from:#q">
+        <input id="q" name="q" value="{{ q }}" class="form-control w-full" placeholder='Search machines…  make:case model:"skid steer" year:2015 type:crawler market:us'>
+        <button class="btn btn-dark">Search</button>
+        <button type="button" class="btn btn-light" data-open="adv-search">Advanced</button>
         
         <!-- Hidden fields to preserve sorting -->
         <input type="hidden" name="sort" value="{{ current_sort }}">
@@ -217,9 +297,45 @@
 
 </div>
 
+<!-- Advanced Search Modal -->
+<div id="adv-search" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Advanced Search</h3>
+            <button type="button" class="modal-close" data-close="adv-search">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div id="search-conditions">
+                <div class="search-condition">
+                    <select class="field-select">
+                        <option value="make">Make</option>
+                        <option value="model">Model</option>
+                        <option value="year">Year</option>
+                        <option value="type">Machine Type</option>
+                        <option value="market">Market Type</option>
+                    </select>
+                    <select class="operator-select">
+                        <option value="contains">contains</option>
+                        <option value="is">is</option>
+                        <option value="startswith">starts with</option>
+                        <option value="endswith">ends with</option>
+                    </select>
+                    <input type="text" class="value-input" placeholder="Enter value...">
+                    <button type="button" class="btn btn-sm btn-danger remove-condition">Remove</button>
+                </div>
+            </div>
+            <button type="button" class="btn btn-secondary" id="add-condition">Add Condition</button>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close="adv-search">Cancel</button>
+            <button type="button" class="btn btn-primary" id="apply-advanced-search">Apply Search</button>
+        </div>
+    </div>
+</div>
+
 <!-- Machines Table -->
 <div class="table-wrap">
-    <table class="table sticky">
+    <table id="machine-table" class="table sticky">
         <thead>
             <tr>
                 <th>
@@ -338,25 +454,111 @@
 
 {% block extra_js %}
 <script>
-    // Auto-submit form when filters change
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('filter-form');
-        const selects = form.querySelectorAll('select');
+        // Modal functionality
+        const modal = document.getElementById('adv-search');
+        const openBtn = document.querySelector('[data-open="adv-search"]');
+        const closeBtn = document.querySelector('[data-close="adv-search"]');
         
-        selects.forEach(select => {
-            select.addEventListener('change', function() {
-                form.submit();
+        function openModal() {
+            modal.style.display = 'flex';
+        }
+        
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+        
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        
+        // Close modal when clicking outside
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeModal();
+            }
+        });
+        
+        // Add condition functionality
+        const addConditionBtn = document.getElementById('add-condition');
+        const conditionsContainer = document.getElementById('search-conditions');
+        
+        function createConditionElement() {
+            const conditionDiv = document.createElement('div');
+            conditionDiv.className = 'search-condition';
+            conditionDiv.innerHTML = `
+                <select class="field-select">
+                    <option value="make">Make</option>
+                    <option value="model">Model</option>
+                    <option value="year">Year</option>
+                    <option value="type">Machine Type</option>
+                    <option value="market">Market Type</option>
+                </select>
+                <select class="operator-select">
+                    <option value="contains">contains</option>
+                    <option value="is">is</option>
+                    <option value="startswith">starts with</option>
+                    <option value="endswith">ends with</option>
+                </select>
+                <input type="text" class="value-input" placeholder="Enter value...">
+                <button type="button" class="btn btn-sm btn-danger remove-condition">Remove</button>
+            `;
+            
+            // Add remove functionality
+            const removeBtn = conditionDiv.querySelector('.remove-condition');
+            removeBtn.addEventListener('click', function() {
+                conditionDiv.remove();
+            });
+            
+            return conditionDiv;
+        }
+        
+        addConditionBtn.addEventListener('click', function() {
+            const newCondition = createConditionElement();
+            conditionsContainer.appendChild(newCondition);
+        });
+        
+        // Remove condition functionality for existing conditions
+        document.querySelectorAll('.remove-condition').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.search-condition').remove();
             });
         });
         
-        // Submit on Enter key for text inputs
-        const textInputs = form.querySelectorAll('input[type="text"], input[type="number"]');
-        textInputs.forEach(input => {
-            input.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    form.submit();
+        // Apply advanced search
+        const applyBtn = document.getElementById('apply-advanced-search');
+        const searchInput = document.getElementById('q');
+        
+        applyBtn.addEventListener('click', function() {
+            const conditions = document.querySelectorAll('.search-condition');
+            const queryParts = [];
+            
+            conditions.forEach(condition => {
+                const field = condition.querySelector('.field-select').value;
+                const operator = condition.querySelector('.operator-select').value;
+                const value = condition.querySelector('.value-input').value.trim();
+                
+                if (value) {
+                    let queryPart = `${field}:`;
+                    
+                    // Handle operators (for now, we'll just use the value as-is since backend uses icontains)
+                    if (operator === 'is') {
+                        queryPart += `"${value}"`;
+                    } else {
+                        queryPart += value;
+                    }
+                    
+                    queryParts.push(queryPart);
                 }
             });
+            
+            const query = queryParts.join(' ');
+            searchInput.value = query;
+            
+            // Submit the form
+            const form = searchInput.closest('form');
+            form.submit();
+            
+            closeModal();
         });
     });
 </script>

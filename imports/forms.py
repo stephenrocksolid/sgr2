@@ -101,12 +101,10 @@ class ImportMappingForm(forms.Form):
                 ('notes', 'Notes'),
             ],
             'engines': [
+                # Core engine fields only
                 ('engine_make', 'Engine Make'),
                 ('engine_model', 'Engine Model'),
-                ('sg_make', 'SG Make'),
-                ('sg_model', 'SG Model'),
-                ('status', 'Status'),
-                ('notes', 'Notes'),
+                ('engine_identifier', 'Engine Identifier'),
             ],
             'parts': [
                 ('part_number', 'Part Number'),
@@ -114,6 +112,7 @@ class ImportMappingForm(forms.Form):
                 ('manufacturer', 'Manufacturer'),
                 ('category', 'Category'),
                 ('description', 'Description'),
+                ('weight', 'Weight'),
                 ('notes', 'Notes'),
             ]
         }
@@ -128,6 +127,13 @@ class ImportMappingForm(forms.Form):
                 label=field_label,
                 widget=forms.Select(attrs={'class': 'form-control'})
             )
+        
+        # For engines section, expose core keys for template grouping
+        if section == 'engines':
+            self.engine_core_keys = [f'map_engines_{field_name}' for field_name, _ in section_fields['engines']]
+            # Everything else that starts with 'map_engines_' but not core → goes to More Engine Fields
+            self.engine_more_keys = [k for k in self.fields.keys()
+                                   if k.startswith('map_engines_') and k not in self.engine_core_keys]
 
 class AdditionalEngineMappingForm(forms.Form):
     """Form for mapping additional engine fields."""
@@ -136,8 +142,14 @@ class AdditionalEngineMappingForm(forms.Form):
         discovered_headers = kwargs.pop('discovered_headers', [])
         super().__init__(*args, **kwargs)
         
-        # Define additional engine fields
+        # Define additional engine fields (moved from main engine form + existing additional fields)
         additional_engine_fields = [
+            # Fields moved from main engine form
+            ('sg_make', 'SG Make'),
+            ('sg_model', 'SG Model'),
+            ('status', 'Status'),
+            ('notes', 'Notes'),
+            
             # Specifications
             ('cpl_number', 'CPL Number'),
             ('ar_number', 'AR Number'),
@@ -196,6 +208,47 @@ class AdditionalEngineMappingForm(forms.Form):
                 label=field_label,
                 widget=forms.Select(attrs={'class': 'form-control'})
             )
+        
+        # Expose all additional engine field keys for template grouping
+        self.engine_more_keys = [f'map_engines_{field_name}' for field_name, _ in additional_engine_fields]
+
+class VendorMappingForm(forms.Form):
+    """Form for mapping vendor fields."""
+    
+    def __init__(self, *args, **kwargs):
+        discovered_headers = kwargs.pop('discovered_headers', [])
+        super().__init__(*args, **kwargs)
+        
+        # Define vendor fields
+        vendor_fields = [
+            ('vendor_name', 'Vendor Name'),
+            ('vendor_website', 'Vendor Website'),
+            ('vendor_contact_name', 'Vendor Contact Name'),
+            ('vendor_contact_email', 'Vendor Contact Email'),
+            ('vendor_contact_phone', 'Vendor Contact Phone'),
+            ('vendor_part_number', 'Vendor Part Number'),
+            ('vendor_price', 'Vendor Price'),
+            ('vendor_stock_qty', 'Vendor Stock Qty'),
+        ]
+        
+        # Create choice field for each vendor field
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in discovered_headers]
+        
+        for field_name, field_label in vendor_fields:
+            self.fields[f'map_vendors_{field_name}'] = forms.ChoiceField(
+                choices=header_choices,
+                required=False,
+                label=field_label,
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+        
+        # Add option to create missing vendors
+        self.fields['create_missing_vendors'] = forms.BooleanField(
+            required=False,
+            initial=True,
+            label='Create vendors that do not exist',
+            widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        )
 
 class SavedMappingForm(forms.ModelForm):
     """Form for saving import mappings."""
@@ -230,7 +283,7 @@ class ProcessingOptionsForm(forms.Form):
         initial=True,
         required=False,
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-        help_text="Skip rows that would create duplicate records"
+        help_text="Skip rows that would create duplicate records. Duplicates are detected by (Engine Make, Engine Model, Engine Identifier)."
     )
     
     update_existing = forms.BooleanField(

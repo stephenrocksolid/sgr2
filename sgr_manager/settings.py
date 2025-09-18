@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     # Local apps
     'inventory',
     'imports',
+    'sgvendors',
 ]
 
 MIDDLEWARE = [
