@@ -155,6 +155,7 @@ class ImportRow(models.Model):
     # Relationships created
     machine_engine_created = models.BooleanField(default=False)
     engine_part_created = models.BooleanField(default=False)
+    machine_part_created = models.BooleanField(default=False)
     part_vendor_created = models.BooleanField(default=False)
     engine_vendor_linked = models.BooleanField(default=False)
     

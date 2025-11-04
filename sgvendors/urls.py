@@ -11,3 +11,5 @@ urlpatterns = [
     path('create/', views.create_ajax, name='create_ajax'),
     path('search/', views.search, name='search'),
 ]
+
+

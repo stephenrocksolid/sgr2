@@ -145,8 +145,6 @@ class AdditionalEngineMappingForm(forms.Form):
         # Define additional engine fields (moved from main engine form + existing additional fields)
         additional_engine_fields = [
             # Fields moved from main engine form
-            ('sg_make', 'SG Make'),
-            ('sg_model', 'SG Model'),
             ('status', 'Status'),
             ('notes', 'Notes'),
             

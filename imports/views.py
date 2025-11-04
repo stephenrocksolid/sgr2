@@ -165,6 +165,16 @@ def mapping_step(request, batch_id):
     """Step 2: Field mapping configuration."""
     batch = get_object_or_404(ImportBatch, id=batch_id)
     
+    # Initialize variables to store form data for re-rendering
+    submitted_data = None
+    mapping_name_value = ''
+    mapping_description_value = ''
+    missing_fields = {
+        'machines': [],
+        'engines': [],
+        'parts': []
+    }
+    
     if request.method == 'POST':
         # Handle mapping form submission
         machine_mapping = create_mapping_dict(request.POST, 'machines')
@@ -181,54 +191,154 @@ def mapping_step(request, batch_id):
             if header:
                 part_attribute_mappings[str(attr.id)] = header
         
-        # Create or update mapping
-        mapping_name = request.POST.get('mapping_name', '')
-        mapping_description = request.POST.get('mapping_description', '')
+        # Validate required fields based on which entity types have mappings
+        validation_errors = []
         
-        if mapping_name:
-            mapping, created = SavedImportMapping.objects.get_or_create(
-                name=mapping_name,
-                defaults={
-                    'description': mapping_description,
-                    'created_by': request.user if request.user.is_authenticated else None
-                }
-            )
+        # Reset missing_fields for this validation
+        missing_fields = {
+            'machines': [],
+            'engines': [],
+            'parts': []
+        }
+        
+        # Check if any fields are mapped for each entity type
+        has_machine_fields = any(v for v in machine_mapping.values() if v)
+        has_engine_fields = any(v for v in engine_mapping.values() if v)
+        has_part_fields = any(v for v in part_mapping.values() if v)
+        
+        # Validate Engines: if any engine field is mapped, require make, model, and identifier
+        if has_engine_fields:
+            required_engine_fields = {
+                'engine_make': 'Engine Make',
+                'engine_model': 'Engine Model',
+                'engine_identifier': 'Engine Identifier'
+            }
+            missing_engine_field_labels = []
+            for field_name, field_label in required_engine_fields.items():
+                if not engine_mapping.get(field_name):
+                    missing_engine_field_labels.append(field_label)
+                    missing_fields['engines'].append(field_name)
             
-            # Update mapping
-            mapping.machine_mapping = machine_mapping
-            mapping.engine_mapping = engine_mapping
-            mapping.part_mapping = part_mapping
-            mapping.vendor_mapping = vendor_mapping
-            mapping.part_attribute_mappings = part_attribute_mappings
-            mapping.save()
+            if missing_engine_field_labels:
+                validation_errors.append(
+                    f"Engine fields are mapped but missing required fields: {', '.join(missing_engine_field_labels)}"
+                )
+        
+        # Validate Machines: if any machine field is mapped, require make and model
+        if has_machine_fields:
+            required_machine_fields = {
+                'make': 'Make',
+                'model': 'Model'
+            }
+            missing_machine_field_labels = []
+            for field_name, field_label in required_machine_fields.items():
+                if not machine_mapping.get(field_name):
+                    missing_machine_field_labels.append(field_label)
+                    missing_fields['machines'].append(field_name)
+            
+            if missing_machine_field_labels:
+                validation_errors.append(
+                    f"Machine fields are mapped but missing required fields: {', '.join(missing_machine_field_labels)}"
+                )
+        
+        # Validate Parts: if any part field is mapped, require part_number and name
+        if has_part_fields:
+            required_part_fields = {
+                'part_number': 'Part Number',
+                'name': 'Name'
+            }
+            missing_part_field_labels = []
+            for field_name, field_label in required_part_fields.items():
+                if not part_mapping.get(field_name):
+                    missing_part_field_labels.append(field_label)
+                    missing_fields['parts'].append(field_name)
+            
+            if missing_part_field_labels:
+                validation_errors.append(
+                    f"Part fields are mapped but missing required fields: {', '.join(missing_part_field_labels)}"
+                )
+        
+        # If there are validation errors, show them and re-render the form
+        if validation_errors:
+            for error in validation_errors:
+                messages.error(request, error)
+            # Store the submitted data to re-populate the form
+            submitted_data = request.POST
+            mapping_name_value = request.POST.get('mapping_name', '')
+            mapping_description_value = request.POST.get('mapping_description', '')
+            # Re-render the form with the validation errors
+            # We'll continue to the GET section below to show the form again
+        else:
+            # Validation passed, proceed with saving
+            # Create or update mapping
+            mapping_name = request.POST.get('mapping_name', '').strip()
+            mapping_description = request.POST.get('mapping_description', '')
+            
+            if mapping_name:
+                # User provided a name, create/update a reusable saved mapping
+                mapping, created = SavedImportMapping.objects.get_or_create(
+                    name=mapping_name,
+                    defaults={
+                        'description': mapping_description,
+                        'created_by': request.user if request.user.is_authenticated else None
+                    }
+                )
+                
+                # Update mapping
+                mapping.machine_mapping = machine_mapping
+                mapping.engine_mapping = engine_mapping
+                mapping.part_mapping = part_mapping
+                mapping.vendor_mapping = vendor_mapping
+                mapping.part_attribute_mappings = part_attribute_mappings
+                mapping.save()
+                
+                messages.success(request, f"Mapping '{mapping_name}' saved successfully.")
+            else:
+                # No name provided, create an anonymous/temporary mapping
+                import datetime
+                temp_name = f"Import_{batch.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                mapping = SavedImportMapping.objects.create(
+                    name=temp_name,
+                    description=mapping_description or f"Temporary mapping for batch {batch.id}",
+                    machine_mapping=machine_mapping,
+                    engine_mapping=engine_mapping,
+                    part_mapping=part_mapping,
+                    vendor_mapping=vendor_mapping,
+                    part_attribute_mappings=part_attribute_mappings,
+                    created_by=request.user if request.user.is_authenticated else None
+                )
+                
+                messages.success(request, "Mapping saved successfully.")
             
             # Assign to batch
             batch.mapping = mapping
             batch.status = 'mapped'
             batch.save()
             
-            messages.success(request, f"Mapping '{mapping_name}' saved successfully.")
             return redirect('imports:processing_step', batch_id=batch.id)
-        else:
-            messages.error(request, "Please provide a name for the mapping.")
     
-    # Create mapping forms for each section
+    # Create mapping forms for each section (with submitted data if validation failed)
     machine_form = ImportMappingForm(
+        data=submitted_data,
         discovered_headers=batch.discovered_headers,
         section='machines'
     )
     engine_form = ImportMappingForm(
+        data=submitted_data,
         discovered_headers=batch.discovered_headers,
         section='engines'
     )
     additional_engine_form = AdditionalEngineMappingForm(
+        data=submitted_data,
         discovered_headers=batch.discovered_headers
     )
     part_form = ImportMappingForm(
+        data=submitted_data,
         discovered_headers=batch.discovered_headers,
         section='parts'
     )
     vendor_form = VendorMappingForm(
+        data=submitted_data,
         discovered_headers=batch.discovered_headers
     )
     
@@ -241,6 +351,14 @@ def mapping_step(request, batch_id):
     
     # Get saved mappings for dropdown
     saved_mappings = SavedImportMapping.objects.all()
+    
+    # Prepare submitted attribute mappings for easier template access
+    submitted_attr_mappings = {}
+    if submitted_data:
+        for attr in all_attrs:
+            field_name = f'attr_map_{attr.id}'
+            if field_name in submitted_data:
+                submitted_attr_mappings[attr.id] = submitted_data.get(field_name)
     
     context = {
         'batch': batch,
@@ -257,6 +375,12 @@ def mapping_step(request, batch_id):
         'engine_more_keys': getattr(additional_engine_form, 'engine_more_keys', []),
         'step': 2,
         'total_steps': 3,
+        # Preserve submitted values for re-rendering
+        'submitted_data': submitted_data,
+        'submitted_attr_mappings': submitted_attr_mappings,
+        'mapping_name_value': mapping_name_value,
+        'mapping_description_value': mapping_description_value,
+        'missing_fields': missing_fields,
     }
     return render(request, 'imports/mapping_step.html', context)
 
@@ -272,38 +396,44 @@ def processing_step(request, batch_id):
     if request.method == 'POST':
         form = ProcessingOptionsForm(request.POST)
         if form.is_valid():
-            # Update mapping with processing options
-            mapping = batch.mapping
-            mapping.chunk_size = form.cleaned_data['chunk_size']
-            mapping.skip_duplicates = form.cleaned_data['skip_duplicates']
-            mapping.update_existing = form.cleaned_data['update_existing']
-            mapping.save()
-            
-            # Start processing task
-            from django.conf import settings
-            if getattr(settings, 'CELERY_ENABLED', False):
-                # Use Celery for async processing
-                result = process_import_batch.delay(batch.id)
-                batch.celery_id = result.id
-                batch.status = 'queued'
-                batch.save(update_fields=['celery_id', 'status'])
-            else:
-                # For large files, run asynchronously even without Celery
-                if batch.total_rows > 5000:
+            try:
+                # Update mapping with processing options
+                mapping = batch.mapping
+                mapping.chunk_size = form.cleaned_data['chunk_size']
+                mapping.skip_duplicates = form.cleaned_data['skip_duplicates']
+                mapping.update_existing = form.cleaned_data['update_existing']
+                mapping.save()
+                
+                # Start processing task
+                from django.conf import settings
+                if getattr(settings, 'CELERY_ENABLED', False):
+                    # Use Celery for async processing
+                    result = process_import_batch.delay(batch.id)
+                    batch.celery_id = result.id
+                    batch.status = 'queued'
+                    batch.save(update_fields=['celery_id', 'status'])
+                else:
+                    # Run asynchronously in a background thread
                     import threading
+                    from .tasks import process_import_batch_sync
                     batch.status = 'processing'
                     batch.save(update_fields=['status'])
-                    thread = threading.Thread(target=process_import_batch, args=(batch.id,))
+                    thread = threading.Thread(target=process_import_batch_sync, args=(batch.id,))
                     thread.daemon = True
                     thread.start()
-                else:
-                    # Run synchronously for small files
-                    batch.status = 'processing'
-                    batch.save(update_fields=['status'])
-                    process_import_batch(batch.id)
-            
-            messages.success(request, "Import processing started. You can monitor progress below.")
-            return redirect('imports:processing_step', batch_id=batch.id)
+                
+                messages.success(request, "Import processing started. You can monitor progress below.")
+                return redirect('imports:processing_step', batch_id=batch.id)
+            except Exception as e:
+                messages.error(request, f"Error starting import: {str(e)}")
+                import traceback
+                print(traceback.format_exc())
+        else:
+            # Form validation failed - show errors
+            messages.error(request, "Please correct the errors below.")
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
     else:
         # Smart chunk size based on file size
         default_chunk_size = 2000
@@ -405,6 +535,7 @@ def batch_status(request, batch_id):
         'progress': batch.progress_percentage,
         'processed_rows': batch.processed_rows,
         'total_rows': batch.total_rows,
+        'error_message': batch.error_message,
         'html': html,
         'is_complete': batch.status in ['completed', 'failed'],
         'rows_stats': rows_stats,

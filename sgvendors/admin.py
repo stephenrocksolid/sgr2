@@ -8,3 +8,5 @@ class SGVendorAdmin(admin.ModelAdmin):
     list_filter = ['created', 'updated']
     search_fields = ['name', 'website', 'notes']
     readonly_fields = ['created', 'updated']
+
+

@@ -35,3 +35,5 @@ class SGVendorForm(forms.ModelForm):
             if existing.exists():
                 raise forms.ValidationError('An SG Vendor with this name already exists.')
         return name
+
+

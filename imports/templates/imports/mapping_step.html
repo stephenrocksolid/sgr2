@@ -29,8 +29,8 @@
 
     <div class="wizard-content">
         <div class="mapping-section">
-            <h2>Step 3: Map Your Data Fields</h2>
-            <p>Map the columns in your file to the appropriate database fields.</p>
+            <h2 style="font-size: 1.3em; margin-bottom: 4px;">Step 3: Map Your Data Fields</h2>
+            <p style="font-size: 0.9em; margin-bottom: 12px; color: #666;">Map the columns in your file to the appropriate database fields.</p>
             
             <div class="file-info">
                 <h3>File Information</h3>
@@ -47,31 +47,38 @@
             </div>
 
             <div class="preview-section">
-                <h3>Data Preview</h3>
-                <p>Your data with the discovered headers:</p>
+                <h3 style="cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px;" onclick="toggleSection('preview-data')">
+                    <span id="preview-toggle-icon" style="font-size: 1.2em;">▶</span>
+                    Data Preview
+                    <small style="font-weight: normal; color: #666;">(click to expand)</small>
+                </h3>
                 
-                {% if batch.discovered_headers %}
-                    <div class="table-wrap">
-                        <table class="preview-table">
-                            <thead>
-                                <tr>
-                                    {% for header in batch.discovered_headers %}
-                                        <th>{{ header }}</th>
-                                    {% endfor %}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for row in batch.preview_data|slice:":3" %}
+                <div id="preview-data" style="display: none; margin-top: 10px;">
+                    <p>Your data with the discovered headers:</p>
+                    
+                    {% if batch.discovered_headers %}
+                        <div class="table-wrap">
+                            <table class="preview-table">
+                                <thead>
                                     <tr>
-                                        {% for cell in row %}
-                                            <td>{{ cell|default:"—" }}</td>
+                                        {% for header in batch.discovered_headers %}
+                                            <th>{{ header }}</th>
                                         {% endfor %}
                                     </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% endif %}
+                                </thead>
+                                <tbody>
+                                    {% for row in batch.preview_data|slice:":3" %}
+                                        <tr>
+                                            {% for cell in row %}
+                                                <td>{{ cell|default:"—" }}</td>
+                                            {% endfor %}
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
 
             <form method="post" class="mapping-form">
@@ -79,14 +86,34 @@
                 
                 <div class="mapping-sections">
                     <!-- Machines Section -->
-                    <div class="mapping-section-card">
-                        <h3>Machine Fields</h3>
+                    <div class="mapping-section-card machine-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">🚜</span>
+                                <h3>Machine Fields</h3>
+                            </div>
+                            <div class="section-progress" id="machine-progress">
+                                <span class="progress-text">0 of 2 required mapped</span>
+                            </div>
+                        </div>
                         <p>Map fields for machine data (optional)</p>
+                        <p class="required-note"><small><strong>Required if any machine field is mapped:</strong> Make<span class="required-asterisk">*</span>, Model<span class="required-asterisk">*</span></small></p>
                         
                         <div class="field-mappings">
                             {% for field in machine_form %}
-                                <div class="form-group">
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div class="form-group {% if 'make' in field.name and 'make' in missing_fields.machines %}field-missing{% endif %}{% if 'model' in field.name and 'model' in missing_fields.machines %}field-missing{% endif %}">
+                                    <label for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                        {% if 'make' in field.name or 'model' in field.name %}
+                                            <span class="required-asterisk">*</span>
+                                        {% endif %}
+                                        {% if 'make' in field.name and 'make' in missing_fields.machines %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                        {% if 'model' in field.name and 'model' in missing_fields.machines %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                    </label>
                                     {{ field }}
                                     {% if field.errors %}
                                         <div class="field-error">
@@ -101,9 +128,18 @@
                     </div>
 
                     <!-- Engine Fields (Core) -->
-                    <div class="mapping-section-card">
-                        <h3>Engine Fields</h3>
+                    <div class="mapping-section-card engine-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">⚙️</span>
+                                <h3>Engine Fields</h3>
+                            </div>
+                            <div class="section-progress" id="engine-progress">
+                                <span class="progress-text">0 of 3 required mapped</span>
+                            </div>
+                        </div>
                         <p>Map fields for engine data (core)</p>
+                        <p class="required-note"><small><strong>Required if any engine field is mapped:</strong> Engine Make<span class="required-asterisk">*</span>, Engine Model<span class="required-asterisk">*</span>, Engine Identifier<span class="required-asterisk">*</span></small></p>
                         
                         {% if engine_suggestions %}
                         <div class="auto-suggestions">
@@ -125,8 +161,22 @@
                         <div class="field-mappings">
                             {% for field in engine_form %}
                                 {% if field.name in engine_core_keys %}
-                                <div class="form-group">
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div class="form-group {% if 'engine_make' in field.name and 'engine_make' in missing_fields.engines %}field-missing{% endif %}{% if 'engine_model' in field.name and 'engine_model' in missing_fields.engines %}field-missing{% endif %}{% if 'engine_identifier' in field.name and 'engine_identifier' in missing_fields.engines %}field-missing{% endif %}">
+                                    <label for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                        {% if 'engine_make' in field.name or 'engine_model' in field.name or 'engine_identifier' in field.name %}
+                                            <span class="required-asterisk">*</span>
+                                        {% endif %}
+                                        {% if 'engine_make' in field.name and 'engine_make' in missing_fields.engines %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                        {% if 'engine_model' in field.name and 'engine_model' in missing_fields.engines %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                        {% if 'engine_identifier' in field.name and 'engine_identifier' in missing_fields.engines %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                    </label>
                                     {{ field }}
                                     {% if field.errors %}
                                         <div class="field-error">
@@ -144,14 +194,34 @@
                     </div>
 
                     <!-- Parts Section -->
-                    <div class="mapping-section-card">
-                        <h3>Part Fields</h3>
+                    <div class="mapping-section-card part-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">🔧</span>
+                                <h3>Part Fields</h3>
+                            </div>
+                            <div class="section-progress" id="part-progress">
+                                <span class="progress-text">0 of 2 required mapped</span>
+                            </div>
+                        </div>
                         <p>Map fields for part data (optional)</p>
+                        <p class="required-note"><small><strong>Required if any part field is mapped:</strong> Part Number<span class="required-asterisk">*</span>, Name<span class="required-asterisk">*</span></small></p>
                         
                         <div class="field-mappings">
                             {% for field in part_form %}
-                                <div class="form-group">
-                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                <div class="form-group {% if 'part_number' in field.name and 'part_number' in missing_fields.parts %}field-missing{% endif %}{% if 'name' in field.name and 'name' in missing_fields.parts %}field-missing{% endif %}">
+                                    <label for="{{ field.id_for_label }}">
+                                        {{ field.label }}
+                                        {% if 'part_number' in field.name or 'name' in field.name %}
+                                            <span class="required-asterisk">*</span>
+                                        {% endif %}
+                                        {% if 'part_number' in field.name and 'part_number' in missing_fields.parts %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                        {% if 'name' in field.name and 'name' in missing_fields.parts %}
+                                            <span class="missing-field-indicator">← Missing!</span>
+                                        {% endif %}
+                                    </label>
                                     {{ field }}
                                     {% if field.errors %}
                                         <div class="field-error">
@@ -166,8 +236,13 @@
                     </div>
 
                     <!-- Vendors Section -->
-                    <div class="mapping-section-card">
-                        <h3>Vendor Fields</h3>
+                    <div class="mapping-section-card vendor-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">🏢</span>
+                                <h3>Vendor Fields</h3>
+                            </div>
+                        </div>
                         <p>Map fields for vendor data (optional)</p>
                         
                         <div class="field-mappings">
@@ -242,13 +317,17 @@
                                     <select name="attr_map_{{ attr.id }}" id="attr_map_{{ attr.id }}" class="form-select w-full">
                                         <option value="">— Select Header —</option>
                                         {% for h in batch.discovered_headers %}
-                                            {% if batch.mapping %}
-                                                {% with sel=batch.mapping.part_attribute_mappings|get_item:attr.id|stringformat:"s" %}
-                                                    <option value="{{ h }}" {% if sel == h %}selected{% endif %}>{{ h }}</option>
-                                                {% endwith %}
-                                            {% else %}
-                                                <option value="{{ h }}">{{ h }}</option>
-                                            {% endif %}
+                                            <option value="{{ h }}"
+                                                {% if submitted_attr_mappings %}
+                                                    {# Check submitted data first (after validation error) #}
+                                                    {% if submitted_attr_mappings|get_item:attr.id == h %}selected{% endif %}
+                                                {% elif batch.mapping %}
+                                                    {# Otherwise use saved mapping if exists #}
+                                                    {% with sel=batch.mapping.part_attribute_mappings|get_item:attr.id|stringformat:"s" %}
+                                                        {% if sel == h %}selected{% endif %}
+                                                    {% endwith %}
+                                                {% endif %}
+                                            >{{ h }}</option>
                                         {% endfor %}
                                     </select>
                                     {% if attr.help_text %}<p class="text-xs text-gray-500 mt-1">{{ attr.help_text }}</p>{% endif %}
@@ -259,17 +338,17 @@
                 </div>
 
                 <div class="mapping-options">
-                    <h3>Import Name</h3>
-                    <p>Add notes for future reference on this import.</p>
+                    <h3>Import Name (Optional)</h3>
+                    <p>Optionally name this mapping to save it for future imports.</p>
                     
                     <div class="form-group">
-                        <label for="mapping_name">Import Name</label>
-                        <input type="text" name="mapping_name" id="mapping_name" class="form-control" placeholder="e.g., Standard Parts Import">
+                        <label for="mapping_name">Import Name <small>(optional)</small></label>
+                        <input type="text" name="mapping_name" id="mapping_name" class="form-control" placeholder="e.g., Standard Parts Import (leave blank for one-time import)" value="{{ mapping_name_value }}">
                     </div>
                     
                     <div class="form-group">
                         <label for="mapping_description">Description</label>
-                        <textarea name="mapping_description" id="mapping_description" class="form-control" rows="3" placeholder="Optional description of this import"></textarea>
+                        <textarea name="mapping_description" id="mapping_description" class="form-control" rows="3" placeholder="Optional description of this import">{{ mapping_description_value }}</textarea>
                     </div>
                 </div>
 
@@ -287,15 +366,24 @@
 <script>
 function toggleSection(sectionId) {
     const section = document.getElementById(sectionId);
-    if (section.style.display === 'none') {
+    const isPreview = sectionId === 'preview-data';
+    
+    if (section.style.display === 'none' || section.style.display === '') {
         section.style.display = 'block';
+        if (isPreview) {
+            document.getElementById('preview-toggle-icon').textContent = '▼';
+        }
     } else {
         section.style.display = 'none';
+        if (isPreview) {
+            document.getElementById('preview-toggle-icon').textContent = '▶';
+        }
     }
 }
 
-// Filter functionality
+// Progress tracking and visual feedback
 document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
     const categoryFilter = document.getElementById('category-filter');
     const nameFilter = document.getElementById('name-filter');
     const attrItems = document.querySelectorAll('.attr-item');
@@ -325,6 +413,92 @@ document.addEventListener('DOMContentLoaded', function() {
     if (nameFilter) {
         nameFilter.addEventListener('input', filterAttributes);
     }
+    
+    // Visual feedback and progress tracking
+    function updateFieldVisuals(selectElement) {
+        const formGroup = selectElement.closest('.form-group');
+        if (selectElement.value && selectElement.value !== '') {
+            selectElement.classList.add('mapped');
+            formGroup.classList.add('field-mapped');
+            formGroup.classList.remove('required-unmapped');
+        } else {
+            selectElement.classList.remove('mapped');
+            formGroup.classList.remove('field-mapped');
+        }
+        updateProgress();
+    }
+    
+    function updateProgress() {
+        // Machine progress
+        const machineSelects = document.querySelectorAll('.machine-section select');
+        const machineRequired = Array.from(machineSelects).filter(s => 
+            s.name.includes('make') || s.name.includes('model')
+        );
+        const machineMapped = machineRequired.filter(s => s.value && s.value !== '');
+        updateProgressDisplay('machine-progress', machineMapped.length, machineRequired.length);
+        
+        // Engine progress
+        const engineSelects = document.querySelectorAll('.engine-section select');
+        const engineRequired = Array.from(engineSelects).filter(s => 
+            s.name.includes('engine_make') || s.name.includes('engine_model') || s.name.includes('engine_identifier')
+        );
+        const engineMapped = engineRequired.filter(s => s.value && s.value !== '');
+        updateProgressDisplay('engine-progress', engineMapped.length, engineRequired.length);
+        
+        // Part progress
+        const partSelects = document.querySelectorAll('.part-section select');
+        const partRequired = Array.from(partSelects).filter(s => 
+            s.name.includes('part_number') || (s.name.includes('name') && s.name.includes('part'))
+        );
+        const partMapped = partRequired.filter(s => s.value && s.value !== '');
+        updateProgressDisplay('part-progress', partMapped.length, partRequired.length);
+    }
+    
+    function updateProgressDisplay(elementId, mapped, total) {
+        const progressEl = document.getElementById(elementId);
+        if (progressEl) {
+            const text = progressEl.querySelector('.progress-text');
+            if (text) {
+                text.textContent = `${mapped} of ${total} required mapped`;
+                
+                // Add/remove badge
+                let badge = progressEl.querySelector('.progress-badge');
+                if (mapped === total && total > 0) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'progress-badge';
+                        progressEl.appendChild(badge);
+                    }
+                    badge.textContent = 'Complete';
+                    badge.classList.remove('incomplete');
+                } else if (mapped > 0 && mapped < total) {
+                    if (!badge) {
+                        badge = document.createElement('span');
+                        badge.className = 'progress-badge incomplete';
+                        progressEl.appendChild(badge);
+                    }
+                    badge.textContent = `${total - mapped} left`;
+                    badge.classList.add('incomplete');
+                } else if (badge) {
+                    badge.remove();
+                }
+            }
+        }
+    }
+    
+    
+    // Attach change listeners to all select fields
+    const allSelects = document.querySelectorAll('select');
+    allSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            updateFieldVisuals(this);
+        });
+        // Initialize visuals
+        updateFieldVisuals(select);
+    });
+    
+    // Initial progress update
+    updateProgress();
 });
 
 // Auto-suggestion functionality
@@ -510,29 +684,34 @@ function applySuggestion(fieldName, headerName) {
 }
 
 .wizard-content {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
 }
 
 .mapping-section {
     background: white;
-    padding: var(--spacing-xl);
+    padding: 16px;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
 }
 
 .file-info {
     background: var(--gray-50);
-    padding: var(--spacing-lg);
+    padding: 10px 12px;
     border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: 12px;
+}
+
+.file-info h3 {
+    font-size: 1em;
+    margin-bottom: 6px;
 }
 
 .info-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-md);
+    gap: 8px;
+    margin-top: 6px;
 }
 
 .info-item {
@@ -543,49 +722,111 @@ function applySuggestion(fieldName, headerName) {
 .info-item label {
     font-weight: 500;
     color: var(--gray-700);
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 2px;
+    font-size: 0.9em;
 }
 
 .info-item span {
     color: var(--gray-600);
+    font-size: 0.9em;
 }
 
 .mapping-sections {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: var(--spacing-xl);
-    margin-bottom: var(--spacing-xl);
+    gap: 16px;
+    margin-bottom: 16px;
 }
 
 .mapping-section-card {
-    background: var(--gray-50);
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius);
+    background: white;
+    padding: 16px;
+    border-radius: 8px;
     border: 1px solid var(--gray-200);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.mapping-section-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    transition: opacity 0.3s ease;
+}
+
+.mapping-section-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Color-coded sections */
+.machine-section {
+    border-top: 4px solid #2196F3;
+    background: linear-gradient(to bottom, #E3F2FD 0%, white 100px);
+}
+
+.engine-section {
+    border-top: 4px solid #FF9800;
+    background: linear-gradient(to bottom, #FFF3E0 0%, white 100px);
+}
+
+.part-section {
+    border-top: 4px solid #4CAF50;
+    background: linear-gradient(to bottom, #E8F5E9 0%, white 100px);
+}
+
+.vendor-section {
+    border-top: 4px solid #9C27B0;
+    background: linear-gradient(to bottom, #F3E5F5 0%, white 100px);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.section-icon {
+    font-size: 1.5em;
+    line-height: 1;
 }
 
 .mapping-section-card h3 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-sm);
-    color: var(--gray-700);
+    margin: 0;
+    color: var(--gray-800);
+    font-size: 1.1em;
+    font-weight: 600;
 }
 
 .mapping-section-card p {
     color: var(--gray-600);
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-lg);
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    line-height: 1.3;
 }
 
  .field-mappings {
      display: flex;
      flex-direction: column;
-     gap: var(--spacing-md);
+     gap: 8px;
  }
  
  .field-mappings.three-columns {
      display: grid;
      grid-template-columns: repeat(3, 1fr);
-     gap: var(--spacing-md);
+     gap: 8px;
  }
  
  @media (max-width: 1024px) {
@@ -600,44 +841,212 @@ function applySuggestion(fieldName, headerName) {
      }
  }
 
+/* Progress indicators */
+.section-progress {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.progress-text {
+    font-size: 0.75em;
+    color: #666;
+    font-weight: 500;
+}
+
+.progress-badge {
+    background: #4CAF50;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+}
+
+.progress-badge.incomplete {
+    background: #ff9800;
+}
+
+/* Compact form controls with visual feedback */
+.form-group {
+    margin-bottom: 0;
+    position: relative;
+}
+
+.form-group label {
+    font-size: 0.9em;
+    margin-bottom: 3px;
+    display: block;
+    font-weight: 500;
+    transition: color 0.3s ease;
+}
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+    padding: 6px 8px;
+    font-size: 0.9em;
+    height: auto;
+    transition: all 0.3s ease;
+    border: 2px solid #ddd;
+}
+
+.form-group select:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2196F3;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+/* Mapped field indicator */
+.form-group select.mapped {
+    border-color: #4CAF50;
+    background-color: #f1f8f4;
+}
+
+.form-group.field-mapped label::after {
+    content: ' ✓';
+    color: #4CAF50;
+    font-weight: bold;
+    margin-left: 4px;
+}
+
+.form-control {
+    padding: 6px 8px;
+    font-size: 0.9em;
+}
+
 .mapping-options {
     background: var(--blue-50);
-    padding: var(--spacing-lg);
+    padding: 12px;
     border-radius: var(--border-radius);
     border: 1px solid var(--blue-200);
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: 16px;
 }
 
 .mapping-options h3 {
     margin-top: 0;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 4px;
     color: var(--blue-800);
+    font-size: 1.1em;
 }
 
 .mapping-options p {
     color: var(--blue-700);
-    font-size: var(--font-size-sm);
-    margin-bottom: var(--spacing-lg);
+    font-size: 0.85em;
+    margin-bottom: 8px;
+}
+
+.mapping-options .form-group {
+    margin-bottom: 10px;
 }
 
 .preview-section {
     border-top: 1px solid var(--gray-200);
-    padding-top: var(--spacing-xl);
+    padding-top: 12px;
+    margin-top: 8px;
+}
+
+.preview-section h3 {
+    font-size: 1em;
+    margin-bottom: 8px;
 }
 
 .preview-table {
-    font-size: var(--font-size-sm);
+    font-size: 0.85em;
 }
 
 .preview-table th {
     background: var(--gray-100);
     font-weight: 600;
+    padding: 6px 8px;
+}
+
+.preview-table td {
+    padding: 5px 8px;
 }
 
 .form-actions {
     display: flex;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-xl);
+    gap: 10px;
+    margin-top: 16px;
+}
+
+/* Enhanced button styles */
+.btn-primary {
+    background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
+    background: linear-gradient(135deg, #1976D2 0%, #1565C0 100%);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-primary::before {
+    content: '💾';
+    font-size: 1em;
+}
+
+.btn-secondary {
+    background: white;
+    color: #666;
+    border: 2px solid #ddd;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-secondary:hover {
+    border-color: #2196F3;
+    color: #2196F3;
+    transform: translateY(-1px);
+}
+
+.btn-secondary::before {
+    content: '←';
+    font-size: 1.2em;
+}
+
+/* Status badges */
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-left: 6px;
+}
+
+.badge-required {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.badge-optional {
+    background: #f5f5f5;
+    color: #757575;
 }
 
 /* Part Attributes Section Styles */
@@ -645,33 +1054,34 @@ function applySuggestion(fieldName, headerName) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 8px;
 }
 
 .card-header h3 {
     margin: 0;
+    font-size: 1.1em;
 }
 
 .filter-controls {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 8px;
 }
 
 .filter-row {
     display: flex;
-    gap: var(--spacing-md);
+    gap: 8px;
     align-items: center;
 }
 
 .filter-row input {
-    padding: var(--spacing-sm);
+    padding: 5px 8px;
     border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
-    font-size: var(--font-size-sm);
+    font-size: 0.85em;
 }
 
 .attr-item {
     border: 1px solid var(--gray-200);
-    padding: var(--spacing-md);
+    padding: 8px;
     border-radius: var(--border-radius);
     background: white;
 }
@@ -679,22 +1089,143 @@ function applySuggestion(fieldName, headerName) {
 .attr-item label {
     font-weight: 500;
     color: var(--gray-700);
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 3px;
     display: block;
+    font-size: 0.85em;
 }
 
 .attr-item select {
     width: 100%;
-    padding: var(--spacing-sm);
+    padding: 5px 6px;
     border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
-    font-size: var(--font-size-sm);
+    font-size: 0.85em;
 }
 
 .attr-item p {
-    margin-top: var(--spacing-xs);
-    font-size: var(--font-size-xs);
+    margin-top: 2px;
+    font-size: 0.75em;
     color: var(--gray-500);
+}
+
+/* Required field styling */
+.required-asterisk {
+    color: #dc3545;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+.required-note {
+    background-color: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    padding: 6px 10px;
+    margin-top: 4px;
+    margin-bottom: 6px;
+    color: #856404;
+    font-size: 0.85em;
+    line-height: 1.3;
+}
+
+.required-note strong {
+    color: #856404;
+}
+
+/* Missing field styling */
+.field-missing {
+    background-color: #ffe6e6 !important;
+    border: 2px solid #dc3545 !important;
+    border-radius: 4px;
+    padding: 8px;
+    animation: pulse-red 2s ease-in-out;
+}
+
+.field-missing label {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+.field-missing select {
+    border: 2px solid #dc3545 !important;
+    background-color: #fff;
+}
+
+.missing-field-indicator {
+    color: #dc3545;
+    font-weight: bold;
+    margin-left: 8px;
+    font-size: 0.9em;
+    animation: blink 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-red {
+    0%, 100% {
+        background-color: #ffe6e6;
+    }
+    50% {
+        background-color: #ffcccc;
+    }
+}
+
+@keyframes blink {
+    0%, 50%, 100% {
+        opacity: 1;
+    }
+    25%, 75% {
+        opacity: 0.5;
+    }
+}
+
+/* Page load animations */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.mapping-section-card {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.machine-section {
+    animation-delay: 0.1s;
+}
+
+.engine-section {
+    animation-delay: 0.2s;
+}
+
+.part-section {
+    animation-delay: 0.3s;
+}
+
+.vendor-section {
+    animation-delay: 0.4s;
+}
+
+/* Smooth scroll behavior */
+html {
+    scroll-behavior: smooth;
+}
+
+
+/* Pulse animation for unmapped required fields */
+@keyframes gentle-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(255, 152, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(255, 152, 0, 0);
+    }
+}
+
+.form-group.required-unmapped select {
+    animation: gentle-pulse 2s infinite;
 }
 </style>
 {% endblock %}

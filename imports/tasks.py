@@ -129,9 +129,8 @@ except ImportError:
 def test_task():
     return "Celery is working!"
 
-@shared_task(bind=True, time_limit=1800, soft_time_limit=1500)
-def process_import_batch(self, batch_id):
-    """Process an import batch in chunks with transaction.atomic() per chunk."""
+def _process_import_batch_internal(batch_id, task_instance=None):
+    """Internal function to process an import batch. Can be called directly or from Celery task."""
     start_time = time.time()
     
     try:
@@ -141,8 +140,8 @@ def process_import_batch(self, batch_id):
         batch.save()
         
         # Update Celery task state
-        if CELERY_AVAILABLE and hasattr(self, 'update_state'):
-            self.update_state(
+        if CELERY_AVAILABLE and task_instance and hasattr(task_instance, 'update_state'):
+            task_instance.update_state(
                 state='PROGRESS',
                 meta={'rows': 0, 'created': 0, 'errors': 0, 'status': 'Starting import...'}
             )
@@ -162,9 +161,9 @@ def process_import_batch(self, batch_id):
         
         # Process file based on type
         if batch.is_csv():
-            success_count, error_count = process_csv_import(batch, mapping, self)
+            success_count, error_count = process_csv_import(batch, mapping, task_instance)
         elif batch.is_xlsx():
-            success_count, error_count = process_xlsx_import(batch, mapping, self)
+            success_count, error_count = process_xlsx_import(batch, mapping, task_instance)
         else:
             raise Exception(f"Unsupported file type: {batch.file_type}")
         
@@ -175,8 +174,8 @@ def process_import_batch(self, batch_id):
         batch.save()
         
         # Final Celery task state update
-        if CELERY_AVAILABLE and hasattr(self, 'update_state'):
-            self.update_state(
+        if CELERY_AVAILABLE and task_instance and hasattr(task_instance, 'update_state'):
+            task_instance.update_state(
                 state='SUCCESS',
                 meta={
                     'rows': success_count + error_count,
@@ -210,8 +209,8 @@ def process_import_batch(self, batch_id):
             batch.save()
             
             # Update Celery task state
-            if CELERY_AVAILABLE and hasattr(self, 'update_state'):
-                self.update_state(
+            if CELERY_AVAILABLE and task_instance and hasattr(task_instance, 'update_state'):
+                task_instance.update_state(
                     state='FAILURE',
                     meta={'status': f'Import failed: {str(e)}'}
                 )
@@ -228,6 +227,15 @@ def process_import_batch(self, batch_id):
             'success': False,
             'error': str(e)
         }
+
+@shared_task(bind=True, time_limit=1800, soft_time_limit=1500)
+def process_import_batch(self, batch_id):
+    """Celery task wrapper for processing an import batch."""
+    return _process_import_batch_internal(batch_id, task_instance=self)
+
+def process_import_batch_sync(batch_id):
+    """Synchronous wrapper for processing an import batch (for threading/testing)."""
+    return _process_import_batch_internal(batch_id, task_instance=None)
 
 def process_csv_import(batch, mapping, task_instance=None):
     """Process CSV import in chunks with streaming."""
@@ -708,6 +716,15 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
         import_row.add_error(error_msg)
         raise Exception(error_msg)
     
+    # Check for identifier field (can be engine_identifier, sg_engine_identifier, or engine_id)
+    has_identifier = (engine_data.get('engine_identifier') or 
+                     engine_data.get('sg_engine_identifier') or 
+                     engine_data.get('engine_id'))
+    if not has_identifier:
+        error_msg = "Engine requires an identifier field (engine_identifier, sg_engine_identifier, or engine_id)"
+        import_row.add_error(error_msg)
+        raise Exception(error_msg)
+    
     # Handle SG Engine mapping
     sg_engine = None
     if engine_data.get('sg_make') and engine_data.get('sg_model'):
@@ -1096,16 +1113,19 @@ def create_relationships(batch, mapping, normalized_data, import_row):
     
     # Engine↔Vendor relationship is now handled directly in process_engine_row
     
-    # Create Machine↔Part relationship (stub for future implementation)
-    machine_part_data = normalized_data.get('machine_part_links', {})
-    if machine_part_data and import_row.machine_id and import_row.part_id:
+    # Create Machine↔Part relationship
+    if import_row.machine_id and import_row.part_id:
         machine = Machine.objects.get(id=import_row.machine_id)
         part = Part.objects.get(id=import_row.part_id)
         
-        # TODO: Implement machine-part link processing
-        # This could handle cases where a row specifies a machine and multiple parts
-        # or where a separate section/column specifies machine-part relationships
-        pass
+        machine_part, created = MachinePart.objects.get_or_create(
+            machine=machine,
+            part=part,
+            defaults={'notes': f"Created from import batch {batch.id}"}
+        )
+        
+        if created:
+            import_row.machine_part_created = True
     
     # Handle vendor relationships
     vendor_data = normalized_data.get('vendor', {})
