@@ -461,86 +461,116 @@ def processing_step(request, batch_id):
 @login_required
 def batch_status(request, batch_id):
     """HTMX endpoint for polling import status."""
-    batch = get_object_or_404(ImportBatch, id=batch_id)
-    
-    # Check Celery task status if available
-    celery_meta = {}
-    if batch.celery_id:
-        try:
-            from celery.result import AsyncResult
-            from django.conf import settings
-            
-            if getattr(settings, 'CELERY_ENABLED', False):
-                result = AsyncResult(batch.celery_id)
-                celery_meta = {
-                    'state': result.state,
-                    'meta': result.info if hasattr(result, 'info') else {}
-                }
+    try:
+        batch = get_object_or_404(ImportBatch, id=batch_id)
+        
+        # Check Celery task status if available
+        celery_meta = {}
+        if batch.celery_id:
+            try:
+                from celery.result import AsyncResult
+                from django.conf import settings
                 
-                # Update batch status based on Celery task state
-                if result.state == 'PENDING' and batch.status != 'queued':
-                    batch.status = 'queued'
-                    batch.save(update_fields=['status'])
-                elif result.state == 'PROGRESS' and batch.status != 'processing':
-                    batch.status = 'processing'
-                    batch.save(update_fields=['status'])
-                elif result.state == 'SUCCESS' and batch.status != 'completed':
-                    batch.status = 'completed'
-                    batch.save(update_fields=['status'])
-                elif result.state == 'FAILURE' and batch.status != 'failed':
-                    batch.status = 'failed'
-                    batch.error_message = str(result.info) if result.info else 'Task failed'
-                    batch.save(update_fields=['status', 'error_message'])
-        except Exception as e:
-            # If Celery check fails, continue with database status
-            celery_meta = {'error': str(e)}
-    
-    # Get recent logs
-    recent_logs = batch.logs.all()[:10]
-    
-    # Get ImportRow statistics
-    rows_stats = batch.rows.aggregate(
-        total_rows=Count('id'),
-        error_rows=Count('id', filter=Q(has_errors=True)),
-        machine_created=Count('id', filter=Q(machine_created=True)),
-        engine_created=Count('id', filter=Q(engine_created=True)),
-        part_created=Count('id', filter=Q(part_created=True)),
-        vendor_created=Count('id', filter=Q(vendor_created=True)),
-        machine_updated=Count('id', filter=Q(machine_updated=True)),
-        engine_updated=Count('id', filter=Q(engine_updated=True)),
-        part_updated=Count('id', filter=Q(part_updated=True)),
-        vendor_updated=Count('id', filter=Q(vendor_updated=True)),
-        engine_duplicates_skipped=Count('id', filter=Q(engine_duplicate_skipped=True)),
-        engine_duplicates_updated=Count('id', filter=Q(engine_duplicate_updated=True)),
-        part_vendor_created=Count('id', filter=Q(part_vendor_created=True)),
-        relationships_created=Count('id', filter=Q(
-            Q(machine_engine_created=True) | 
-            Q(engine_part_created=True) | 
-            Q(part_vendor_created=True) |
-            Q(engine_vendor_linked=True)
-        ))
-    )
-    
-    context = {
-        'batch': batch,
-        'recent_logs': recent_logs,
-        'rows_stats': rows_stats,
-        'celery_meta': celery_meta,
-    }
-    
-    html = render_to_string('imports/partials/batch_status.html', context)
-    
-    return JsonResponse({
-        'status': batch.status,
-        'progress': batch.progress_percentage,
-        'processed_rows': batch.processed_rows,
-        'total_rows': batch.total_rows,
-        'error_message': batch.error_message,
-        'html': html,
-        'is_complete': batch.status in ['completed', 'failed'],
-        'rows_stats': rows_stats,
-        'celery_meta': celery_meta
-    })
+                if getattr(settings, 'CELERY_ENABLED', False):
+                    result = AsyncResult(batch.celery_id)
+                    celery_meta = {
+                        'state': result.state,
+                        'meta': result.info if hasattr(result, 'info') else {}
+                    }
+                    
+                    # Update batch status based on Celery task state
+                    if result.state == 'PENDING' and batch.status != 'queued':
+                        batch.status = 'queued'
+                        batch.save(update_fields=['status'])
+                    elif result.state == 'PROGRESS' and batch.status != 'processing':
+                        batch.status = 'processing'
+                        batch.save(update_fields=['status'])
+                    elif result.state == 'SUCCESS' and batch.status != 'completed':
+                        batch.status = 'completed'
+                        batch.save(update_fields=['status'])
+                    elif result.state == 'FAILURE' and batch.status != 'failed':
+                        batch.status = 'failed'
+                        batch.error_message = str(result.info) if result.info else 'Task failed'
+                        batch.save(update_fields=['status', 'error_message'])
+            except Exception as e:
+                # If Celery check fails, continue with database status
+                celery_meta = {'error': str(e)}
+        
+        # Get recent logs
+        recent_logs = batch.logs.all()[:10]
+        
+        # Get ImportRow statistics
+        # Note: We compute relationships_created separately to avoid aggregate field name conflicts
+        rows_stats = batch.rows.aggregate(
+            total_rows=Count('id'),
+            error_rows=Count('id', filter=Q(has_errors=True)),
+            machine_created=Count('id', filter=Q(machine_created=True)),
+            engine_created=Count('id', filter=Q(engine_created=True)),
+            part_created=Count('id', filter=Q(part_created=True)),
+            vendor_created=Count('id', filter=Q(vendor_created=True)),
+            machine_updated=Count('id', filter=Q(machine_updated=True)),
+            engine_updated=Count('id', filter=Q(engine_updated=True)),
+            part_updated=Count('id', filter=Q(part_updated=True)),
+            vendor_updated=Count('id', filter=Q(vendor_updated=True)),
+            engine_duplicates_skipped=Count('id', filter=Q(engine_duplicate_skipped=True)),
+            engine_duplicates_updated=Count('id', filter=Q(engine_duplicate_updated=True)),
+            part_vendor_created=Count('id', filter=Q(part_vendor_created=True)),
+            machine_engine_rel=Count('id', filter=Q(machine_engine_created=True)),
+            engine_part_rel=Count('id', filter=Q(engine_part_created=True)),
+            engine_vendor_rel=Count('id', filter=Q(engine_vendor_linked=True)),
+        )
+        
+        # Calculate total relationships (sum of individual relationship counts)
+        rows_stats['relationships_created'] = (
+            rows_stats['machine_engine_rel'] + 
+            rows_stats['engine_part_rel'] + 
+            rows_stats['part_vendor_created'] +
+            rows_stats['engine_vendor_rel']
+        )
+        
+        context = {
+            'batch': batch,
+            'recent_logs': recent_logs,
+            'rows_stats': rows_stats,
+            'celery_meta': celery_meta,
+        }
+        
+        html = render_to_string('imports/partials/batch_status.html', context)
+        
+        # Format logs as JSON for easier JavaScript handling
+        logs_data = [{
+            'level': log.level,
+            'message': log.message,
+            'created_at': log.created_at.strftime('%I:%M:%S %p'),
+            'row_number': log.row_number
+        } for log in recent_logs]
+        
+        return JsonResponse({
+            'status': batch.status,
+            'progress': batch.progress_percentage,
+            'processed_rows': batch.processed_rows,
+            'total_rows': batch.total_rows,
+            'error_message': batch.error_message,
+            'html': html,
+            'is_complete': batch.status in ['completed', 'failed'],
+            'rows_stats': rows_stats,
+            'celery_meta': celery_meta,
+            'logs': logs_data
+        })
+    except Exception as e:
+        # Return error details in response for debugging
+        import traceback
+        return JsonResponse({
+            'error': str(e),
+            'traceback': traceback.format_exc(),
+            'status': 'error',
+            'progress': 0,
+            'processed_rows': 0,
+            'total_rows': 0,
+            'error_message': f'Error fetching status: {str(e)}',
+            'html': f'<div class="alert alert-danger">Error: {str(e)}</div>',
+            'is_complete': False,
+        }, status=200)  # Return 200 so the JavaScript can parse the error
 
 @login_required
 def batch_detail(request, batch_id):
@@ -566,12 +596,18 @@ def batch_detail(request, batch_id):
         vendor_updated=Count('id', filter=Q(vendor_updated=True)),
         engine_duplicates_skipped=Count('id', filter=Q(engine_duplicate_skipped=True)),
         engine_duplicates_updated=Count('id', filter=Q(engine_duplicate_updated=True)),
-        relationships_created=Count('id', filter=Q(
-            Q(machine_engine_created=True) | 
-            Q(engine_part_created=True) | 
-            Q(part_vendor_created=True) |
-            Q(engine_vendor_linked=True)
-        ))
+        part_vendor_created=Count('id', filter=Q(part_vendor_created=True)),
+        machine_engine_rel=Count('id', filter=Q(machine_engine_created=True)),
+        engine_part_rel=Count('id', filter=Q(engine_part_created=True)),
+        engine_vendor_rel=Count('id', filter=Q(engine_vendor_linked=True)),
+    )
+    
+    # Calculate total relationships (sum of individual relationship counts)
+    rows_stats['relationships_created'] = (
+        rows_stats['machine_engine_rel'] + 
+        rows_stats['engine_part_rel'] + 
+        rows_stats['part_vendor_created'] +
+        rows_stats['engine_vendor_rel']
     )
     
     context = {
