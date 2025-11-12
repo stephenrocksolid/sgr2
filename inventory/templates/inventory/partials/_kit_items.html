@@ -1,0 +1,53 @@
+{% load static %}
+
+{% if items %}
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Part Number</th>
+                <th>Part Name</th>
+                <th>Qty</th>
+                <th>Notes</th>
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr id="kit-item-row-{{ item.id }}">
+                    <td><strong>{{ item.part.part_number }}</strong></td>
+                    <td>{{ item.part.name }}</td>
+                    <td>{{ item.quantity }}</td>
+                    <td>{{ item.notes|default:"—"|truncatewords:10 }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button 
+                                class="btn btn-sm btn-secondary"
+                                hx-get="{% url 'inventory:kit_item_edit_form' kit.pk item.pk %}"
+                                hx-target="#kit-item-form-container"
+                                hx-swap="innerHTML">
+                                Edit
+                            </button>
+                            <form method="post" 
+                                  action="{% url 'inventory:kit_item_delete' kit.pk item.pk %}"
+                                  hx-post="{% url 'inventory:kit_item_delete' kit.pk item.pk %}"
+                                  hx-target="#kit-items-table-container"
+                                  hx-swap="innerHTML"
+                                  onsubmit="return confirm('Remove this part from the kit?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No parts added yet.</p>
+    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Part" to add parts to this kit.</p>
+</div>
+{% endif %}
+

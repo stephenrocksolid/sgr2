@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import (
     SGEngine, Engine, EngineSupercession, Machine, MachineEngine, MachinePart,
     Vendor, VendorContact, Part, EnginePart, PartVendor, PartCategory, PartAttribute, 
-    PartAttributeChoice, PartAttributeValue, BuildList, Kit, KitItem
+    PartAttributeChoice, PartAttributeValue, BuildList, BuildListItem, Kit, KitItem, Casting
 )
 
 
@@ -13,6 +13,12 @@ class SGEngineAdmin(admin.ModelAdmin):
     search_fields = ['sg_make', 'sg_model', 'identifier']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
     ordering = ['sg_make', 'sg_model']
+
+
+class CastingInline(admin.TabularInline):
+    model = Casting
+    extra = 1
+    fields = ['casting_number', 'comments']
 
 
 @admin.register(Engine)
@@ -49,9 +55,6 @@ class EngineAdmin(admin.ModelAdmin):
         ('Valves', {
             'fields': ('two_valve', 'four_valve', 'five_valve')
         }),
-        ('Casting', {
-            'fields': ('casting_comments',)
-        }),
         ('Overview', {
             'fields': ('overview_comments', 'interference', 'camshaft', 'valve_adjustment')
         }),
@@ -69,6 +72,7 @@ class EngineAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         })
     )
+    inlines = [CastingInline]
 
 
 @admin.register(EngineSupercession)
@@ -311,50 +315,70 @@ class MachinePartAdmin(admin.ModelAdmin):
 
 @admin.register(BuildList)
 class BuildListAdmin(admin.ModelAdmin):
-    list_display = ['engine', 'name', 'kits_count', 'created_at', 'updated_at']
+    list_display = ['name', 'engines_count', 'items_count', 'created_at', 'updated_at']
     list_filter = ['created_at', 'updated_at']
-    search_fields = ['name', 'engine__engine_make', 'engine__engine_model', 'notes']
+    search_fields = ['name', 'notes']
     readonly_fields = ['created_at', 'updated_at']
-    autocomplete_fields = ['engine']
-    ordering = ['-updated_at']
+    filter_horizontal = ['engines']
+    ordering = ['name']
     
-    def kits_count(self, obj):
-        return obj.kits.count()
-    kits_count.short_description = 'Kits'
-
-
-class KitItemInline(admin.TabularInline):
-    model = KitItem
-    extra = 1
-    autocomplete_fields = ['part', 'vendor']
-    fields = ['part', 'vendor', 'quantity', 'unit_cost', 'notes']
-
-
-@admin.register(Kit)
-class KitAdmin(admin.ModelAdmin):
-    list_display = ['build_list', 'name', 'cost_total', 'margin_pct', 'sale_price', 'items_count', 'created_at']
-    list_filter = ['created_at', 'updated_at']
-    search_fields = ['name', 'build_list__name', 'build_list__engine__engine_make', 'notes']
-    readonly_fields = ['cost_total', 'sale_price', 'created_at', 'updated_at']
-    autocomplete_fields = ['build_list']
-    inlines = [KitItemInline]
-    ordering = ['-updated_at']
+    def engines_count(self, obj):
+        return obj.engines.count()
+    engines_count.short_description = 'Engines'
     
     def items_count(self, obj):
         return obj.items.count()
     items_count.short_description = 'Items'
 
 
+@admin.register(BuildListItem)
+class BuildListItemAdmin(admin.ModelAdmin):
+    list_display = ['name', 'build_list', 'hour_qty', 'created_at']
+    list_filter = ['build_list', 'created_at']
+    search_fields = ['name', 'description']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['build_list']
+
+
+@admin.register(Casting)
+class CastingAdmin(admin.ModelAdmin):
+    list_display = ['casting_number', 'engine', 'created_at']
+    list_filter = ['created_at']
+    search_fields = ['casting_number', 'comments', 'engine__engine_make', 'engine__engine_model']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['engine']
+
+
+class KitItemInline(admin.TabularInline):
+    model = KitItem
+    extra = 1
+    autocomplete_fields = ['part']
+    fields = ['part', 'quantity', 'notes']
+
+
+@admin.register(Kit)
+class KitAdmin(admin.ModelAdmin):
+    list_display = ['name', 'engines_count', 'parts_count', 'created_at']
+    list_filter = ['created_at', 'updated_at']
+    search_fields = ['name', 'notes']
+    readonly_fields = ['created_at', 'updated_at']
+    filter_horizontal = ['engines']
+    inlines = [KitItemInline]
+    ordering = ['name']
+    
+    def engines_count(self, obj):
+        return obj.engines.count()
+    engines_count.short_description = 'Engines'
+    
+    def parts_count(self, obj):
+        return obj.items.count()
+    parts_count.short_description = 'Parts'
+
+
 @admin.register(KitItem)
 class KitItemAdmin(admin.ModelAdmin):
-    list_display = ['kit', 'part', 'vendor', 'quantity', 'unit_cost', 'line_total']
-    search_fields = [
-        'kit__name', 'kit__build_list__name',
-        'part__part_number', 'part__name',
-        'vendor__name'
-    ]
-    autocomplete_fields = ['kit', 'part', 'vendor']
-    
-    def line_total(self, obj):
-        return obj.unit_cost * obj.quantity
-    line_total.short_description = 'Line Total'
+    list_display = ['kit', 'part', 'quantity', 'created_at']
+    list_filter = ['kit', 'created_at']
+    search_fields = ['kit__name', 'part__part_number', 'part__name']
+    readonly_fields = ['created_at', 'updated_at']
+    autocomplete_fields = ['kit', 'part']

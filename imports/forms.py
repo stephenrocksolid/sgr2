@@ -224,6 +224,7 @@ class VendorMappingForm(forms.Form):
             ('vendor_contact_name', 'Vendor Contact Name'),
             ('vendor_contact_email', 'Vendor Contact Email'),
             ('vendor_contact_phone', 'Vendor Contact Phone'),
+            ('vendor_notes', 'Vendor Notes'),
             ('vendor_part_number', 'Vendor Part Number'),
             ('vendor_price', 'Vendor Price'),
             ('vendor_stock_qty', 'Vendor Stock Qty'),

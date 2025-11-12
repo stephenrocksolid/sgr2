@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ kit.name }} - {{ kit.build_list.name }} - Kits - SGR Part Manager{% endblock %}
+{% block title %}{{ kit.name }} - Kits - SGR Part Manager{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -39,12 +39,18 @@
         text-decoration: underline;
     }
     
+    .detail-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 2rem;
+        margin-bottom: 2rem;
+    }
+    
     .detail-section {
         background: white;
         border: 1px solid var(--gray-200);
         border-radius: var(--border-radius);
         padding: 1.5rem;
-        margin-bottom: 2rem;
     }
     
     .section-title {
@@ -54,334 +60,203 @@
         margin-bottom: 1rem;
         padding-bottom: 0.5rem;
         border-bottom: 2px solid var(--red-600);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
     }
     
-    .kit-header {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr 1fr;
-        gap: 2rem;
-        margin-bottom: 2rem;
-        padding: 1.5rem;
-        background: var(--gray-50);
-        border-radius: var(--border-radius);
-        border: 1px solid var(--gray-200);
-    }
-    
-    .kit-header-item {
-        text-align: center;
-    }
-    
-    .kit-header-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: var(--gray-600);
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        margin-bottom: 0.5rem;
-    }
-    
-    .kit-header-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: var(--gray-900);
-    }
-    
-    .kit-header-value.editable {
-        cursor: pointer;
-        border-bottom: 2px dashed var(--gray-400);
-        padding-bottom: 0.25rem;
-    }
-    
-    .kit-header-value.editable:hover {
-        border-bottom-color: var(--red-600);
-        color: var(--red-600);
+    .section-actions {
+        display: flex;
+        gap: 0.5rem;
     }
     
     .action-buttons {
         display: flex;
         gap: 1rem;
         margin-top: 2rem;
+        flex-wrap: wrap;
+        align-items: center;
     }
     
-    .sticky-table {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-        border-bottom: 2px solid var(--gray-200);
+    .action-buttons form {
+        margin: 0;
+        display: inline;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 2rem;
+        color: var(--gray-500);
+    }
+    
+    .empty-state p {
+        margin-bottom: 1rem;
+        font-size: 1rem;
+    }
+    
+    /* HTMX Form Styles */
+    .htmx-form {
+        background: var(--gray-50);
+        padding: 1rem;
+        border: 1px solid var(--gray-200);
+        border-radius: var(--border-radius);
+        margin-bottom: 1rem;
+    }
+    
+    .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .form-group label {
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+        padding: 0.5rem;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        font-size: 0.875rem;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: flex-end;
+    }
+    
+    @media (max-width: 768px) {
+        .detail-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .section-title {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+        }
+        
+        .section-actions {
+            width: 100%;
+            flex-direction: column;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container">
-    <!-- Header -->
-    <div class="detail-header">
-        <div class="breadcrumb">
-            <a href="{% url 'inventory:engines_list' %}">Engines</a> &gt; 
-            <a href="{% url 'inventory:engine_detail' kit.build_list.engine.id %}">{{ kit.build_list.engine.engine_make }} {{ kit.build_list.engine.engine_model }}</a> &gt; 
-            <a href="{% url 'inventory:build_list_detail' kit.build_list.engine.id kit.build_list.id %}">{{ kit.build_list.name }}</a> &gt; 
-            Kits
-        </div>
-        <h1 class="detail-title">{{ kit.name }}</h1>
-        <div class="detail-subtitle">{{ kit.build_list.name }} - {{ kit.build_list.engine.engine_make }} {{ kit.build_list.engine.engine_model }}</div>
+<!-- Header -->
+<div class="detail-header">
+    <div class="breadcrumb">
+        <a href="{% url 'inventory:kits_list' %}">Kits</a> / {{ kit.name }}
     </div>
-    
-    <!-- Kit Header with Pricing -->
+    <h1 class="detail-title">{{ kit.name }}</h1>
+    {% if kit.notes %}
+        <div class="detail-subtitle">{{ kit.notes }}</div>
+    {% endif %}
+</div>
+
+<!-- Kit Parts Section -->
+<div class="detail-grid">
     <div class="detail-section">
-        <div class="kit-header">
-            <div class="kit-header-item">
-                <div class="kit-header-label">Kit Name</div>
-                <div class="kit-header-value editable" onclick="editKitName()">{{ kit.name }}</div>
-            </div>
-            <div class="kit-header-item">
-                <div class="kit-header-label">Margin %</div>
-                <div class="kit-header-value editable" onclick="editMargin()">{{ kit.margin_pct|floatformat:2 }}%</div>
-            </div>
-            <div class="kit-header-item">
-                <div class="kit-header-label">Cost Total</div>
-                <div class="kit-header-value">${{ kit.cost_total|floatformat:2 }}</div>
-            </div>
-            <div class="kit-header-item">
-                <div class="kit-header-label">Sale Price</div>
-                <div class="kit-header-value">${{ kit.sale_price|floatformat:2 }}</div>
+        <div class="section-title">
+            <span>Parts in Kit</span>
+            <div class="section-actions">
+                <button 
+                    class="btn btn-sm btn-primary"
+                    hx-get="{% url 'inventory:kit_item_add_form' kit.pk %}"
+                    hx-target="#kit-item-form-container"
+                    hx-swap="innerHTML">
+                    + Add Part
+                </button>
             </div>
         </div>
         
-        {% if kit.notes %}
-            <div class="kit-notes">
-                <strong>Notes:</strong> {{ kit.notes }}
+        <div id="kit-item-form-container"></div>
+        
+        <div 
+            id="kit-items-table-container"
+            hx-get="{% url 'inventory:kit_items_partial' kit.pk %}"
+            hx-trigger="load"
+            hx-swap="innerHTML">
+            <div class="empty-state">
+                <p>Loading parts...</p>
             </div>
-        {% endif %}
+        </div>
     </div>
     
-    <!-- Items Section -->
-    {% include 'inventory/partials/_kit_items_section.html' %}
+    <!-- Used on Engines Section -->
+    <div class="detail-section">
+        <div class="section-title">
+            <span>Used on Engines</span>
+            <div class="section-actions">
+                <button 
+                    class="btn btn-sm btn-primary"
+                    hx-get="{% url 'inventory:kit_engine_add_form' kit.pk %}"
+                    hx-target="#kit-engine-form-container"
+                    hx-swap="innerHTML">
+                    + Add Engine
+                </button>
+            </div>
+        </div>
+        
+        <div id="kit-engine-form-container"></div>
+        
+        <div 
+            id="kit-engines-table-container"
+            hx-get="{% url 'inventory:kit_engines_partial' kit.pk %}"
+            hx-trigger="load"
+            hx-swap="innerHTML">
+            <div class="empty-state">
+                <p>Loading engines...</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Action Buttons -->
 <div class="action-buttons">
-    <a href="{% url 'inventory:build_list_detail' kit.build_list.engine.id kit.build_list.id %}" class="btn btn-secondary">
-        ← Back to Build List
+    <a href="{% url 'inventory:kits_list' %}" class="btn btn-secondary">
+        ← Back to Kits
     </a>
-    <a href="/admin/inventory/kit/{{ kit.pk }}/change/" class="btn btn-primary" target="_blank">
+    <a href="{% url 'inventory:kit_edit' kit.pk %}" class="btn btn-primary">
         Edit Kit
     </a>
+    <form method="post" action="{% url 'inventory:kit_delete' kit.pk %}"
+          onsubmit="return confirm('Are you sure you want to delete this kit? This action cannot be undone.');">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Delete Kit</button>
+    </form>
 </div>
 
-<!-- Edit Kit Name Modal -->
-<div id="edit-kit-name-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Edit Kit Name</h3>
-            <span class="close" onclick="closeEditKitNameModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="edit-kit-name-form">
-                <div class="form-group">
-                    <label for="edit_kit_name">Name *</label>
-                    <input type="text" name="name" id="edit_kit_name" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeEditKitNameModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- Edit Margin Modal -->
-<div id="edit-margin-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Edit Margin</h3>
-            <span class="close" onclick="closeEditMarginModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="edit-margin-form">
-                <div class="form-group">
-                    <label for="edit_margin_pct">Margin %</label>
-                    <input type="number" name="margin_pct" id="edit_margin_pct" step="0.01" min="0" required>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeEditMarginModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<style>
-.modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    padding: 0;
-    border-radius: var(--border-radius);
-    width: 90%;
-    max-width: 500px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--gray-900);
-}
-
-.close {
-    color: var(--gray-400);
-    font-size: 1.5rem;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close:hover {
-    color: var(--gray-600);
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--gray-700);
-}
-
-.form-group input {
-    padding: 0.5rem;
-    border: 1px solid var(--gray-300);
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-}
-
-.form-group input:focus {
-    outline: none;
-    border-color: var(--red-600);
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-}
-
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-}
-</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-function editKitName() {
-    const currentName = '{{ kit.name|escapejs }}';
-    document.getElementById('edit_kit_name').value = currentName;
-    
-    const form = document.getElementById('edit-kit-name-form');
-    form.onsubmit = function(e) {
-        e.preventDefault();
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Kit detail page loaded');
         
-        const formData = new FormData(form);
-        fetch(`/inventory/kits/{{ kit.id }}/rename/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('kits-section').innerHTML = html;
-            closeEditKitNameModal();
-            location.reload(); // Refresh to update the header
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while updating the kit name.');
+        // Clear form when item is successfully added/edited
+        document.body.addEventListener('clearKitItemForm', function() {
+            document.getElementById('kit-item-form-container').innerHTML = '';
         });
-    };
-    
-    document.getElementById('edit-kit-name-modal').style.display = 'block';
-}
-
-function editMargin() {
-    const currentMargin = '{{ kit.margin_pct }}';
-    document.getElementById('edit_margin_pct').value = currentMargin;
-    
-    const form = document.getElementById('edit-margin-form');
-    form.onsubmit = function(e) {
-        e.preventDefault();
         
-        const formData = new FormData(form);
-        fetch(`/inventory/kits/{{ kit.id }}/set-margin/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('kit-items-section').innerHTML = html;
-            closeEditMarginModal();
-            location.reload(); // Refresh to update the header
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while updating the margin.');
+        // Clear engine form when engine is successfully added
+        document.body.addEventListener('clearKitEngineForm', function() {
+            document.getElementById('kit-engine-form-container').innerHTML = '';
         });
-    };
-    
-    document.getElementById('edit-margin-modal').style.display = 'block';
-}
-
-function closeEditKitNameModal() {
-    document.getElementById('edit-kit-name-modal').style.display = 'none';
-}
-
-function closeEditMarginModal() {
-    document.getElementById('edit-margin-modal').style.display = 'none';
-}
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-    const kitNameModal = document.getElementById('edit-kit-name-modal');
-    const marginModal = document.getElementById('edit-margin-modal');
-    
-    if (event.target === kitNameModal) {
-        closeEditKitNameModal();
-    }
-    if (event.target === marginModal) {
-        closeEditMarginModal();
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Kit detail page loaded');
-});
+    });
 </script>
 {% endblock %}

@@ -1,0 +1,50 @@
+{% load static %}
+
+{% if engines %}
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Engine</th>
+                <th>Type</th>
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for engine in engines %}
+                <tr>
+                    <td>
+                        <a href="{% url 'inventory:engine_detail' engine.pk %}" style="color: var(--red-600); text-decoration: none;">
+                            <strong>{{ engine }}</strong>
+                        </a>
+                    </td>
+                    <td>{{ engine.get_engine_type_display|default:"—" }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <a href="{% url 'inventory:engine_detail' engine.pk %}" 
+                               class="btn btn-sm btn-secondary">
+                                View
+                            </a>
+                            <form method="post" 
+                                  action="{% url 'inventory:kit_engine_remove' kit.pk engine.pk %}"
+                                  hx-post="{% url 'inventory:kit_engine_remove' kit.pk engine.pk %}"
+                                  hx-target="#kit-engines-table-container"
+                                  hx-swap="innerHTML"
+                                  onsubmit="return confirm('Remove this engine from the kit?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No engines assigned yet.</p>
+    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Engine" to assign this kit to engines.</p>
+</div>
+{% endif %}
+

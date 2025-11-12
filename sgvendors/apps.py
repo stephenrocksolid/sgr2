@@ -6,3 +6,4 @@ class SgvendorsConfig(AppConfig):
     name = 'sgvendors'
 
 
+

@@ -1,0 +1,48 @@
+{% load static %}
+
+<div class="htmx-form">
+    <h4 style="margin-bottom: 1rem;">Add Part to Kit</h4>
+    <form method="post" 
+          action="{% url 'inventory:kit_item_add' kit.pk %}"
+          hx-post="{% url 'inventory:kit_item_add' kit.pk %}"
+          hx-target="#kit-items-table-container"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label for="{{ form.part.id_for_label }}">Part <span style="color: var(--red-600);">*</span></label>
+                {{ form.part }}
+                {% if form.part.errors %}
+                    <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.part.errors.0 }}</span>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.quantity.id_for_label }}">Quantity</label>
+                {{ form.quantity }}
+                {% if form.quantity.errors %}
+                    <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.quantity.errors.0 }}</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.notes.id_for_label }}">Notes</label>
+            {{ form.notes }}
+            {% if form.notes.errors %}
+                <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.notes.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-sm btn-primary">Add Part</button>
+            <button type="button" 
+                    class="btn btn-sm btn-secondary"
+                    onclick="document.getElementById('kit-item-form-container').innerHTML = '';">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+

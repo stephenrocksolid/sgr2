@@ -1,0 +1,41 @@
+{% load static %}
+
+<div class="htmx-form">
+    <h4 style="margin-bottom: 1rem;">Add Build List to Engine</h4>
+    <form method="post" 
+          action="{% url 'inventory:engine_build_list_add' engine.pk %}"
+          hx-post="{% url 'inventory:engine_build_list_add' engine.pk %}"
+          hx-target="#engine-build-lists-container"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="build_list_id">Select Build List <span style="color: var(--red-600);">*</span></label>
+            <select name="build_list_id" id="build_list_id" required 
+                    style="width: 100%; padding: 0.5rem; border: 1px solid var(--gray-300); border-radius: var(--border-radius);">
+                <option value="">-- Select a build list --</option>
+                {% for build_list in available_build_lists %}
+                    <option value="{{ build_list.pk }}">
+                        {{ build_list.name }}
+                        {% if build_list.notes %}({{ build_list.notes|truncatewords:5 }}){% endif %}
+                    </option>
+                {% empty %}
+                    <option value="" disabled>No available build lists</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-sm btn-primary" 
+                    {% if not available_build_lists %}disabled{% endif %}>
+                Add Build List
+            </button>
+            <button type="button" 
+                    class="btn btn-sm btn-secondary"
+                    onclick="document.getElementById('engine-build-list-form-container').innerHTML = '';">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+

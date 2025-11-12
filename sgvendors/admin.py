@@ -10,3 +10,4 @@ class SGVendorAdmin(admin.ModelAdmin):
     readonly_fields = ['created', 'updated']
 
 
+

@@ -245,3 +245,4 @@ Cummins,6BTA,5.9,https://cummins.com,contact@cummins.com"""
         self.assertEqual(Vendor.objects.count(), 2)
 
 
+

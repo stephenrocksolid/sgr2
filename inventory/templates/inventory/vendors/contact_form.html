@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}{{ is_create|yesno:"Add Contact,Edit Contact" }} - {{ vendor.name }} - SGR Part Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ is_create|yesno:"Add Contact,Edit Contact" }}</h1>
+    <div class="breadcrumb" style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;">
+        <a href="{% url 'imports:index' %}">Home</a> → 
+        <a href="{% url 'inventory:vendor_index' %}">Vendors</a> → 
+        <a href="{% url 'inventory:vendor_detail' vendor.id %}">{{ vendor.name }}</a> → 
+        {{ is_create|yesno:"Add Contact,Edit Contact" }}
+    </div>
+</div>
+
+<div class="form-container">
+    <form method="post" class="form">
+        {% csrf_token %}
+        
+        {% if form.non_field_errors %}
+            <div class="alert alert-error">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        <div class="form-grid">
+            <div class="form-group full-width">
+                <label for="{{ form.full_name.id_for_label }}">{{ form.full_name.label }}</label>
+                {{ form.full_name }}
+                {% if form.full_name.errors %}
+                    <div class="field-error">{{ form.full_name.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="field-error">{{ form.email.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                <label for="{{ form.phone.id_for_label }}">{{ form.phone.label }}</label>
+                {{ form.phone }}
+                {% if form.phone.errors %}
+                    <div class="field-error">{{ form.phone.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="{{ form.title.id_for_label }}">{{ form.title.label }}</label>
+                {{ form.title }}
+                {% if form.title.errors %}
+                    <div class="field-error">{{ form.title.errors.0 }}</div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="{{ form.notes.id_for_label }}">{{ form.notes.label }}</label>
+                {{ form.notes }}
+                {% if form.notes.errors %}
+                    <div class="field-error">{{ form.notes.errors.0 }}</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">
+                {{ is_create|yesno:"Create Contact,Update Contact" }}
+            </button>
+            <a href="{% url 'inventory:vendor_detail' vendor.id %}" class="btn btn-secondary">Cancel</a>
+            {% if not is_create %}
+                <a href="{% url 'inventory:vendor_contact_delete_confirm' vendor.id contact.id %}" class="btn btn-danger" style="margin-left: auto;">
+                    Delete Contact
+                </a>
+            {% endif %}
+        </div>
+    </form>
+</div>
+{% endblock %}
+

@@ -209,7 +209,6 @@
                     </a>
                 </th>
                 <th>Primary Contact</th>
-                <th>All Contacts</th>
                 <th>Website</th>
                 <th>
                     <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=created_at&order={% if current_sort == 'created_at' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
@@ -242,24 +241,6 @@
                         {% endif %}
                     </td>
                     <td>
-                        {% if vendor.contacts.exists %}
-                            {% with first_contact=vendor.contacts.first %}
-                                {{ first_contact.full_name }}
-                                {% if first_contact.email %}
-                                    <br><a href="mailto:{{ first_contact.email }}" class="link-secondary">{{ first_contact.email }}</a>
-                                {% endif %}
-                                {% if first_contact.phone %}
-                                    <br>{{ first_contact.phone }}
-                                {% endif %}
-                            {% endwith %}
-                            {% if vendor.contacts.count > 1 %}
-                                <br><small class="text-muted">(+{{ vendor.contacts.count|add:"-1" }} more)</small>
-                            {% endif %}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>
                         {% if vendor.website %}
                             <a href="{{ vendor.website }}" target="_blank" class="link-secondary">Site</a>
                         {% else %}
@@ -270,7 +251,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                    <td colspan="4" style="text-align: center; padding: 2rem; color: var(--gray-500);">
                         No vendors found matching your criteria.
                     </td>
                 </tr>

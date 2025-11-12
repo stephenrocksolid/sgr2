@@ -490,27 +490,6 @@
             </div>
         </div>
         
-        <!-- Casting Information -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Casting Information</h2>
-                <p class="edit-card-subtitle">Casting number comments and notes</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group full-width">
-                        <label class="form-label" for="{{ form.casting_comments.id_for_label }}">Casting # Comments</label>
-                        {{ form.casting_comments }}
-                        <div class="form-help">Notes specific to casting numbers; separate from general notes.</div>
-                        {% for error in form.casting_comments.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
         <!-- Overview -->
         <div class="edit-card">
             <div class="edit-card-header">

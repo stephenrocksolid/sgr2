@@ -7,8 +7,8 @@ from django.views.decorators.http import require_http_methods, require_POST
 from django.template.loader import render_to_string
 from django.contrib import messages
 from django.urls import reverse
-from .models import Machine, Engine, Part, PartVendor, MachineEngine, EnginePart, SGEngine, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice, PartCategory, Vendor, VendorContact, BuildList, Kit, KitItem, EngineSupercession
-from .forms import SGEngineForm, MachineEngineForm, MachinePartForm, EngineMachineForm, EnginePartForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitItemForm, PartEngineLinkForm, PartMachineLinkForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, VendorContactForm, VendorContactFormSet, PartVendorForm, PartVendorFormSet
+from .models import Machine, Engine, Part, PartVendor, MachineEngine, EnginePart, SGEngine, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice, PartCategory, Vendor, VendorContact, BuildList, BuildListItem, Kit, KitItem, Casting, EngineSupercession
+from .forms import SGEngineForm, MachineEngineForm, MachinePartForm, EngineMachineForm, EnginePartForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitForm, KitItemForm, PartEngineLinkForm, PartMachineLinkForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, VendorContactForm, VendorContactFormSet, PartVendorForm, PartVendorFormSet, BuildListForm, BuildListItemForm, CastingForm
 from django.contrib.auth.decorators import login_required
 from io import StringIO
 from datetime import datetime
@@ -264,18 +264,12 @@ def engine_detail(request, engine_id):
     """Display detailed information for a specific engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
     
-    # Get the single build list and its kits
-    build_list = engine.get_or_create_build_list()
-    kits = build_list.kits.all().order_by('-updated_at')
-    
     context = {
         'engine': engine,
         'interchanges': engine.interchanges.all(),
         'compatibles': engine.compatibles.all(),
         'supersedes': engine.supersedes,
         'superseded_by': engine.superseded_by,
-        'build_list': build_list,
-        'kits': kits,
     }
     
     return render(request, 'inventory/engine_detail.html', context)
@@ -3229,16 +3223,17 @@ def build_list_add_form(request, engine_id):
 
 
 # New engine-based kit management views
+# NOTE: Kits are now independent and not connected to build lists
+# These views need refactoring for the new system
 @login_required
 def engine_kits_section(request, engine_id):
     """HTMX endpoint to render the kits section for an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
-    build_list = engine.get_or_create_build_list()
-    kits = build_list.kits.all().order_by('-updated_at')
+    # TODO: Implement kit management for independent kits
+    kits = Kit.objects.all().order_by('-updated_at')  # Temporary: show all kits
     
     context = {
         'engine': engine,
-        'build_list': build_list,
         'kits': kits,
     }
     
@@ -3251,7 +3246,6 @@ def engine_kits_section(request, engine_id):
 def engine_kit_create(request, engine_id):
     """HTMX endpoint to create a new kit for an engine."""
     engine = get_object_or_404(Engine, pk=engine_id)
-    build_list = engine.get_or_create_build_list()
     
     name = request.POST.get('name', '').strip()
     notes = request.POST.get('notes', '').strip()
@@ -3260,8 +3254,8 @@ def engine_kit_create(request, engine_id):
     if not name:
         return HttpResponse("Kit name is required", status=400)
     
-    # Check for duplicate names within this build list
-    if Kit.objects.filter(build_list=build_list, name__iexact=name).exists():
+    # Check for duplicate kit names
+    if Kit.objects.filter(name__iexact=name).exists():
         return HttpResponse("A kit with this name already exists", status=400)
     
     try:
@@ -3270,7 +3264,6 @@ def engine_kit_create(request, engine_id):
         margin_pct = Decimal('0.00')
     
     kit = Kit.objects.create(
-        build_list=build_list,
         name=name,
         notes=notes,
         margin_pct=margin_pct
@@ -4028,6 +4021,828 @@ def engine_supercession_remove(request, engine_id, superseded_id):
     return render(request, "inventory/partials/_engine_supercessions_partial.html", ctx)
 
 
+# ---------- Build List Views ----------
+
+@login_required
+def build_lists_list(request):
+    """Display list of build lists with search and sorting."""
+    from django.db.models import Count
+    
+    # Get search query and sorting parameters
+    search = request.GET.get('search', '').strip()
+    sort_field = request.GET.get('sort', 'name')
+    sort_order = request.GET.get('order', 'asc')
+    
+    # Base queryset with annotations
+    build_lists = BuildList.objects.annotate(
+        engines_count=Count('engines')
+    ).all()
+    
+    # Apply search
+    if search:
+        build_lists = build_lists.filter(
+            Q(name__icontains=search) | 
+            Q(notes__icontains=search)
+        )
+    
+    # Apply sorting
+    valid_sort_fields = ['name', 'engines_count', 'created_at']
+    if sort_field in valid_sort_fields:
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        build_lists = build_lists.order_by(sort_field)
+    else:
+        build_lists = build_lists.order_by('name')
+    
+    # Pagination
+    paginator = Paginator(build_lists, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'build_lists': page_obj.object_list,
+        'total_count': paginator.count,
+        'search': search,
+        'current_sort': request.GET.get('sort', 'name'),
+        'current_order': sort_order,
+    }
+    
+    return render(request, 'inventory/build_lists_list.html', context)
+
+
+@login_required
+def build_list_detail(request, build_list_id):
+    """Display build list detail with items and engines."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    
+    context = {
+        'build_list': build_list,
+    }
+    
+    return render(request, 'inventory/build_list_detail.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def build_list_create(request):
+    """Create new build list."""
+    if request.method == "POST":
+        form = BuildListForm(request.POST)
+        if form.is_valid():
+            build_list = form.save(commit=False)
+            if request.user.is_authenticated:
+                build_list.created_by = request.user
+            build_list.save()
+            messages.success(request, "Build list created.")
+            return redirect("inventory:build_list_detail", build_list_id=build_list.id)
+    else:
+        form = BuildListForm()
+    
+    return render(request, 'inventory/build_list_form.html', {
+        'form': form,
+        'is_create': True
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def build_list_edit(request, build_list_id):
+    """Edit build list."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    
+    if request.method == "POST":
+        form = BuildListForm(request.POST, instance=build_list)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Build list updated.")
+            return redirect("inventory:build_list_detail", build_list_id=build_list.id)
+    else:
+        form = BuildListForm(instance=build_list)
+    
+    return render(request, 'inventory/build_list_form.html', {
+        'form': form,
+        'build_list': build_list,
+        'is_create': False
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_delete(request, build_list_id):
+    """Delete build list."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    build_list.delete()
+    messages.success(request, "Build list deleted.")
+    return redirect("inventory:build_lists_list")
+
+
+# Build List Items (HTMX)
+
+@login_required
+def build_list_items_partial(request, build_list_id):
+    """HTMX partial for build list items table."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    items = build_list.items.all()
+    
+    context = {
+        'build_list': build_list,
+        'items': items,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_items.html', context)
+
+
+@login_required
+def build_list_item_add_form(request, build_list_id):
+    """HTMX form to add item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    form = BuildListItemForm()
+    
+    context = {
+        'build_list': build_list,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_item_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_item_add(request, build_list_id):
+    """POST: Create item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    form = BuildListItemForm(request.POST)
+    
+    if form.is_valid():
+        item = form.save(commit=False)
+        item.build_list = build_list
+        item.save()
+        messages.success(request, "Item added.")
+        
+        # Clear the form and refresh the items table
+        response = build_list_items_partial(request, build_list_id)
+        response['HX-Trigger'] = 'clearItemForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'build_list': build_list,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_build_list_item_add_form.html', context, status=400)
+
+
+@login_required
+def build_list_item_edit_form(request, build_list_id, item_id):
+    """HTMX form to edit item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
+    form = BuildListItemForm(instance=item)
+    
+    context = {
+        'build_list': build_list,
+        'item': item,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_item_edit_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_item_edit(request, build_list_id, item_id):
+    """POST: Update item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
+    form = BuildListItemForm(request.POST, instance=item)
+    
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Item updated.")
+        
+        # Clear the form and refresh the items table
+        response = build_list_items_partial(request, build_list_id)
+        response['HX-Trigger'] = 'clearItemForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'build_list': build_list,
+        'item': item,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_build_list_item_edit_form.html', context, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_item_delete(request, build_list_id, item_id):
+    """POST: Delete item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
+    item.delete()
+    messages.success(request, "Item deleted.")
+    
+    # Re-render items partial
+    return build_list_items_partial(request, build_list_id)
+
+
+# Engine Assignments from Build List side (HTMX)
+
+@login_required
+def build_list_engines_partial(request, build_list_id):
+    """HTMX partial for engines using this build list."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    engines = build_list.engines.all()
+    
+    context = {
+        'build_list': build_list,
+        'engines': engines,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_engines.html', context)
+
+
+@login_required
+def build_list_engine_add_form(request, build_list_id):
+    """HTMX form to add engine."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    
+    # Get all engines not already assigned
+    assigned_engine_ids = build_list.engines.values_list('id', flat=True)
+    available_engines = Engine.objects.exclude(id__in=assigned_engine_ids).order_by('engine_make', 'engine_model')
+    
+    context = {
+        'build_list': build_list,
+        'available_engines': available_engines,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_engine_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_engine_add(request, build_list_id):
+    """POST: Assign engine to build list."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    engine_id = request.POST.get('engine_id')
+    
+    if engine_id:
+        engine = get_object_or_404(Engine, pk=engine_id)
+        build_list.engines.add(engine)
+        messages.success(request, f"Added {engine} to build list.")
+    
+    # Re-render engines partial and clear form
+    response = build_list_engines_partial(request, build_list_id)
+    response['HX-Trigger'] = 'clearEngineForm'
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_engine_remove(request, build_list_id, engine_id):
+    """POST: Remove engine from build list."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    engine = get_object_or_404(Engine, pk=engine_id)
+    build_list.engines.remove(engine)
+    messages.success(request, f"Removed {engine} from build list.")
+    
+    # Re-render engines partial
+    return build_list_engines_partial(request, build_list_id)
+
+
+# Build Lists on Engine side (HTMX)
+
+@login_required
+def engine_build_lists_partial(request, engine_id):
+    """HTMX partial showing build lists assigned to this engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    build_lists = engine.build_lists.all()
+    
+    context = {
+        'engine': engine,
+        'build_lists': build_lists,
+    }
+    
+    return render(request, 'inventory/partials/_engine_build_lists.html', context)
+
+
+@login_required
+def engine_build_list_add_form(request, engine_id):
+    """HTMX form to add build list to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Get all build lists not already assigned
+    assigned_bl_ids = engine.build_lists.values_list('id', flat=True)
+    available_build_lists = BuildList.objects.exclude(id__in=assigned_bl_ids).order_by('name')
+    
+    context = {
+        'engine': engine,
+        'available_build_lists': available_build_lists,
+    }
+    
+    return render(request, 'inventory/partials/_engine_build_list_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_build_list_add(request, engine_id):
+    """POST: Assign build list to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    build_list_id = request.POST.get('build_list_id')
+    
+    if build_list_id:
+        build_list = get_object_or_404(BuildList, pk=build_list_id)
+        engine.build_lists.add(build_list)
+        messages.success(request, f"Added {build_list.name} to engine.")
+    
+    # Re-render build lists partial and clear form
+    response = engine_build_lists_partial(request, engine_id)
+    response['HX-Trigger'] = 'clearEngineBuildListForm'
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_build_list_remove(request, engine_id, build_list_id):
+    """POST: Remove build list from engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    engine.build_lists.remove(build_list)
+    messages.success(request, f"Removed {build_list.name} from engine.")
+    
+    # Re-render build lists partial
+    return engine_build_lists_partial(request, engine_id)
+
+
+# ---------- Kit Views ----------
+
+@login_required
+def kits_list(request):
+    """Display list of kits with search and sorting."""
+    from django.db.models import Count
+    
+    # Get search query and sorting parameters
+    search = request.GET.get('search', '').strip()
+    sort_field = request.GET.get('sort', 'name')
+    sort_order = request.GET.get('order', 'asc')
+    
+    # Base queryset with annotations
+    kits = Kit.objects.annotate(
+        engines_count=Count('engines'),
+        parts_count=Count('items')
+    ).all()
+    
+    # Apply search
+    if search:
+        kits = kits.filter(
+            Q(name__icontains=search) | 
+            Q(notes__icontains=search)
+        )
+    
+    # Apply sorting
+    valid_sort_fields = ['name', 'engines_count', 'parts_count', 'created_at']
+    if sort_field in valid_sort_fields:
+        if sort_order == 'desc':
+            sort_field = f'-{sort_field}'
+        kits = kits.order_by(sort_field)
+    else:
+        kits = kits.order_by('name')
+    
+    # Pagination
+    paginator = Paginator(kits, 50)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'page_obj': page_obj,
+        'kits': page_obj.object_list,
+        'total_count': paginator.count,
+        'search': search,
+        'current_sort': request.GET.get('sort', 'name'),
+        'current_order': sort_order,
+    }
+    
+    return render(request, 'inventory/kits_list.html', context)
+
+
+@login_required
+def kit_detail(request, kit_id):
+    """Display kit detail with parts and engines."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    
+    context = {
+        'kit': kit,
+    }
+    
+    return render(request, 'inventory/kit_detail.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def kit_create(request):
+    """Create new kit."""
+    if request.method == "POST":
+        form = KitForm(request.POST)
+        if form.is_valid():
+            kit = form.save(commit=False)
+            if request.user.is_authenticated:
+                kit.created_by = request.user
+            kit.save()
+            messages.success(request, "Kit created.")
+            return redirect("inventory:kit_detail", kit_id=kit.id)
+    else:
+        form = KitForm()
+    
+    return render(request, 'inventory/kit_form.html', {
+        'form': form,
+        'is_create': True
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def kit_edit(request, kit_id):
+    """Edit kit."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    
+    if request.method == "POST":
+        form = KitForm(request.POST, instance=kit)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Kit updated.")
+            return redirect("inventory:kit_detail", kit_id=kit.id)
+    else:
+        form = KitForm(instance=kit)
+    
+    return render(request, 'inventory/kit_form.html', {
+        'form': form,
+        'kit': kit,
+        'is_create': False
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_delete(request, kit_id):
+    """Delete kit."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    kit.delete()
+    messages.success(request, "Kit deleted.")
+    return redirect("inventory:kits_list")
+
+
+# Kit Items (HTMX)
+
+@login_required
+def kit_items_partial(request, kit_id):
+    """HTMX partial for kit items table."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    items = kit.items.select_related('part').all()
+    
+    context = {
+        'kit': kit,
+        'items': items,
+    }
+    
+    return render(request, 'inventory/partials/_kit_items.html', context)
+
+
+@login_required
+def kit_item_add_form(request, kit_id):
+    """HTMX form to add item."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    form = KitItemForm()
+    
+    context = {
+        'kit': kit,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_kit_item_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_item_add(request, kit_id):
+    """POST: Create item."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    form = KitItemForm(request.POST)
+    
+    if form.is_valid():
+        item = form.save(commit=False)
+        item.kit = kit
+        item.save()
+        messages.success(request, "Part added to kit.")
+        
+        # Clear the form and refresh the items table
+        response = kit_items_partial(request, kit_id)
+        response['HX-Trigger'] = 'clearKitItemForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'kit': kit,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_kit_item_add_form.html', context, status=400)
+
+
+@login_required
+def kit_item_edit_form(request, kit_id, item_id):
+    """HTMX form to edit item."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    item = get_object_or_404(KitItem, pk=item_id, kit=kit)
+    form = KitItemForm(instance=item)
+    
+    context = {
+        'kit': kit,
+        'item': item,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_kit_item_edit_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_item_edit(request, kit_id, item_id):
+    """POST: Update item."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    item = get_object_or_404(KitItem, pk=item_id, kit=kit)
+    form = KitItemForm(request.POST, instance=item)
+    
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Kit item updated.")
+        
+        # Clear the form and refresh the items table
+        response = kit_items_partial(request, kit_id)
+        response['HX-Trigger'] = 'clearKitItemForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'kit': kit,
+        'item': item,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_kit_item_edit_form.html', context, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_item_delete(request, kit_id, item_id):
+    """POST: Delete item."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    item = get_object_or_404(KitItem, pk=item_id, kit=kit)
+    item.delete()
+    messages.success(request, "Part removed from kit.")
+    
+    # Re-render items partial
+    return kit_items_partial(request, kit_id)
+
+
+# Engine Assignments from Kit side (HTMX)
+
+@login_required
+def kit_engines_partial(request, kit_id):
+    """HTMX partial for engines using this kit."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    engines = kit.engines.all()
+    
+    context = {
+        'kit': kit,
+        'engines': engines,
+    }
+    
+    return render(request, 'inventory/partials/_kit_engines.html', context)
+
+
+@login_required
+def kit_engine_add_form(request, kit_id):
+    """HTMX form to add engine."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    
+    # Get all engines not already assigned
+    assigned_engine_ids = kit.engines.values_list('id', flat=True)
+    available_engines = Engine.objects.exclude(id__in=assigned_engine_ids).order_by('engine_make', 'engine_model')
+    
+    context = {
+        'kit': kit,
+        'available_engines': available_engines,
+    }
+    
+    return render(request, 'inventory/partials/_kit_engine_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_engine_add(request, kit_id):
+    """POST: Assign engine to kit."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    engine_id = request.POST.get('engine_id')
+    
+    if engine_id:
+        engine = get_object_or_404(Engine, pk=engine_id)
+        kit.engines.add(engine)
+        messages.success(request, f"Added {engine} to kit.")
+    
+    # Re-render engines partial and clear form
+    response = kit_engines_partial(request, kit_id)
+    response['HX-Trigger'] = 'clearKitEngineForm'
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_engine_remove(request, kit_id, engine_id):
+    """POST: Remove engine from kit."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    engine = get_object_or_404(Engine, pk=engine_id)
+    kit.engines.remove(engine)
+    messages.success(request, f"Removed {engine} from kit.")
+    
+    # Re-render engines partial
+    return kit_engines_partial(request, kit_id)
+
+
+# Kits on Engine side (HTMX)
+
+@login_required
+def engine_kits_partial(request, engine_id):
+    """HTMX partial showing kits assigned to this engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    kits = engine.kits.all()
+    
+    context = {
+        'engine': engine,
+        'kits': kits,
+    }
+    
+    return render(request, 'inventory/partials/_engine_kits.html', context)
+
+
+@login_required
+def engine_kit_add_form(request, engine_id):
+    """HTMX form to add kit to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Get all kits not already assigned
+    assigned_kit_ids = engine.kits.values_list('id', flat=True)
+    available_kits = Kit.objects.exclude(id__in=assigned_kit_ids).order_by('name')
+    
+    context = {
+        'engine': engine,
+        'available_kits': available_kits,
+    }
+    
+    return render(request, 'inventory/partials/_engine_kit_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_kit_add(request, engine_id):
+    """POST: Assign kit to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    kit_id = request.POST.get('kit_id')
+    
+    if kit_id:
+        kit = get_object_or_404(Kit, pk=kit_id)
+        engine.kits.add(kit)
+        messages.success(request, f"Added {kit.name} to engine.")
+    
+    # Re-render kits partial and clear form
+    response = engine_kits_partial(request, engine_id)
+    response['HX-Trigger'] = 'clearEngineKitForm'
+    return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_kit_remove(request, engine_id, kit_id):
+    """POST: Remove kit from engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    kit = get_object_or_404(Kit, pk=kit_id)
+    engine.kits.remove(kit)
+    messages.success(request, f"Removed {kit.name} from engine.")
+    
+    # Re-render kits partial
+    return engine_kits_partial(request, engine_id)
+
+
+# ---------- Casting Views (Engine-side) ----------
+
+@login_required
+def engine_castings_partial(request, engine_id):
+    """HTMX partial for engine castings table."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    castings = engine.castings.all()
+    
+    context = {
+        'engine': engine,
+        'castings': castings,
+    }
+    
+    return render(request, 'inventory/partials/_engine_castings.html', context)
+
+
+@login_required
+def engine_casting_add_form(request, engine_id):
+    """HTMX form to add casting."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    form = CastingForm()
+    
+    context = {
+        'engine': engine,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_engine_casting_add_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_casting_add(request, engine_id):
+    """POST: Create casting."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    form = CastingForm(request.POST)
+    
+    if form.is_valid():
+        casting = form.save(commit=False)
+        casting.engine = engine
+        casting.save()
+        messages.success(request, "Casting added.")
+        
+        # Clear the form and refresh the castings table
+        response = engine_castings_partial(request, engine_id)
+        response['HX-Trigger'] = 'clearCastingForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'engine': engine,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_engine_casting_add_form.html', context, status=400)
+
+
+@login_required
+def engine_casting_edit_form(request, engine_id, casting_id):
+    """HTMX form to edit casting."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    casting = get_object_or_404(Casting, pk=casting_id, engine=engine)
+    form = CastingForm(instance=casting)
+    
+    context = {
+        'engine': engine,
+        'casting': casting,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/_engine_casting_edit_form.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_casting_edit(request, engine_id, casting_id):
+    """POST: Update casting."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    casting = get_object_or_404(Casting, pk=casting_id, engine=engine)
+    form = CastingForm(request.POST, instance=casting)
+    
+    if form.is_valid():
+        form.save()
+        messages.success(request, "Casting updated.")
+        
+        # Clear the form and refresh the castings table
+        response = engine_castings_partial(request, engine_id)
+        response['HX-Trigger'] = 'clearCastingForm'
+        return response
+    
+    # Return form with errors
+    context = {
+        'engine': engine,
+        'casting': casting,
+        'form': form,
+    }
+    return render(request, 'inventory/partials/_engine_casting_edit_form.html', context, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_casting_delete(request, engine_id, casting_id):
+    """POST: Delete casting."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    casting = get_object_or_404(Casting, pk=casting_id, engine=engine)
+    casting.delete()
+    messages.success(request, "Casting removed.")
+    
+    # Re-render castings partial
+    return engine_castings_partial(request, engine_id)
+
+
 # ---------- Vendor Views ----------
 
 @login_required
@@ -4099,20 +4914,15 @@ def vendor_index(request):
 def vendor_create(request):
     """Create a new vendor."""
     form = VendorForm(request.POST or None)
-    formset = VendorContactFormSet(request.POST or None)
     
     if request.method == "POST":
-        if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                vendor = form.save()
-                formset.instance = vendor
-                formset.save()
+        if form.is_valid():
+            vendor = form.save()
             messages.success(request, "Vendor created.")
             return redirect("inventory:vendor_detail", vendor_id=vendor.id)
     
     return render(request, "inventory/vendors/form.html", {
-        "form": form, 
-        "formset": formset,
+        "form": form,
         "is_create": True
     })
 
@@ -4124,19 +4934,15 @@ def vendor_edit(request, vendor_id):
     """Edit an existing vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
     form = VendorForm(request.POST or None, instance=vendor)
-    formset = VendorContactFormSet(request.POST or None, instance=vendor)
     
     if request.method == "POST":
-        if form.is_valid() and formset.is_valid():
-            with transaction.atomic():
-                form.save()
-                formset.save()
+        if form.is_valid():
+            form.save()
             messages.success(request, "Vendor updated.")
             return redirect("inventory:vendor_detail", vendor_id=vendor.id)
     
     return render(request, "inventory/vendors/form.html", {
-        "form": form, 
-        "formset": formset,
+        "form": form,
         "vendor": vendor, 
         "is_create": False
     })
@@ -4151,6 +4957,91 @@ def vendor_delete(request, vendor_id):
     vendor.delete()
     messages.success(request, "Vendor deleted.")
     return redirect("inventory:vendor_index")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def vendor_contact_create(request, vendor_id):
+    """Create a new contact for a vendor."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    form = VendorContactForm(request.POST or None)
+    
+    if request.method == "POST":
+        if form.is_valid():
+            contact = form.save(commit=False)
+            contact.vendor = vendor
+            contact.save()
+            messages.success(request, "Contact created.")
+            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    
+    return render(request, "inventory/vendors/contact_form.html", {
+        "form": form,
+        "vendor": vendor,
+        "is_create": True
+    })
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def vendor_contact_edit(request, vendor_id, contact_id):
+    """Edit an existing contact for a vendor."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
+    form = VendorContactForm(request.POST or None, instance=contact)
+    
+    if request.method == "POST":
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Contact updated.")
+            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    
+    return render(request, "inventory/vendors/contact_form.html", {
+        "form": form,
+        "vendor": vendor,
+        "contact": contact,
+        "is_create": False
+    })
+
+
+@login_required
+@require_http_methods(["GET"])
+def vendor_contact_delete_confirm(request, vendor_id, contact_id):
+    """Display confirmation page for deleting a contact."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
+    
+    return render(request, "inventory/vendors/contact_confirm_delete.html", {
+        "vendor": vendor,
+        "contact": contact
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_contact_delete(request, vendor_id, contact_id):
+    """Delete a contact from a vendor."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
+    contact.delete()
+    messages.success(request, "Contact deleted.")
+    return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_contact_set_primary(request, vendor_id, contact_id):
+    """Set a contact as the primary contact for a vendor."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
+    
+    # Update vendor's primary contact fields
+    vendor.contact_name = contact.full_name
+    vendor.email = contact.email
+    vendor.phone = contact.phone
+    vendor.save()
+    
+    messages.success(request, f"{contact.full_name} set as primary contact.")
+    return redirect("inventory:vendor_detail", vendor_id=vendor.id)
 
 
 @login_required

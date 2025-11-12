@@ -1,0 +1,49 @@
+{% load static %}
+
+{% if castings %}
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Casting Number</th>
+                <th>Comments</th>
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for casting in castings %}
+                <tr>
+                    <td><strong>{{ casting.casting_number|default:"—" }}</strong></td>
+                    <td>{{ casting.comments|default:"—"|truncatewords:15 }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button 
+                                class="btn btn-sm btn-secondary"
+                                hx-get="{% url 'inventory:engine_casting_edit_form' engine.pk casting.pk %}"
+                                hx-target="#casting-form-container"
+                                hx-swap="innerHTML">
+                                Edit
+                            </button>
+                            <form method="post" 
+                                  action="{% url 'inventory:engine_casting_delete' engine.pk casting.pk %}"
+                                  hx-post="{% url 'inventory:engine_casting_delete' engine.pk casting.pk %}"
+                                  hx-target="#casting-table-container"
+                                  hx-swap="innerHTML"
+                                  onsubmit="return confirm('Remove this casting?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No castings added yet.</p>
+    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Casting" to add casting information.</p>
+</div>
+{% endif %}
+

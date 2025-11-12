@@ -1,0 +1,39 @@
+{% load static %}
+
+<div class="htmx-form">
+    <h4 style="margin-bottom: 1rem;">Add Kit to Engine</h4>
+    <form method="post" 
+          action="{% url 'inventory:engine_kit_add' engine.pk %}"
+          hx-post="{% url 'inventory:engine_kit_add' engine.pk %}"
+          hx-target="#engine-kits-container"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="kit_id">Kit <span style="color: var(--red-600);">*</span></label>
+            <select name="kit_id" id="kit_id" class="form-control" required>
+                <option value="">Select a kit...</option>
+                {% for kit in available_kits %}
+                    <option value="{{ kit.pk }}">{{ kit.name }}</option>
+                {% endfor %}
+            </select>
+            {% if not available_kits %}
+                <p style="font-size: 0.875rem; color: var(--gray-600); margin-top: 0.5rem;">
+                    No more kits available to assign.
+                </p>
+            {% endif %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-sm btn-primary" {% if not available_kits %}disabled{% endif %}>
+                Add Kit
+            </button>
+            <button type="button" 
+                    class="btn btn-sm btn-secondary"
+                    onclick="document.getElementById('engine-kit-form-container').innerHTML = '';">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+

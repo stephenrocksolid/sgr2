@@ -1,0 +1,51 @@
+{% load static %}
+
+{% if items %}
+<div class="table-wrap">
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Item Name</th>
+                <th>Description</th>
+                <th>Hour Qty</th>
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+                <tr id="item-row-{{ item.id }}">
+                    <td><strong>{{ item.name }}</strong></td>
+                    <td>{{ item.description|default:"—"|truncatewords:15 }}</td>
+                    <td>{{ item.hour_qty }}</td>
+                    <td>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <button 
+                                class="btn btn-sm btn-secondary"
+                                hx-get="{% url 'inventory:build_list_item_edit_form' build_list.pk item.pk %}"
+                                hx-target="#item-form-container"
+                                hx-swap="innerHTML">
+                                Edit
+                            </button>
+                            <form method="post" 
+                                  action="{% url 'inventory:build_list_item_delete' build_list.pk item.pk %}"
+                                  hx-post="{% url 'inventory:build_list_item_delete' build_list.pk item.pk %}"
+                                  hx-target="#items-table-container"
+                                  hx-swap="innerHTML"
+                                  onsubmit="return confirm('Delete this item?');">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <p>No items added yet.</p>
+    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Item" to add your first item to this build list.</p>
+</div>
+{% endif %}
+

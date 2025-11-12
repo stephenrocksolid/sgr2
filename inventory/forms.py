@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, KitItem, PartAttribute, PartAttributeValue, Vendor, VendorContact, PartVendor
+from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, Kit, KitItem, PartAttribute, PartAttributeValue, Vendor, VendorContact, PartVendor, BuildList, BuildListItem, Casting
 from decimal import Decimal, InvalidOperation
 
 
@@ -421,33 +421,26 @@ class EngineSupercessionForm(forms.Form):
         return cleaned_data
 
 
+class KitForm(forms.ModelForm):
+    """Form for Kits."""
+    class Meta:
+        model = Kit
+        fields = ['name', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+
 class KitItemForm(forms.ModelForm):
-    """Form for creating and editing Kit Items with integer quantity validation."""
+    """Form for creating and editing Kit Items."""
     
     class Meta:
         model = KitItem
-        fields = ["part", "vendor", "quantity", "unit_cost", "notes"]
+        fields = ['part', 'quantity', 'notes']
         widgets = {
-            "quantity": forms.NumberInput(attrs={
-                "step": "1",         # whole-number steppers
-                "min": "1",
-                "inputmode": "numeric",
-                "pattern": r"\d+",   # mobile keyboards prefer digits only
-            }),
+            'notes': forms.Textarea(attrs={'rows': 2}),
+            'quantity': forms.NumberInput(attrs={'step': '0.01', 'min': '0.01'}),
         }
-
-    def clean_quantity(self):
-        q = self.cleaned_data.get("quantity")
-        # Accept numbers but ensure integer only
-        try:
-            d = Decimal(q)
-        except (TypeError, InvalidOperation):
-            raise forms.ValidationError("Enter a whole number.")
-        if d != d.to_integral_value():
-            raise forms.ValidationError("Quantity must be a whole number.")
-        if d <= 0:
-            raise forms.ValidationError("Quantity must be at least 1.")
-        return int(d)  # normalize to int for downstream use
 
 
 class PartEngineLinkForm(forms.ModelForm):
@@ -539,7 +532,7 @@ class EngineForm(forms.ModelForm):
             "di", "idi", "common_rail", "two_valve", "four_valve", "five_valve",
             "overview_comments", "interference", "camshaft", "valve_adjustment",
             "rod_journal_diameter", "main_journal_diameter_pos1", "main_journal_diameter_1",
-            "big_end_housing_bore", "casting_comments",
+            "big_end_housing_bore",
         ]
         widgets = {
             "engine_make": forms.TextInput(attrs={"class": "form-control"}),
@@ -579,7 +572,6 @@ class EngineForm(forms.ModelForm):
             "two_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "four_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "five_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "casting_comments": forms.Textarea(attrs={"class": "form-control", "rows": 3}),
         }
 
 
@@ -708,4 +700,36 @@ class PartVendorForm(forms.ModelForm):
 PartVendorFormSet = inlineformset_factory(
     Part, PartVendor, form=PartVendorForm, extra=1, can_delete=True
 )
+
+
+class BuildListForm(forms.ModelForm):
+    """Form for Build Lists."""
+    class Meta:
+        model = BuildList
+        fields = ['name', 'notes']
+        widgets = {
+            'notes': forms.Textarea(attrs={'rows': 3}),
+        }
+
+
+class BuildListItemForm(forms.ModelForm):
+    """Form for Build List Items."""
+    class Meta:
+        model = BuildListItem
+        fields = ['name', 'description', 'hour_qty']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 2}),
+            'hour_qty': forms.NumberInput(attrs={'step': '0.01', 'min': '0'}),
+        }
+
+
+class CastingForm(forms.ModelForm):
+    """Form for Engine Castings."""
+    class Meta:
+        model = Casting
+        fields = ['casting_number', 'comments']
+        widgets = {
+            'casting_number': forms.TextInput(attrs={'placeholder': 'Casting number (optional)'}),
+            'comments': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Additional notes or comments'}),
+        }
 

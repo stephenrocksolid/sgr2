@@ -1,0 +1,38 @@
+{% load static %}
+
+<div class="htmx-form">
+    <h4 style="margin-bottom: 1rem;">Edit Casting</h4>
+    <form method="post" 
+          action="{% url 'inventory:engine_casting_edit' engine.pk casting.pk %}"
+          hx-post="{% url 'inventory:engine_casting_edit' engine.pk casting.pk %}"
+          hx-target="#casting-table-container"
+          hx-swap="innerHTML">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label for="{{ form.casting_number.id_for_label }}">Casting Number</label>
+            {{ form.casting_number }}
+            {% if form.casting_number.errors %}
+                <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.casting_number.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="form-group">
+            <label for="{{ form.comments.id_for_label }}">Comments</label>
+            {{ form.comments }}
+            {% if form.comments.errors %}
+                <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.comments.errors.0 }}</span>
+            {% endif %}
+        </div>
+        
+        <div class="form-actions">
+            <button type="submit" class="btn btn-sm btn-primary">Save Changes</button>
+            <button type="button" 
+                    class="btn btn-sm btn-secondary"
+                    onclick="document.getElementById('casting-form-container').innerHTML = '';">
+                Cancel
+            </button>
+        </div>
+    </form>
+</div>
+

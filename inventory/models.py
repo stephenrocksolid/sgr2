@@ -6,28 +6,6 @@ from core.models import AuditMixin
 from decimal import Decimal
 
 
-def recalc_kit_totals(kit):
-    """Recalculate kit cost_total and sale_price based on items and margin."""
-    from django.db import transaction
-    
-    with transaction.atomic():
-        # Calculate total cost from items
-        cost_total = Decimal('0.00')
-        for item in kit.items.all():
-            cost_total += item.unit_cost * item.quantity
-        
-        # Calculate sale price with margin
-        margin_multiplier = Decimal('1.00') + (kit.margin_pct / Decimal('100.00'))
-        sale_price = cost_total * margin_multiplier
-        
-        # Update kit totals
-        kit.cost_total = cost_total
-        kit.sale_price = sale_price
-        kit.save(update_fields=['cost_total', 'sale_price'])
-        
-        return cost_total, sale_price
-
-
 class PartCategory(models.Model):
     """Category for organizing parts with custom attributes."""
     name = models.CharField(max_length=120, unique=True)
@@ -186,9 +164,6 @@ class Engine(AuditMixin):
     four_valve = models.BooleanField(default=False, verbose_name="4V (4 Valve)")
     five_valve = models.BooleanField(default=False, verbose_name="5V (5 Valve)")
     
-    # Casting Information
-    casting_comments = models.TextField(blank=True, null=True, verbose_name="Casting # Comments")
-    
     # Engine relationships
     vendor = models.ForeignKey('Vendor', null=True, blank=True, on_delete=models.SET_NULL, related_name='engines')
     interchanges = models.ManyToManyField(
@@ -234,17 +209,6 @@ class Engine(AuditMixin):
         """Engines that supersede this engine (this engine is older than them)"""
         return Engine.objects.filter(superseded_by_links__to_engine=self)
     
-    def get_or_create_build_list(self):
-        """Get or create the single build list for this engine."""
-        bl = getattr(self, '_cached_bl', None)
-        if bl:
-            return bl
-        bl, _ = self.build_lists.get_or_create(
-            defaults={'name': 'Default Build List', 'notes': ''}
-        )
-        self._cached_bl = bl
-        return bl
-
 
 class EngineSupercession(AuditMixin):
     """Through model for Engine supersession relationships."""
@@ -492,70 +456,88 @@ class PartVendor(AuditMixin):
 
 
 class BuildList(models.Model):
-    """Build list for an engine containing multiple kits."""
-    engine = models.ForeignKey('Engine', on_delete=models.CASCADE, related_name='build_lists')
+    """Build list that can be assigned to multiple engines."""
     name = models.CharField(max_length=160)
     notes = models.TextField(blank=True)
+    engines = models.ManyToManyField('Engine', related_name='build_lists', blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', blank=True)
+    
+    class Meta:
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class BuildListItem(models.Model):
+    """Items within a build list."""
+    build_list = models.ForeignKey('BuildList', on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    hour_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['engine'], name='unique_buildlist_per_engine')
-        ]
+        ordering = ['name']
     
     def __str__(self):
-        return f'{self.engine} — {self.name}'
+        return f"{self.build_list.name} - {self.name}"
 
 
 class Kit(models.Model):
-    """Kit within a build list containing multiple parts."""
-    build_list = models.ForeignKey('BuildList', on_delete=models.CASCADE, related_name='kits')
+    """Kit containing multiple parts that can be assigned to multiple engines."""
     name = models.CharField(max_length=160)
     notes = models.TextField(blank=True)
-    # Pricing controls:
-    margin_pct = models.DecimalField(max_digits=6, decimal_places=2, default=0)  # e.g., 25.00 = 25%
-    # Cached rollups (updated on save or via service):
-    cost_total = models.DecimalField(max_digits=14, decimal_places=2, default=0)  # sum of items (unit_cost * qty)
-    sale_price = models.DecimalField(max_digits=14, decimal_places=2, default=0)  # computed from cost_total + margin
+    engines = models.ManyToManyField('Engine', related_name='kits', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='+', blank=True)
+    
+    class Meta:
+        ordering = ['name']
     
     def __str__(self):
-        return f'{self.build_list}: {self.name}'
-    
-    def recalc_totals(self):
-        """Recalculate and update cost_total and sale_price."""
-        return recalc_kit_totals(self)
-    
-    def get_items_count(self):
-        """Get the number of items in this kit."""
-        return self.items.count()
+        return self.name
 
 
 class KitItem(models.Model):
-    """Individual part within a kit with vendor and pricing information."""
+    """Individual part within a kit with quantity."""
     kit = models.ForeignKey('Kit', on_delete=models.CASCADE, related_name='items')
     part = models.ForeignKey('Part', on_delete=models.PROTECT, related_name='kit_items')
-    vendor = models.ForeignKey('Vendor', on_delete=models.PROTECT, related_name='kit_items')
     quantity = models.DecimalField(max_digits=12, decimal_places=2, default=1)
-    # Snapshot unit cost at the time of adding (so totals don't change unexpectedly if vendor cost updates later)
-    unit_cost = models.DecimalField(max_digits=12, decimal_places=2)
     notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
     
     class Meta:
-        unique_together = (('kit', 'part', 'vendor'),)
+        unique_together = (('kit', 'part'),)
+        ordering = ['part__part_number']
     
     def __str__(self):
-        return f'{self.kit}: {self.part} ({self.vendor})'
+        return f'{self.kit}: {self.part}'
     
     def clean(self):
         from django.core.exceptions import ValidationError
         super().clean()
         if self.quantity is None:
             raise ValidationError({"quantity": "Quantity is required."})
-        d = Decimal(self.quantity)
-        if d != d.to_integral_value():
-            raise ValidationError({"quantity": "Quantity must be a whole number."})
-        if d <= 0:
-            raise ValidationError({"quantity": "Quantity must be at least 1."})
+        if Decimal(str(self.quantity)) <= 0:
+            raise ValidationError({"quantity": "Quantity must be greater than 0."})
+
+
+class Casting(models.Model):
+    """Casting number entries for an engine."""
+    engine = models.ForeignKey('Engine', on_delete=models.CASCADE, related_name='castings')
+    casting_number = models.CharField(max_length=100)
+    comments = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['casting_number']
+    
+    def __str__(self):
+        return f"{self.engine} - {self.casting_number}"

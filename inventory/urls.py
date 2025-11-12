@@ -116,12 +116,81 @@ urlpatterns = [
     path('parts/<int:part_id>/vendors/<int:part_vendor_id>/delete/', views.part_vendor_delete, name='part_vendor_delete'),
     path('parts/<int:part_id>/vendors/<int:part_vendor_id>/set-primary/', views.part_vendor_set_primary, name='part_vendor_set_primary'),
     
+    # Build Lists
+    path('build-lists/', views.build_lists_list, name='build_lists_list'),
+    path('build-lists/new/', views.build_list_create, name='build_list_create'),
+    path('build-lists/<int:build_list_id>/', views.build_list_detail, name='build_list_detail'),
+    path('build-lists/<int:build_list_id>/edit/', views.build_list_edit, name='build_list_edit'),
+    path('build-lists/<int:build_list_id>/delete/', views.build_list_delete, name='build_list_delete'),
+    
+    # Build list items (HTMX)
+    path('build-lists/<int:build_list_id>/items/partial/', views.build_list_items_partial, name='build_list_items_partial'),
+    path('build-lists/<int:build_list_id>/items/add/form/', views.build_list_item_add_form, name='build_list_item_add_form'),
+    path('build-lists/<int:build_list_id>/items/add/', views.build_list_item_add, name='build_list_item_add'),
+    path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/form/', views.build_list_item_edit_form, name='build_list_item_edit_form'),
+    path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/', views.build_list_item_edit, name='build_list_item_edit'),
+    path('build-lists/<int:build_list_id>/items/<int:item_id>/delete/', views.build_list_item_delete, name='build_list_item_delete'),
+    
+    # Engine assignments from build list side (HTMX)
+    path('build-lists/<int:build_list_id>/engines/partial/', views.build_list_engines_partial, name='build_list_engines_partial'),
+    path('build-lists/<int:build_list_id>/engines/add/form/', views.build_list_engine_add_form, name='build_list_engine_add_form'),
+    path('build-lists/<int:build_list_id>/engines/add/', views.build_list_engine_add, name='build_list_engine_add'),
+    path('build-lists/<int:build_list_id>/engines/<int:engine_id>/remove/', views.build_list_engine_remove, name='build_list_engine_remove'),
+    
+    # Build lists on engine side (HTMX)
+    path('engines/<int:engine_id>/build-lists/partial/', views.engine_build_lists_partial, name='engine_build_lists_partial'),
+    path('engines/<int:engine_id>/build-lists/add/form/', views.engine_build_list_add_form, name='engine_build_list_add_form'),
+    path('engines/<int:engine_id>/build-lists/add/', views.engine_build_list_add, name='engine_build_list_add'),
+    path('engines/<int:engine_id>/build-lists/<int:build_list_id>/remove/', views.engine_build_list_remove, name='engine_build_list_remove'),
+    
+    # Kits
+    path('kits/', views.kits_list, name='kits_list'),
+    path('kits/new/', views.kit_create, name='kit_create'),
+    path('kits/<int:kit_id>/', views.kit_detail, name='kit_detail'),
+    path('kits/<int:kit_id>/edit/', views.kit_edit, name='kit_edit'),
+    path('kits/<int:kit_id>/delete/', views.kit_delete, name='kit_delete'),
+    
+    # Kit items (HTMX)
+    path('kits/<int:kit_id>/items/partial/', views.kit_items_partial, name='kit_items_partial'),
+    path('kits/<int:kit_id>/items/add/form/', views.kit_item_add_form, name='kit_item_add_form'),
+    path('kits/<int:kit_id>/items/add/', views.kit_item_add, name='kit_item_add'),
+    path('kits/<int:kit_id>/items/<int:item_id>/edit/form/', views.kit_item_edit_form, name='kit_item_edit_form'),
+    path('kits/<int:kit_id>/items/<int:item_id>/edit/', views.kit_item_edit, name='kit_item_edit'),
+    path('kits/<int:kit_id>/items/<int:item_id>/delete/', views.kit_item_delete, name='kit_item_delete'),
+    
+    # Engine assignments from kit side (HTMX)
+    path('kits/<int:kit_id>/engines/partial/', views.kit_engines_partial, name='kit_engines_partial'),
+    path('kits/<int:kit_id>/engines/add/form/', views.kit_engine_add_form, name='kit_engine_add_form'),
+    path('kits/<int:kit_id>/engines/add/', views.kit_engine_add, name='kit_engine_add'),
+    path('kits/<int:kit_id>/engines/<int:engine_id>/remove/', views.kit_engine_remove, name='kit_engine_remove'),
+    
+    # Kits on engine side (HTMX)
+    path('engines/<int:engine_id>/kits/partial/', views.engine_kits_partial, name='engine_kits_partial'),
+    path('engines/<int:engine_id>/kits/add/form/', views.engine_kit_add_form, name='engine_kit_add_form'),
+    path('engines/<int:engine_id>/kits/add/', views.engine_kit_add, name='engine_kit_add'),
+    path('engines/<int:engine_id>/kits/<int:kit_id>/remove/', views.engine_kit_remove, name='engine_kit_remove'),
+    
+    # Castings (HTMX)
+    path('engines/<int:engine_id>/castings/partial/', views.engine_castings_partial, name='engine_castings_partial'),
+    path('engines/<int:engine_id>/castings/add/form/', views.engine_casting_add_form, name='engine_casting_add_form'),
+    path('engines/<int:engine_id>/castings/add/', views.engine_casting_add, name='engine_casting_add'),
+    path('engines/<int:engine_id>/castings/<int:casting_id>/edit/form/', views.engine_casting_edit_form, name='engine_casting_edit_form'),
+    path('engines/<int:engine_id>/castings/<int:casting_id>/edit/', views.engine_casting_edit, name='engine_casting_edit'),
+    path('engines/<int:engine_id>/castings/<int:casting_id>/delete/', views.engine_casting_delete, name='engine_casting_delete'),
+    
     # Vendors
     path("vendors/", views.vendor_index, name="vendor_index"),
     path("vendors/new/", views.vendor_create, name="vendor_create"),
     path("vendors/<int:vendor_id>/", views.vendor_detail, name="vendor_detail"),
     path("vendors/<int:vendor_id>/edit/", views.vendor_edit, name="vendor_edit"),
     path("vendors/<int:vendor_id>/delete/", views.vendor_delete, name="vendor_delete"),
+    
+    # Vendor contacts
+    path("vendors/<int:vendor_id>/contacts/new/", views.vendor_contact_create, name="vendor_contact_create"),
+    path("vendors/<int:vendor_id>/contacts/<int:contact_id>/edit/", views.vendor_contact_edit, name="vendor_contact_edit"),
+    path("vendors/<int:vendor_id>/contacts/<int:contact_id>/delete/", views.vendor_contact_delete_confirm, name="vendor_contact_delete_confirm"),
+    path("vendors/<int:vendor_id>/contacts/<int:contact_id>/delete/confirm/", views.vendor_contact_delete, name="vendor_contact_delete"),
+    path("vendors/<int:vendor_id>/contacts/<int:contact_id>/set-primary/", views.vendor_contact_set_primary, name="vendor_contact_set_primary"),
 
     # Vendor detail partials (HTMX)
     path("vendors/<int:vendor_id>/parts/partial/", views.vendor_parts_partial, name="vendor_parts_partial"),

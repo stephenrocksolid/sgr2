@@ -33,14 +33,28 @@ def normalize(s):
     """Normalize string for comparison."""
     return (s or '').strip()
 
-def ci_get_or_create_vendor(name):
+def ci_get_or_create_vendor(name, vendor_data=None):
     """Get or create vendor by case-insensitive name."""
     n = normalize(name)
     if not n:
         return None
     
     v = Vendor.objects.filter(name__iexact=n).first()
-    return v or Vendor.objects.create(name=n)
+    if v:
+        return v
+    
+    # Create new vendor with additional data if provided
+    vendor_defaults = {'name': n}
+    if vendor_data:
+        vendor_defaults.update({
+            'website': vendor_data.get('vendor_website', ''),
+            'contact_name': vendor_data.get('vendor_contact_name', ''),
+            'email': vendor_data.get('vendor_contact_email', ''),
+            'phone': vendor_data.get('vendor_contact_phone', ''),
+            'notes': vendor_data.get('vendor_notes', ''),
+        })
+    
+    return Vendor.objects.create(**vendor_defaults)
 
 def _nz(s):
     """Normalize string for comparison."""
@@ -616,7 +630,7 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             value = row_data[header_name]
             
             # Determine field type for normalization
-            if field_name in ['vendor_name', 'vendor_website', 'vendor_contact_name', 'vendor_contact_email', 'vendor_contact_phone', 'vendor_part_number']:
+            if field_name in ['vendor_name', 'vendor_website', 'vendor_contact_name', 'vendor_contact_email', 'vendor_contact_phone', 'vendor_notes', 'vendor_part_number']:
                 normalized_value = normalize_value(value, 'string')
             elif field_name in ['vendor_price']:
                 normalized_value = normalize_value(value, 'decimal')
@@ -797,7 +811,7 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
     # Attach vendor if present in row data
     vendor_data = normalized_data.get('vendor', {})
     if vendor_data.get('vendor_name'):
-        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'], vendor_data)
         if vendor:
             engine.vendor = vendor
             engine.save(update_fields=['vendor'])
@@ -856,7 +870,7 @@ def process_part_row(batch, mapping, normalized_data, import_row):
             # Update vendor pricing if present
             vendor_data = normalized_data.get('vendor', {})
             if vendor_data.get('vendor_name'):
-                vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+                vendor = ci_get_or_create_vendor(vendor_data['vendor_name'], vendor_data)
                 if vendor:
                     existing_part.vendor = vendor
                     existing_part.save(update_fields=['vendor'])
@@ -905,7 +919,7 @@ def process_part_row(batch, mapping, normalized_data, import_row):
     # Attach vendor if present in row data
     vendor_data = normalized_data.get('vendor', {})
     if vendor_data.get('vendor_name'):
-        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'])
+        vendor = ci_get_or_create_vendor(vendor_data['vendor_name'], vendor_data)
         if vendor:
             part.vendor = vendor
             part.save(update_fields=['vendor'])
@@ -1136,7 +1150,14 @@ def create_relationships(batch, mapping, normalized_data, import_row):
         vendor_name = vendor_data.get('vendor_name')
         if vendor_name:
             # Validate vendor defaults
-            vendor_defaults = {'name': vendor_name}
+            vendor_defaults = {
+                'name': vendor_name,
+                'website': vendor_data.get('vendor_website', ''),
+                'contact_name': vendor_data.get('vendor_contact_name', ''),
+                'email': vendor_data.get('vendor_contact_email', ''),
+                'phone': vendor_data.get('vendor_contact_phone', ''),
+                'notes': vendor_data.get('vendor_notes', ''),
+            }
             validated_vendor_defaults = validate_and_truncate_fields(vendor_defaults, Vendor, batch, import_row.row_number)
             
             vendor, created = Vendor.objects.get_or_create(
