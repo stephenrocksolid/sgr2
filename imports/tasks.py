@@ -591,7 +591,7 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
                              'cpl_number', 'ar_number', 'build_list', 'engine_code', 'serial_number',
                              'crankshaft_no', 'piston_no', 'piston_marked_no', 'piston_notes', 'oh_kit_no', 
                              'bore_stroke', 'firing_order', 'overview_comments', 'interference', 'camshaft', 
-                             'valve_adjustment', 'status', 'casting_comments']:
+                             'valve_adjustment', 'status']:
                 normalized_value = normalize_value(value, 'string')
             elif field_name in ['cylinder', 'valves_per_cyl']:
                 normalized_value = normalize_value(value, 'integer')

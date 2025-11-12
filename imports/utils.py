@@ -250,7 +250,6 @@ def get_engine_field_aliases():
         'two_valve': ['2v', '2 valve', 'two valve'],
         'four_valve': ['4v', '4 valve', 'four valve'],
         'five_valve': ['5v', '5 valve', 'five valve'],
-        'casting_comments': ['casting # comments', 'casting comments', 'casting notes'],
     }
 
 def fuzzy_match_header(header, target_field, aliases):

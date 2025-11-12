@@ -177,9 +177,6 @@ class AdditionalEngineMappingForm(forms.Form):
             ('four_valve', '4V (4 Valve)'),
             ('five_valve', '5V (5 Valve)'),
             
-            # Casting Information
-            ('casting_comments', 'Casting # Comments'),
-            
             # Overview
             ('overview_comments', 'Overview Comments'),
             ('interference', 'Interference'),

@@ -506,7 +506,13 @@
                     <td>
                         <span class="valve-pills">{{ engine.valves_display }}</span>
                     </td>
-                    <td>{{ engine.casting_comments|default:"—"|truncatechars:80 }}</td>
+                    <td>
+                        {% if engine.castings.exists %}
+                            {{ engine.castings.count }} casting{{ engine.castings.count|pluralize }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ engine.cpl_number|default:"—" }}</td>
                     <td>{{ engine.status|default:"—" }}</td>
                     <td>{% if engine.price %}${{ engine.price }}{% else %}—{% endif %}</td>
