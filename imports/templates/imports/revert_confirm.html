@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+
+{% block title %}Revert Import - {{ batch.original_filename }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="page-header">
+        <h1>Revert Import</h1>
+        <div class="header-actions">
+            <a href="{% url 'imports:batch_detail' batch.id %}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+
+    <!-- Import Information -->
+    <div class="batch-details">
+        <div class="detail-card">
+            <h2>Import Information</h2>
+            
+            <div class="detail-grid">
+                <div class="detail-item">
+                    <label>Batch ID</label>
+                    <span><strong>#{{ batch.id }}</strong></span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>File Name</label>
+                    <span>{{ batch.original_filename }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Status</label>
+                    <span class="status-badge status-{{ batch.status }}">{{ batch.get_status_display }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Created</label>
+                    <span>{{ batch.created_at|date:"M d, Y g:i A" }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Total Rows</label>
+                    <span>{{ batch.total_rows }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Processed Rows</label>
+                    <span>{{ batch.processed_rows }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Warning Banner -->
+    <div class="revert-warning-banner">
+        <div class="warning-icon">⚠️</div>
+        <div class="warning-content">
+            <h3>Warning: This Action Cannot Be Undone</h3>
+            <p>Reverting this import will permanently delete all records that were created during this import. This includes engines, machines, parts, and vendors (if not used elsewhere).</p>
+        </div>
+    </div>
+
+    <!-- Impact Preview -->
+    <div class="batch-details">
+        <div class="detail-card">
+            <h2>Revert Impact Preview</h2>
+            <p class="section-description">The following records will be deleted:</p>
+            
+            <table class="impact-table">
+                <thead>
+                    <tr>
+                        <th>Record Type</th>
+                        <th>Count</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Machines</strong></td>
+                        <td>{{ preview.machines }}</td>
+                        <td><span class="delete-badge">Will be deleted</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Engines</strong></td>
+                        <td>{{ preview.engines }}</td>
+                        <td><span class="delete-badge">Will be deleted</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Parts</strong></td>
+                        <td>{{ preview.parts }}</td>
+                        <td><span class="delete-badge">Will be deleted</span></td>
+                    </tr>
+                    <tr>
+                        <td><strong>Vendors</strong></td>
+                        <td>{{ preview.vendors_to_delete }}</td>
+                        <td><span class="delete-badge">Will be deleted</span></td>
+                    </tr>
+                    {% if preview.vendors_to_keep > 0 %}
+                    <tr>
+                        <td><strong>Vendors (in use)</strong></td>
+                        <td>{{ preview.vendors_to_keep }}</td>
+                        <td><span class="keep-badge">Will be kept (used elsewhere)</span></td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong>Relationships</strong></td>
+                        <td>{{ preview.relationships }}</td>
+                        <td><span class="delete-badge">Will be removed</span></td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            {% if preview.warnings %}
+            <div class="impact-warnings">
+                <h3>Additional Warnings:</h3>
+                <ul>
+                    {% for warning in preview.warnings %}
+                    <li>{{ warning }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Double Confirmation Form -->
+    <div class="batch-details">
+        <div class="detail-card">
+            <h2>Confirm Revert</h2>
+            <p class="section-description">To proceed with reverting this import, you must complete both confirmation steps below:</p>
+            
+            <form method="post" id="revert-form">
+                {% csrf_token %}
+                
+                <div class="confirmation-step">
+                    <h3>Step 1: Acknowledge Understanding</h3>
+                    <div class="checkbox-wrapper">
+                        <input type="checkbox" id="confirm_delete" name="confirm_delete" required>
+                        <label for="confirm_delete">
+                            <strong>I understand this will permanently delete all data created by this import and this action cannot be undone.</strong>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="confirmation-step">
+                    <h3>Step 2: Type Batch ID to Confirm</h3>
+                    <p>Type <strong>{{ batch.id }}</strong> below to confirm:</p>
+                    <input 
+                        type="text" 
+                        id="confirm_batch_id" 
+                        name="confirm_batch_id" 
+                        class="form-control" 
+                        placeholder="Enter batch ID"
+                        required
+                        autocomplete="off"
+                    >
+                </div>
+                
+                <div class="form-actions">
+                    <a href="{% url 'imports:batch_detail' batch.id %}" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" id="revert-button" class="btn btn-danger" disabled>
+                        🔄 Revert Import
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.revert-warning-banner {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin: 20px 0;
+    display: flex;
+    align-items: start;
+    gap: 20px;
+    box-shadow: 0 4px 15px rgba(238, 90, 111, 0.3);
+}
+
+.warning-icon {
+    font-size: 48px;
+    line-height: 1;
+}
+
+.warning-content h3 {
+    margin: 0 0 10px 0;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.warning-content p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.section-description {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.impact-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+.impact-table thead {
+    background: #f8f9fa;
+}
+
+.impact-table th,
+.impact-table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.impact-table th {
+    font-weight: 600;
+    color: #495057;
+}
+
+.delete-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #fee;
+    color: #c00;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.keep-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.impact-warnings {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    padding: 15px;
+    margin-top: 20px;
+}
+
+.impact-warnings h3 {
+    margin: 0 0 10px 0;
+    color: #856404;
+    font-size: 16px;
+}
+
+.impact-warnings ul {
+    margin: 0;
+    padding-left: 20px;
+    color: #856404;
+}
+
+.impact-warnings li {
+    margin-bottom: 5px;
+}
+
+.confirmation-step {
+    background: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.confirmation-step h3 {
+    margin: 0 0 15px 0;
+    font-size: 18px;
+    color: #495057;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: start;
+    gap: 12px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    cursor: pointer;
+}
+
+.checkbox-wrapper label {
+    cursor: pointer;
+    user-select: none;
+    line-height: 1.5;
+}
+
+#confirm_batch_id {
+    max-width: 300px;
+    font-size: 16px;
+    padding: 10px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    margin-top: 25px;
+    padding-top: 20px;
+    border-top: 2px solid #dee2e6;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+.btn-danger:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.detail-card h2 {
+    margin-bottom: 20px;
+    color: #333;
+    font-size: 24px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('revert-form');
+    const checkbox = document.getElementById('confirm_delete');
+    const batchIdInput = document.getElementById('confirm_batch_id');
+    const revertButton = document.getElementById('revert-button');
+    const expectedBatchId = '{{ batch.id }}';
+    
+    function validateForm() {
+        const checkboxChecked = checkbox.checked;
+        const batchIdMatches = batchIdInput.value.trim() === expectedBatchId;
+        
+        revertButton.disabled = !(checkboxChecked && batchIdMatches);
+    }
+    
+    checkbox.addEventListener('change', validateForm);
+    batchIdInput.addEventListener('input', validateForm);
+    
+    form.addEventListener('submit', function(e) {
+        if (!checkbox.checked) {
+            e.preventDefault();
+            alert('You must check the confirmation box to proceed.');
+            return false;
+        }
+        
+        if (batchIdInput.value.trim() !== expectedBatchId) {
+            e.preventDefault();
+            alert('Batch ID does not match. Please type "' + expectedBatchId + '" to confirm.');
+            batchIdInput.focus();
+            return false;
+        }
+        
+        // Final browser confirmation
+        if (!confirm('This is your final confirmation. Are you absolutely sure you want to revert this import?\n\nThis will permanently delete ' + 
+                     '{{ preview.machines }} machines, {{ preview.engines }} engines, {{ preview.parts }} parts, and {{ preview.vendors_to_delete }} vendors.\n\n' +
+                     'This action CANNOT be undone.')) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Show processing message
+        revertButton.disabled = true;
+        revertButton.textContent = 'Reverting...';
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}
+

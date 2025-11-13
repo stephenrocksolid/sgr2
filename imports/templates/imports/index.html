@@ -31,6 +31,7 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th>Batch ID</th>
                         <th>File Name</th>
                         <th>Type</th>
                         <th>Status</th>
@@ -42,6 +43,7 @@
                 <tbody>
                     {% for batch in page_obj %}
                         <tr>
+                            <td><strong>#{{ batch.id }}</strong></td>
                             <td>
                                 <strong>{{ batch.original_filename }}</strong>
                                 {% if batch.created_by %}

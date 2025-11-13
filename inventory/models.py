@@ -83,33 +83,28 @@ class PartAttributeValue(models.Model):
 
 class SGEngine(AuditMixin):
     """Spring Garden Engine model."""
-    sg_make = models.CharField(max_length=100)
-    sg_model = models.CharField(max_length=100)
-    identifier = models.CharField(max_length=100, unique=True)
+    sg_make = models.CharField(max_length=100, null=True, blank=True)
+    sg_model = models.CharField(max_length=100, null=True, blank=True)
+    identifier = models.CharField(max_length=100, null=True, blank=True)
     notes = models.TextField(blank=True)
 
     class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['sg_make', 'sg_model'],
-                name='unique_sg_engine_make_model',
-                violation_error_message='SG Engine with this make and model already exists.'
-            )
-        ]
         indexes = [
             Index(Lower('sg_make'), name='sg_engine_make_lower_idx'),
             Index(Lower('sg_model'), name='sg_engine_model_lower_idx'),
         ]
 
     def __str__(self):
-        return f"{self.sg_make} {self.sg_model}"
+        make = self.sg_make or ""
+        model = self.sg_model or ""
+        return f"{make} {model}".strip() or "(No Make/Model)"
 
 
 class Engine(AuditMixin):
     """Engine model with specifications."""
     sg_engine = models.ForeignKey(SGEngine, on_delete=models.SET_NULL, null=True, blank=True)
-    engine_make = models.CharField(max_length=100)
-    engine_model = models.CharField(max_length=100)
+    engine_make = models.CharField(max_length=100, null=True, blank=True)
+    engine_model = models.CharField(max_length=100, null=True, blank=True)
     sg_engine_identifier = models.CharField(max_length=100, blank=True)
     sg_engine_notes = models.TextField(blank=True)
     
@@ -185,7 +180,9 @@ class Engine(AuditMixin):
         ]
 
     def __str__(self):
-        base_name = f"{self.engine_make} {self.engine_model}"
+        make = self.engine_make or ""
+        model = self.engine_model or ""
+        base_name = f"{make} {model}".strip() or "(No Make/Model)"
         if self.serial_number:
             return f"{base_name} (SN: {self.serial_number})"
         return base_name
@@ -228,22 +225,15 @@ class EngineSupercession(AuditMixin):
 
 class Machine(AuditMixin):
     """Machine model."""
-    make = models.CharField(max_length=100)
-    model = models.CharField(max_length=100)
-    year = models.PositiveIntegerField()
-    machine_type = models.CharField(max_length=100)
-    market_type = models.CharField(max_length=100)
+    make = models.CharField(max_length=100, null=True, blank=True)
+    model = models.CharField(max_length=100, null=True, blank=True)
+    year = models.IntegerField(null=True, blank=True)
+    machine_type = models.CharField(max_length=100, null=True, blank=True)
+    market_type = models.CharField(max_length=100, null=True, blank=True)
     engines = models.ManyToManyField(Engine, through='MachineEngine')
     parts = models.ManyToManyField('Part', through='MachinePart')
 
     class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['make', 'model', 'year', 'machine_type', 'market_type'],
-                name='unique_machine_key',
-                violation_error_message='Machine with this combination already exists.'
-            )
-        ]
         indexes = [
             Index(Lower('make'), name='machine_make_lower_idx'),
             Index(Lower('model'), name='machine_model_lower_idx'),
@@ -252,7 +242,10 @@ class Machine(AuditMixin):
         ]
 
     def __str__(self):
-        return f"{self.year} {self.make} {self.model}"
+        year = self.year or ""
+        make = self.make or ""
+        model = self.model or ""
+        return f"{year} {make} {model}".strip() or "(No Info)"
 
 
 class MachineEngine(AuditMixin):
@@ -297,7 +290,7 @@ class MachinePart(AuditMixin):
 
 class SGVendor(models.Model):
     """Canonical Spring Garden Vendor model for unifying vendor names."""
-    name = models.CharField(max_length=255, unique=False)
+    name = models.CharField(max_length=255, null=True, blank=True)
     website = models.URLField(blank=True)
     notes = models.TextField(blank=True)
     created = models.DateTimeField(auto_now_add=True)
@@ -308,21 +301,14 @@ class SGVendor(models.Model):
         indexes = [
             Index(Lower('name'), name='idx_sgvendor_lower_name'),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                Lower('name'), 
-                name='uq_sgvendor_lower_name',
-                violation_error_message='SG Vendor with this name already exists (case-insensitive)'
-            )
-        ]
     
     def __str__(self):
-        return self.name
+        return self.name or "(No Name)"
 
 
 class Vendor(AuditMixin):
     """Vendor model."""
-    name = models.CharField(max_length=200, unique=False)  # Remove unique constraint, add case-insensitive constraint below
+    name = models.CharField(max_length=200, null=True, blank=True)
     contact_name = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
@@ -336,16 +322,9 @@ class Vendor(AuditMixin):
         indexes = [
             Index(Lower('name'), name='vendor_name_lower_idx'),
         ]
-        constraints = [
-            models.UniqueConstraint(
-                Lower('name'), 
-                name='uq_vendor_lower_name', 
-                violation_error_message='Vendor with this name already exists (case-insensitive)'
-            )
-        ]
 
     def __str__(self):
-        return self.name
+        return self.name or "(No Name)"
 
 
 class VendorContact(models.Model):
@@ -368,8 +347,8 @@ class VendorContact(models.Model):
 
 class Part(AuditMixin):
     """Part model."""
-    part_number = models.CharField(max_length=100)
-    name = models.CharField(max_length=200)
+    part_number = models.CharField(max_length=100, null=True, blank=True)
+    name = models.CharField(max_length=200, null=True, blank=True)
     category = models.ForeignKey('PartCategory', null=True, blank=True, on_delete=models.SET_NULL, related_name='parts')
     manufacturer = models.CharField(max_length=100, blank=True)
     unit = models.CharField(max_length=50, blank=True)
@@ -391,13 +370,6 @@ class Part(AuditMixin):
     vendors = models.ManyToManyField(Vendor, through='PartVendor', related_name='supplied_parts')
 
     class Meta:
-        constraints = [
-            UniqueConstraint(
-                fields=['part_number', 'name'],
-                name='unique_part_number_name',
-                violation_error_message='Part with this number and name already exists.'
-            )
-        ]
         indexes = [
             Index(Lower('part_number'), name='part_number_lower_idx'),
             Index(Lower('name'), name='part_name_lower_idx'),
@@ -405,7 +377,13 @@ class Part(AuditMixin):
         ]
 
     def __str__(self):
-        return f"{self.part_number} - {self.name}"
+        if self.part_number and self.name:
+            return f"{self.part_number} - {self.name}"
+        elif self.part_number:
+            return self.part_number
+        elif self.name:
+            return self.name
+        return "(No Part Number/Name)"
     
     @property
     def vendor_offers(self):

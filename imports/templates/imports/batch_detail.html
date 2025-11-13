@@ -7,6 +7,11 @@
     <div class="page-header">
         <h1>Import Batch Details</h1>
         <div class="header-actions">
+            {% if batch.status in 'completed,failed,cancelled' and batch.status != 'reverted' %}
+                <a href="{% url 'imports:revert_import' batch.id %}" class="btn btn-danger">
+                    🔄 Revert Import
+                </a>
+            {% endif %}
             <a href="{% url 'imports:index' %}" class="btn btn-secondary">Back to Imports</a>
         </div>
     </div>
@@ -55,7 +60,29 @@
                     <label>Created By</label>
                     <span>{{ batch.created_by.username|default:"—" }}</span>
                 </div>
+                
+                {% if batch.status == 'reverted' %}
+                <div class="detail-item">
+                    <label>Reverted At</label>
+                    <span>{{ batch.reverted_at|date:"M j, Y g:i A" }}</span>
+                </div>
+                
+                <div class="detail-item">
+                    <label>Reverted By</label>
+                    <span>{{ batch.reverted_by.username|default:"—" }}</span>
+                </div>
+                {% endif %}
             </div>
+            
+            {% if batch.status == 'reverted' %}
+            <div class="reverted-notice">
+                <div class="notice-icon">ℹ️</div>
+                <div class="notice-content">
+                    <strong>This import has been reverted.</strong>
+                    <p>All created records have been permanently deleted.</p>
+                </div>
+            </div>
+            {% endif %}
 
             {% if batch.is_csv %}
                 <div class="csv-details">
@@ -405,6 +432,33 @@
     padding: var(--spacing-xl);
     color: var(--gray-500);
     font-style: italic;
+}
+
+.reverted-notice {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+    display: flex;
+    align-items: start;
+    gap: 15px;
+}
+
+.notice-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.notice-content strong {
+    display: block;
+    font-size: 18px;
+    margin-bottom: 5px;
+}
+
+.notice-content p {
+    margin: 0;
+    opacity: 0.95;
 }
 </style>
 {% endblock %}

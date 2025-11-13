@@ -36,6 +36,10 @@
                 <h3>File Information</h3>
                 <div class="info-grid">
                     <div class="info-item">
+                        <label>Batch ID:</label>
+                        <span><strong>#{{ batch.id }}</strong></span>
+                    </div>
+                    <div class="info-item">
                         <label>File Name:</label>
                         <span>{{ batch.original_filename }}</span>
                     </div>
@@ -78,6 +82,83 @@
                             </table>
                         </div>
                     {% endif %}
+                </div>
+            </div>
+
+            <div class="mapping-controls-toolbar">
+                <div class="mapping-controls-section">
+                    <div class="toolbar-header">
+                        <h3>Mapping Tools</h3>
+                        <button type="button" class="btn-manage-mappings" onclick="toggleMappingManagement()" title="Manage Saved Mappings">
+                            📋 Manage Saved Mappings
+                        </button>
+                    </div>
+                    <div class="mapping-controls-buttons">
+                        <div class="control-group">
+                            <label for="saved-mapping-select">Load Saved Mapping:</label>
+                            <select id="saved-mapping-select" class="form-control">
+                                <option value="">-- Select a Saved Mapping --</option>
+                                {% for mapping in saved_mappings %}
+                                    <option value="{{ mapping.id }}">{{ mapping.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="control-group">
+                            <button type="button" class="btn btn-secondary" onclick="clearMapping()">↺ Clear Mapping</button>
+                            <button type="button" class="btn btn-info" onclick="autoMapFields()">Automatic Mapping</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mapping-management-panel" class="mapping-management-panel" style="display: none;">
+                <div class="panel-header">
+                    <h3>Saved Mappings</h3>
+                    <button type="button" class="btn-close-panel" onclick="toggleMappingManagement()">✕</button>
+                </div>
+                <div class="panel-content">
+                    {% if saved_mappings %}
+                        <table class="mappings-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Description</th>
+                                    <th>Created</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mappings-table-body">
+                                {% for mapping in saved_mappings %}
+                                    <tr id="mapping-row-{{ mapping.id }}" data-mapping-id="{{ mapping.id }}">
+                                        <td class="mapping-name">{{ mapping.name }}</td>
+                                        <td class="mapping-description">{{ mapping.description|default:"—" }}</td>
+                                        <td class="mapping-date">{{ mapping.created_at|date:"M d, Y" }}</td>
+                                        <td class="mapping-user">{{ mapping.created_by.username|default:"—" }}</td>
+                                        <td class="mapping-actions">
+                                            <button type="button" class="btn-action btn-delete" onclick="deleteMapping({{ mapping.id }}, '{{ mapping.name|escapejs }}')" title="Delete">
+                                                🗑️ Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    {% else %}
+                        <p class="no-mappings">No saved mappings yet. Create one by filling out the form and clicking "Save Mapping & Continue".</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="flexible-import-notice" style="background: #fff3cd; border: 2px solid #ffc107; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
+                <div style="display: flex; align-items: start; gap: 10px;">
+                    <span style="font-size: 24px;">⚠️</span>
+                    <div>
+                        <h4 style="margin: 0 0 8px 0; color: #856404;">Flexible Import Mode</h4>
+                        <p style="margin: 0; color: #856404;">
+                            <strong>Important:</strong> Fields are optional during import. Records can be created without identifiers (serial numbers, part numbers, etc.) or even without make/model information. You can add missing details later through the unmatched items screens. Each record must have at least one field with data.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -316,7 +397,7 @@
                                     </label>
                                     <select name="attr_map_{{ attr.id }}" id="attr_map_{{ attr.id }}" class="form-select w-full">
                                         <option value="">— Select Header —</option>
-                                        {% for h in batch.discovered_headers %}
+                                        {% for h in sorted_discovered_headers %}
                                             <option value="{{ h }}"
                                                 {% if submitted_attr_mappings %}
                                                     {# Check submitted data first (after validation error) #}
@@ -338,23 +419,28 @@
                 </div>
 
                 <div class="mapping-options">
-                    <h3>Import Name (Optional)</h3>
-                    <p>Optionally name this mapping to save it for future imports.</p>
+                    <h3>Mapping Name</h3>
+                    <p>Used when Saving a Mapping</p>
                     
                     <div class="form-group">
-                        <label for="mapping_name">Import Name <small>(optional)</small></label>
-                        <input type="text" name="mapping_name" id="mapping_name" class="form-control" placeholder="e.g., Standard Parts Import (leave blank for one-time import)" value="{{ mapping_name_value }}">
+                        <label for="mapping_name">Mapping Name</label>
+                        <input type="text" name="mapping_name" id="mapping_name" class="form-control" placeholder="" value="{{ mapping_name_value }}">
                     </div>
                     
                     <div class="form-group">
                         <label for="mapping_description">Description</label>
-                        <textarea name="mapping_description" id="mapping_description" class="form-control" rows="3" placeholder="Optional description of this import">{{ mapping_description_value }}</textarea>
+                        <textarea name="mapping_description" id="mapping_description" class="form-control" rows="3" placeholder="">{{ mapping_description_value }}</textarea>
                     </div>
                 </div>
 
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Mapping & Continue</button>
-                    <a href="{% url 'imports:options_step' batch.id %}" class="btn btn-secondary">Back</a>
+                    <div class="form-actions-left">
+                        <button type="submit" name="action" value="save_and_continue" class="btn btn-primary" onclick="return validateSaveMapping(event)">Save Mapping & Continue</button>
+                    </div>
+                    <div class="form-actions-right">
+                        <a href="{% url 'imports:options_step' batch.id %}" class="btn btn-secondary">↩️ Back</a>
+                        <button type="submit" name="action" value="continue" class="btn btn-success">Continue</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -377,6 +463,199 @@ function toggleSection(sectionId) {
         section.style.display = 'none';
         if (isPreview) {
             document.getElementById('preview-toggle-icon').textContent = '▶';
+        }
+    }
+}
+
+// Validation for Save Mapping
+function validateSaveMapping(event) {
+    const mappingNameInput = document.getElementById('mapping_name');
+    const mappingName = mappingNameInput.value.trim();
+    
+    if (!mappingName) {
+        event.preventDefault();
+        showNotification('Please provide a Mapping Name to save this mapping.', 'warning');
+        
+        // Highlight the field
+        mappingNameInput.focus();
+        mappingNameInput.style.borderColor = '#ffc107';
+        mappingNameInput.style.boxShadow = '0 0 0 3px rgba(255, 193, 7, 0.2)';
+        
+        // Remove highlight after 3 seconds
+        setTimeout(() => {
+            mappingNameInput.style.borderColor = '';
+            mappingNameInput.style.boxShadow = '';
+        }, 3000);
+        
+        return false;
+    }
+    
+    return true;
+}
+
+// Notification system
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Trigger animation
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    // Remove after 4 seconds
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => {
+            notification.remove();
+        }, 300);
+    }, 4000);
+}
+
+// Mapping Management functions
+function toggleMappingManagement() {
+    const panel = document.getElementById('mapping-management-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'block';
+        // Smooth scroll to panel
+        setTimeout(() => {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }, 100);
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function deleteMapping(mappingId, mappingName) {
+    if (!confirm(`Are you sure you want to delete the mapping "${mappingName}"?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    // Get CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    
+    fetch(`/imports/mappings/${mappingId}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Remove row from table
+            const row = document.getElementById(`mapping-row-${mappingId}`);
+            if (row) {
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-20px)';
+                setTimeout(() => {
+                    row.remove();
+                    
+                    // Check if table is now empty
+                    const tbody = document.getElementById('mappings-table-body');
+                    if (tbody && tbody.children.length === 0) {
+                        const panelContent = tbody.closest('.panel-content');
+                        panelContent.innerHTML = '<p class="no-mappings">No saved mappings yet. Create one by filling out the form and clicking "Save Mapping & Continue".</p>';
+                    }
+                }, 300);
+            }
+            
+            // Remove from dropdown
+            const dropdown = document.getElementById('saved-mapping-select');
+            const option = dropdown.querySelector(`option[value="${mappingId}"]`);
+            if (option) {
+                option.remove();
+            }
+            
+            showNotification(`Mapping "${mappingName}" deleted successfully.`, 'success');
+        } else {
+            showNotification(data.error || 'Error deleting mapping.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error deleting mapping:', error);
+        showNotification('Error deleting mapping. Please try again.', 'error');
+    });
+}
+
+// Visual feedback and progress tracking - Global functions
+function updateFieldVisuals(selectElement) {
+    const formGroup = selectElement.closest('.form-group');
+    if (selectElement.value && selectElement.value !== '') {
+        selectElement.classList.add('mapped');
+        if (formGroup) {
+            formGroup.classList.add('field-mapped');
+            formGroup.classList.remove('required-unmapped');
+        }
+    } else {
+        selectElement.classList.remove('mapped');
+        if (formGroup) {
+            formGroup.classList.remove('field-mapped');
+        }
+    }
+    updateProgress();
+}
+
+function updateProgress() {
+    // Machine progress
+    const machineSelects = document.querySelectorAll('.machine-section select');
+    const machineRequired = Array.from(machineSelects).filter(s => 
+        s.name.includes('make') || s.name.includes('model')
+    );
+    const machineMapped = machineRequired.filter(s => s.value && s.value !== '');
+    updateProgressDisplay('machine-progress', machineMapped.length, machineRequired.length);
+    
+    // Engine progress
+    const engineSelects = document.querySelectorAll('.engine-section select');
+    const engineRequired = Array.from(engineSelects).filter(s => 
+        s.name.includes('engine_make') || s.name.includes('engine_model') || s.name.includes('engine_identifier')
+    );
+    const engineMapped = engineRequired.filter(s => s.value && s.value !== '');
+    updateProgressDisplay('engine-progress', engineMapped.length, engineRequired.length);
+    
+    // Part progress
+    const partSelects = document.querySelectorAll('.part-section select');
+    const partRequired = Array.from(partSelects).filter(s => 
+        s.name.includes('part_number') || (s.name.includes('name') && s.name.includes('part'))
+    );
+    const partMapped = partRequired.filter(s => s.value && s.value !== '');
+    updateProgressDisplay('part-progress', partMapped.length, partRequired.length);
+}
+
+function updateProgressDisplay(elementId, mapped, total) {
+    const progressEl = document.getElementById(elementId);
+    if (progressEl) {
+        const text = progressEl.querySelector('.progress-text');
+        if (text) {
+            text.textContent = `${mapped} of ${total} required mapped`;
+            
+            // Add/remove badge
+            let badge = progressEl.querySelector('.progress-badge');
+            if (mapped === total && total > 0) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'progress-badge';
+                    progressEl.appendChild(badge);
+                }
+                badge.textContent = 'Complete';
+                badge.classList.remove('incomplete');
+            } else if (mapped > 0 && mapped < total) {
+                if (!badge) {
+                    badge = document.createElement('span');
+                    badge.className = 'progress-badge incomplete';
+                    progressEl.appendChild(badge);
+                }
+                badge.textContent = `${total - mapped} left`;
+                badge.classList.add('incomplete');
+            } else if (badge) {
+                badge.remove();
+            }
         }
     }
 }
@@ -414,79 +693,6 @@ document.addEventListener('DOMContentLoaded', function() {
         nameFilter.addEventListener('input', filterAttributes);
     }
     
-    // Visual feedback and progress tracking
-    function updateFieldVisuals(selectElement) {
-        const formGroup = selectElement.closest('.form-group');
-        if (selectElement.value && selectElement.value !== '') {
-            selectElement.classList.add('mapped');
-            formGroup.classList.add('field-mapped');
-            formGroup.classList.remove('required-unmapped');
-        } else {
-            selectElement.classList.remove('mapped');
-            formGroup.classList.remove('field-mapped');
-        }
-        updateProgress();
-    }
-    
-    function updateProgress() {
-        // Machine progress
-        const machineSelects = document.querySelectorAll('.machine-section select');
-        const machineRequired = Array.from(machineSelects).filter(s => 
-            s.name.includes('make') || s.name.includes('model')
-        );
-        const machineMapped = machineRequired.filter(s => s.value && s.value !== '');
-        updateProgressDisplay('machine-progress', machineMapped.length, machineRequired.length);
-        
-        // Engine progress
-        const engineSelects = document.querySelectorAll('.engine-section select');
-        const engineRequired = Array.from(engineSelects).filter(s => 
-            s.name.includes('engine_make') || s.name.includes('engine_model') || s.name.includes('engine_identifier')
-        );
-        const engineMapped = engineRequired.filter(s => s.value && s.value !== '');
-        updateProgressDisplay('engine-progress', engineMapped.length, engineRequired.length);
-        
-        // Part progress
-        const partSelects = document.querySelectorAll('.part-section select');
-        const partRequired = Array.from(partSelects).filter(s => 
-            s.name.includes('part_number') || (s.name.includes('name') && s.name.includes('part'))
-        );
-        const partMapped = partRequired.filter(s => s.value && s.value !== '');
-        updateProgressDisplay('part-progress', partMapped.length, partRequired.length);
-    }
-    
-    function updateProgressDisplay(elementId, mapped, total) {
-        const progressEl = document.getElementById(elementId);
-        if (progressEl) {
-            const text = progressEl.querySelector('.progress-text');
-            if (text) {
-                text.textContent = `${mapped} of ${total} required mapped`;
-                
-                // Add/remove badge
-                let badge = progressEl.querySelector('.progress-badge');
-                if (mapped === total && total > 0) {
-                    if (!badge) {
-                        badge = document.createElement('span');
-                        badge.className = 'progress-badge';
-                        progressEl.appendChild(badge);
-                    }
-                    badge.textContent = 'Complete';
-                    badge.classList.remove('incomplete');
-                } else if (mapped > 0 && mapped < total) {
-                    if (!badge) {
-                        badge = document.createElement('span');
-                        badge.className = 'progress-badge incomplete';
-                        progressEl.appendChild(badge);
-                    }
-                    badge.textContent = `${total - mapped} left`;
-                    badge.classList.add('incomplete');
-                } else if (badge) {
-                    badge.remove();
-                }
-            }
-        }
-    }
-    
-    
     // Attach change listeners to all select fields
     const allSelects = document.querySelectorAll('select');
     allSelects.forEach(select => {
@@ -501,6 +707,190 @@ document.addEventListener('DOMContentLoaded', function() {
     updateProgress();
 });
 
+// Load saved mapping functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const savedMappingSelect = document.getElementById('saved-mapping-select');
+    if (savedMappingSelect) {
+        savedMappingSelect.addEventListener('change', function() {
+            const mappingId = this.value;
+            if (mappingId) {
+                loadSavedMapping(mappingId);
+            }
+        });
+    }
+});
+
+function loadSavedMapping(mappingId) {
+    fetch(`/imports/mappings/${mappingId}/load/`)
+        .then(response => response.json())
+        .then(data => {
+            let mappedCount = 0;
+            
+            // Load machine mappings
+            if (data.machine_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.machine_mapping)) {
+                    const select = document.querySelector(`select[name="map_machines_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load engine mappings
+            if (data.engine_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.engine_mapping)) {
+                    const select = document.querySelector(`select[name="map_engines_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load part mappings
+            if (data.part_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.part_mapping)) {
+                    const select = document.querySelector(`select[name="map_parts_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load vendor mappings
+            if (data.vendor_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.vendor_mapping)) {
+                    const select = document.querySelector(`select[name="map_vendors_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load part attribute mappings
+            if (data.part_attribute_mappings) {
+                for (const [attrId, headerName] of Object.entries(data.part_attribute_mappings)) {
+                    const select = document.querySelector(`select[name="attr_map_${attrId}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Update visuals for all mapped fields
+            document.querySelectorAll('select').forEach(select => {
+                updateFieldVisuals(select);
+            });
+            
+            showNotification(`Loaded mapping successfully! ${mappedCount} fields mapped.`, 'success');
+        })
+        .catch(error => {
+            console.error('Error loading mapping:', error);
+            showNotification('Error loading mapping. Please try again.', 'error');
+        });
+}
+
+function clearMapping() {
+    if (!confirm('Are you sure you want to clear all mappings?')) {
+        return;
+    }
+    
+    document.querySelectorAll('select[name^="map_"], select[name^="attr_map_"]').forEach(select => {
+        select.value = '';
+        select.classList.remove('auto-mapped');
+        updateFieldVisuals(select);
+    });
+    
+    // Reset the saved mapping dropdown
+    const savedMappingSelect = document.getElementById('saved-mapping-select');
+    if (savedMappingSelect) {
+        savedMappingSelect.value = '';
+    }
+    
+    showNotification('All mappings cleared.', 'info');
+}
+
+function autoMapFields() {
+    let mappedCount = 0;
+    
+    document.querySelectorAll('select[name^="map_"], select[name^="attr_map_"]').forEach(select => {
+        // Skip if already mapped
+        if (select.value && select.value !== '') {
+            return;
+        }
+        
+        // Extract field name from select name
+        const selectName = select.name;
+        let fieldName = '';
+        
+        if (selectName.startsWith('map_machines_')) {
+            fieldName = selectName.replace('map_machines_', '');
+        } else if (selectName.startsWith('map_engines_')) {
+            fieldName = selectName.replace('map_engines_', '');
+        } else if (selectName.startsWith('map_parts_')) {
+            fieldName = selectName.replace('map_parts_', '');
+        } else if (selectName.startsWith('map_vendors_')) {
+            fieldName = selectName.replace('map_vendors_', '');
+        } else if (selectName.startsWith('attr_map_')) {
+            // For attributes, try to match by label text
+            const label = select.closest('.form-group')?.querySelector('label');
+            if (label) {
+                fieldName = label.textContent.split('—')[1]?.trim().split('(')[0]?.trim() || '';
+            }
+        }
+        
+        if (!fieldName) return;
+        
+        // Normalize field name for comparison (remove underscores, lowercase)
+        const normalizedFieldName = fieldName.replace(/_/g, '').toLowerCase();
+        
+        // Try to find matching header
+        const options = select.querySelectorAll('option');
+        for (const option of options) {
+            if (option.value === '') continue;
+            
+            const normalizedHeader = option.value.replace(/[_\s-]/g, '').toLowerCase();
+            
+            // Check if header contains the field name
+            if (normalizedHeader.includes(normalizedFieldName)) {
+                select.value = option.value;
+                select.classList.add('auto-mapped');
+                mappedCount++;
+                break;
+            }
+        }
+    });
+    
+    // Update visuals for all fields
+    document.querySelectorAll('select').forEach(select => {
+        updateFieldVisuals(select);
+    });
+    
+    if (mappedCount > 0) {
+        showNotification(`Automatic mapping completed! ${mappedCount} fields mapped.`, 'success');
+    } else {
+        showNotification('No automatic matches found. Please map fields manually.', 'warning');
+    }
+}
+
+function hasOption(selectElement, value) {
+    for (const option of selectElement.options) {
+        if (option.value === value) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // Auto-suggestion functionality
 function applySuggestion(fieldName, headerName) {
     // Find the corresponding select field
@@ -511,15 +901,8 @@ function applySuggestion(fieldName, headerName) {
         // Set the value
         selectField.value = headerName;
         
-        // Add visual feedback
-        selectField.style.backgroundColor = '#d4edda';
-        selectField.style.borderColor = '#c3e6cb';
-        
-        // Remove highlight after 2 seconds
-        setTimeout(() => {
-            selectField.style.backgroundColor = '';
-            selectField.style.borderColor = '';
-        }, 2000);
+        // Add auto-mapped class for visual feedback
+        selectField.classList.add('auto-mapped');
         
         // Show success message
         const successMsg = document.createElement('div');
@@ -539,6 +922,9 @@ function applySuggestion(fieldName, headerName) {
         setTimeout(() => {
             successMsg.remove();
         }, 3000);
+        
+        // Update field visuals
+        updateFieldVisuals(selectField);
     }
 }
 </script>
@@ -1024,11 +1410,6 @@ function applySuggestion(fieldName, headerName) {
     transform: translateY(-1px);
 }
 
-.btn-secondary::before {
-    content: '←';
-    font-size: 1.2em;
-}
-
 /* Status badges */
 .status-badge {
     display: inline-block;
@@ -1226,6 +1607,354 @@ html {
 
 .form-group.required-unmapped select {
     animation: gentle-pulse 2s infinite;
+}
+
+/* Auto-mapped field highlighting */
+select.auto-mapped {
+    background-color: #d4edda !important;
+    border-color: #c3e6cb !important;
+}
+
+/* Mapping controls toolbar */
+.mapping-controls-toolbar {
+    background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
+    border: 2px solid #d1d9e6;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+}
+
+.toolbar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.mapping-controls-section h3 {
+    font-size: 1.2em;
+    color: #2c3e50;
+    margin: 0;
+    font-weight: 600;
+}
+
+.btn-manage-mappings {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: #212529;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 5px;
+    font-weight: 600;
+    font-size: 0.85em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-manage-mappings:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 193, 7, 0.3);
+}
+
+.mapping-controls-buttons {
+    display: flex;
+    gap: 20px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 250px;
+}
+
+.control-group label {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.9em;
+}
+
+.control-group select.form-control {
+    padding: 10px;
+    border-radius: 6px;
+    border: 2px solid #d1d9e6;
+    font-size: 0.95em;
+    background-color: white;
+}
+
+.control-group select.form-control:focus {
+    border-color: #2196F3;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.btn-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.4);
+}
+
+.btn-info::before {
+    content: '🔮';
+    font-size: 1em;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #218838 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+}
+
+.btn-success::before {
+    content: '→';
+    font-size: 1.2em;
+}
+
+/* Form actions layout */
+.form-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 2px solid #e0e0e0;
+}
+
+.form-actions-left {
+    display: flex;
+    gap: 10px;
+}
+
+.form-actions-right {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+/* Notification system */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 16px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 0.95em;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    max-width: 400px;
+    opacity: 0;
+    transform: translateX(400px);
+    transition: all 0.3s ease;
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.notification-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-left: 4px solid #155724;
+}
+
+.notification-error {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-left: 4px solid #721c24;
+}
+
+.notification-warning {
+    background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+    color: #212529;
+    border-left: 4px solid #856404;
+}
+
+.notification-info {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-left: 4px solid #0c5460;
+}
+
+/* Mapping Management Panel */
+.mapping-management-panel {
+    background: white;
+    border: 2px solid #d1d9e6;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    overflow: hidden;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.panel-header {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 15px 20px;
+    border-bottom: 2px solid #d1d9e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-header h3 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1em;
+    font-weight: 600;
+}
+
+.btn-close-panel {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.btn-close-panel:hover {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+}
+
+.panel-content {
+    padding: 20px;
+}
+
+.mappings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95em;
+}
+
+.mappings-table thead {
+    background: linear-gradient(135deg, #f1f3f5 0%, #e9ecef 100%);
+}
+
+.mappings-table th {
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.mappings-table tbody tr {
+    border-bottom: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+}
+
+.mappings-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.mappings-table td {
+    padding: 12px;
+    color: #495057;
+}
+
+.mapping-name {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.mapping-description {
+    color: #6c757d;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mapping-date, .mapping-user {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.mapping-actions {
+    text-align: right;
+}
+
+.btn-action {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.btn-delete {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.btn-delete:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(220, 53, 69, 0.3);
+}
+
+.no-mappings {
+    text-align: center;
+    color: #6c757d;
+    padding: 40px 20px;
+    font-size: 1em;
 }
 </style>
 {% endblock %}

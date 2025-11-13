@@ -37,7 +37,14 @@ def ci_get_or_create_vendor(name, vendor_data=None):
     """Get or create vendor by case-insensitive name."""
     n = normalize(name)
     if not n:
-        return None
+        # Return Unknown default vendor when name is None/empty
+        unknown_vendor = Vendor.objects.get_or_create(
+            name='Unknown',
+            defaults={
+                'notes': 'Default record for imports without vendor information'
+            }
+        )[0]
+        return unknown_vendor
     
     v = Vendor.objects.filter(name__iexact=n).first()
     if v:
@@ -181,30 +188,39 @@ def _process_import_batch_internal(batch_id, task_instance=None):
         else:
             raise Exception(f"Unsupported file type: {batch.file_type}")
         
-        # Update batch status
-        batch.status = 'completed'
-        batch.progress_percentage = 100
-        batch.processed_rows = success_count + error_count
-        batch.save()
+        # Refresh batch to check if it was cancelled during processing
+        batch.refresh_from_db()
         
-        # Final Celery task state update
-        if CELERY_AVAILABLE and task_instance and hasattr(task_instance, 'update_state'):
-            task_instance.update_state(
-                state='SUCCESS',
-                meta={
-                    'rows': success_count + error_count,
-                    'created': success_count,
-                    'errors': error_count,
-                    'status': 'Import completed successfully'
-                }
+        # Update batch status (only if not already cancelled)
+        if batch.status != 'cancelled':
+            batch.status = 'completed'
+            batch.progress_percentage = 100
+            batch.processed_rows = success_count + error_count
+            batch.save()
+            
+            # Final Celery task state update
+            if CELERY_AVAILABLE and task_instance and hasattr(task_instance, 'update_state'):
+                task_instance.update_state(
+                    state='SUCCESS',
+                    meta={
+                        'rows': success_count + error_count,
+                        'created': success_count,
+                        'errors': error_count,
+                        'status': 'Import completed successfully'
+                    }
+                )
+            
+            # Log completion
+            ImportLog.objects.create(
+                batch=batch,
+                level='info',
+                message=f"Import completed in {time.time() - start_time:.2f}s. {success_count} records processed successfully, {error_count} errors."
             )
-        
-        # Log completion
-        ImportLog.objects.create(
-            batch=batch,
-            level='info',
-            message=f"Import completed in {time.time() - start_time:.2f}s. {success_count} records processed successfully, {error_count} errors."
-        )
+        else:
+            # Import was cancelled
+            batch.processed_rows = success_count + error_count
+            batch.save()
+            return success_count, error_count
         
         return {
             'success': True,
@@ -309,6 +325,28 @@ def process_csv_import(batch, mapping, task_instance=None):
                 success_count += chunk_success
                 error_count += chunk_errors
                 
+                # Check if cancellation requested FIRST (before updating progress)
+                # Use a fresh query to avoid any caching issues
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT cancel_requested FROM imports_importbatch WHERE id = %s",
+                        [batch.id]
+                    )
+                    row = cursor.fetchone()
+                    if row and row[0]:  # cancel_requested is True
+                        ImportLog.objects.create(
+                            batch=batch,
+                            level='warning',
+                            message=f"Import cancelled by user at row {row_number}"
+                        )
+                        batch.status = 'cancelled'
+                        batch.progress_percentage = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
+                        batch.processed_rows = row_number
+                        batch.cancel_requested = True
+                        batch.save()
+                        return success_count, error_count
+                
                 # Update progress
                 progress = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
                 batch.progress_percentage = progress
@@ -398,6 +436,29 @@ def process_xlsx_import(batch, mapping, task_instance=None):
                 
                 success_count += chunk_success
                 error_count += chunk_errors
+                
+                # Check if cancellation requested FIRST (before updating progress)
+                # Use a fresh query to avoid any caching issues
+                from django.db import connection
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT cancel_requested FROM imports_importbatch WHERE id = %s",
+                        [batch.id]
+                    )
+                    row_result = cursor.fetchone()
+                    if row_result and row_result[0]:  # cancel_requested is True
+                        ImportLog.objects.create(
+                            batch=batch,
+                            level='warning',
+                            message=f"Import cancelled by user at row {row_number}"
+                        )
+                        batch.status = 'cancelled'
+                        batch.progress_percentage = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
+                        batch.processed_rows = row_number
+                        batch.cancel_requested = True
+                        batch.save()
+                        workbook.close()
+                        return success_count, error_count
                 
                 # Update progress
                 progress = min(100, int(row_number / batch.total_rows * 100)) if batch.total_rows > 0 else 0
@@ -651,23 +712,14 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
     if not machine_data:
         return
     
-    # Check for required fields and provide defaults
-    required_fields = ['make', 'model']  # Essential fields that must be provided
-    missing_fields = [field for field in required_fields if not machine_data.get(field)]
-    if missing_fields:
-        error_msg = f"Machine requires: {', '.join(missing_fields)}"
+    # Validate at least one field has a value
+    if not any(v is not None and v != '' for v in machine_data.values()):
+        error_msg = "Machine row must have at least one field with data"
         import_row.add_error(error_msg)
         raise Exception(error_msg)
     
-    # Provide defaults for missing optional fields
-    if not machine_data.get('year'):
-        machine_data['year'] = 0  # Default year when not provided
-    if not machine_data.get('machine_type'):
-        machine_data['machine_type'] = 'Unknown'  # Default type when not provided
-    if not machine_data.get('market_type'):
-        machine_data['market_type'] = 'Unknown'  # Default market when not provided
-    
     # Apply deduplication rules: (make, model, year, machine_type, market_type) CI
+    # Only include non-null fields in the filter
     dedupe_fields = ['make', 'model', 'year', 'machine_type', 'market_type']
     dedupe_filters = {}
     
@@ -675,15 +727,17 @@ def process_machine_row(batch, mapping, normalized_data, import_row):
     string_fields = ['make', 'model', 'machine_type', 'market_type']
     
     for field in dedupe_fields:
-        if field in machine_data:
+        if field in machine_data and machine_data[field] is not None:
             if field in string_fields:
                 dedupe_filters[f"{field}__iexact"] = machine_data[field]
             else:
                 # For non-string fields (like year), use exact matching
                 dedupe_filters[field] = machine_data[field]
     
-    # Check for existing machine
-    existing_machine = Machine.objects.filter(**dedupe_filters).first()
+    # Check for existing machine - only if we have identifying information
+    existing_machine = None
+    if dedupe_filters:
+        existing_machine = Machine.objects.filter(**dedupe_filters).first()
     
     if existing_machine:
         if mapping.skip_duplicates:
@@ -722,20 +776,9 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
     if not engine_data:
         return
     
-    # Check for required fields
-    required_fields = ['engine_make', 'engine_model']
-    missing_fields = [field for field in required_fields if not engine_data.get(field)]
-    if missing_fields:
-        error_msg = f"Engine requires: {', '.join(missing_fields)}"
-        import_row.add_error(error_msg)
-        raise Exception(error_msg)
-    
-    # Check for identifier field (can be engine_identifier, sg_engine_identifier, or engine_id)
-    has_identifier = (engine_data.get('engine_identifier') or 
-                     engine_data.get('sg_engine_identifier') or 
-                     engine_data.get('engine_id'))
-    if not has_identifier:
-        error_msg = "Engine requires an identifier field (engine_identifier, sg_engine_identifier, or engine_id)"
+    # Validate at least one field has a value
+    if not any(v is not None and v != '' for v in engine_data.values()):
+        error_msg = "Engine row must have at least one field with data"
         import_row.add_error(error_msg)
         raise Exception(error_msg)
     
@@ -755,7 +798,19 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
             sg_model__iexact=engine_data['sg_model'],
             defaults=validated_sg_defaults
         )
-        engine_data['sg_engine'] = sg_engine
+    else:
+        # If no sg_make/sg_model provided, use Unknown default
+        sg_engine = SGEngine.objects.get_or_create(
+            identifier='UNKNOWN_DEFAULT',
+            defaults={
+                'sg_make': 'Unknown',
+                'sg_model': 'Unknown',
+                'notes': 'Default record for imports without engine information'
+            }
+        )[0]
+    
+    # Store sg_engine instance for later use (don't add to engine_data as it's not JSON serializable)
+    # We'll add it to the filtered/validated data before creating the Engine object
     
     # Build engine key from row data using mapping
     row_data = {}
@@ -782,6 +837,11 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
                     # Update existing engine
                     filtered_engine_data = filter_valid_fields(engine_data, Engine)
                     validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
+                    
+                    # Add sg_engine to the validated data if we have one
+                    if sg_engine:
+                        validated_engine_data['sg_engine'] = sg_engine
+                    
                     for field, value in validated_engine_data.items():
                         setattr(target, field, value)
                     target.save()
@@ -804,6 +864,10 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
     
     # Validate and truncate field lengths
     validated_engine_data = validate_and_truncate_fields(filtered_engine_data, Engine, batch, import_row.row_number)
+    
+    # Add sg_engine to the validated data (it's a ForeignKey, not a regular field)
+    if sg_engine:
+        validated_engine_data['sg_engine'] = sg_engine
     
     # Create new engine
     engine = Engine.objects.create(**validated_engine_data)
@@ -834,22 +898,24 @@ def process_part_row(batch, mapping, normalized_data, import_row):
     if not part_data:
         return
     
-    # Check for required fields
-    required_fields = ['part_number', 'name']
-    missing_fields = [field for field in required_fields if not part_data.get(field)]
-    if missing_fields:
-        error_msg = f"Part requires: {', '.join(missing_fields)}"
+    # Validate at least one field has a value
+    if not any(v is not None and v != '' for v in part_data.values()):
+        error_msg = "Part row must have at least one field with data"
         import_row.add_error(error_msg)
         raise Exception(error_msg)
     
     # Apply deduplication rules: (part_number, name) CI
-    dedupe_filters = {
-        'part_number__iexact': part_data['part_number'],
-        'name__iexact': part_data['name']
-    }
+    # Only include non-null fields in the filter
+    dedupe_filters = {}
+    if part_data.get('part_number') is not None:
+        dedupe_filters['part_number__iexact'] = part_data['part_number']
+    if part_data.get('name') is not None:
+        dedupe_filters['name__iexact'] = part_data['name']
     
-    # Check for existing part
-    existing_part = Part.objects.filter(**dedupe_filters).first()
+    # Check for existing part - only if we have identifying information
+    existing_part = None
+    if dedupe_filters:
+        existing_part = Part.objects.filter(**dedupe_filters).first()
     
     if existing_part:
         if mapping.skip_duplicates:

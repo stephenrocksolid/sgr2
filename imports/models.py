@@ -15,6 +15,8 @@ class ImportBatch(models.Model):
         ('processing', 'Processing'),
         ('completed', 'Completed'),
         ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+        ('reverted', 'Reverted'),
     ]
     
     file = models.FileField(upload_to='imports/')
@@ -41,6 +43,7 @@ class ImportBatch(models.Model):
     processed_rows = models.IntegerField(default=0)
     error_message = models.TextField(blank=True)
     celery_id = models.CharField(max_length=255, blank=True, null=True, help_text="Celery task ID for tracking async processing")
+    cancel_requested = models.BooleanField(default=False, help_text="Set to True to request cancellation of processing")
     
     # Mapping
     mapping = models.ForeignKey('SavedImportMapping', on_delete=models.SET_NULL, null=True, blank=True)
@@ -49,6 +52,10 @@ class ImportBatch(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Revert tracking
+    reverted_at = models.DateTimeField(null=True, blank=True)
+    reverted_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reverted_imports')
     
     class Meta:
         ordering = ['-created_at']

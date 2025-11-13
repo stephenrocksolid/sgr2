@@ -45,6 +45,10 @@
                 <h3>Import Summary</h3>
                 <div class="info-grid">
                     <div class="info-item">
+                        <label>Batch ID:</label>
+                        <span><strong>#{{ batch.id }}</strong></span>
+                    </div>
+                    <div class="info-item">
                         <label>File Name:</label>
                         <span>{{ batch.original_filename }}</span>
                     </div>
@@ -132,6 +136,14 @@
                                     {{ batch.processed_rows }} of {{ batch.total_rows }} rows processed ({{ batch.progress_percentage }}%)
                                 </div>
                             </div>
+                            <div class="cancel-action" style="margin-top: 15px; text-align: center;">
+                                <button type="button" id="cancel-import-btn" class="btn btn-danger" onclick="cancelImport()">
+                                    🛑 Stop Import
+                                </button>
+                                <p id="cancel-status" style="display: none; margin-top: 10px; color: #856404;">
+                                    Stopping import... (will complete current chunk)
+                                </p>
+                            </div>
                         {% endif %}
                         
                         {% if batch.error_message %}
@@ -168,6 +180,47 @@
 {% block extra_js %}
 {% if batch.status == 'processing' or batch.status == 'queued' %}
 <script>
+// Cancel import function
+function cancelImport() {
+    if (!confirm('Are you sure you want to stop this import?\n\nThe import will stop after processing the current chunk of rows.')) {
+        return;
+    }
+    
+    const cancelBtn = document.getElementById('cancel-import-btn');
+    const cancelStatus = document.getElementById('cancel-status');
+    
+    // Disable button
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'Stopping...';
+    cancelStatus.style.display = 'block';
+    
+    fetch("{% url 'imports:cancel_import' batch.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Keep showing stopping message, polling will update when cancelled
+        } else {
+            alert('Error: ' + (data.error || 'Could not cancel import'));
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = '🛑 Stop Import';
+            cancelStatus.style.display = 'none';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error cancelling import. Please try again.');
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = '🛑 Stop Import';
+        cancelStatus.style.display = 'none';
+    });
+}
+
 // Polling for status updates
 document.addEventListener('DOMContentLoaded', function() {
     let completionHandled = false;
@@ -293,7 +346,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     errorDiv.innerHTML = '<strong>Error:</strong> ' + data.error_message;
                 }
                 
-                // Handle completion
+                // Handle completion or cancellation
                 if (data.is_complete && !completionHandled) {
                     completionHandled = true;
                     clearInterval(pollInterval);
@@ -304,10 +357,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         processingIndicator.style.display = 'none';
                     }
                     
-                    // Hide progress container
+                    // Hide progress container and cancel button
                     const progressContainer = document.querySelector('.progress-container');
                     if (progressContainer) {
                         progressContainer.style.display = 'none';
+                    }
+                    
+                    const cancelAction = document.querySelector('.cancel-action');
+                    if (cancelAction) {
+                        cancelAction.style.display = 'none';
                     }
                     
                     // For completed status, show success UI
@@ -623,6 +681,27 @@ document.addEventListener('DOMContentLoaded', function() {
     background-color: #fff3cd;
     border-left-color: #ffc107;
     color: #856404;
+}
+
+.btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+}
+
+.btn-danger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .alert-info {

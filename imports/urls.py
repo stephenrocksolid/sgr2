@@ -16,10 +16,13 @@ urlpatterns = [
     path('<int:batch_id>/', views.batch_detail, name='batch_detail'),
     path('<int:batch_id>/status/', views.batch_status, name='batch_status'),
     path('<int:batch_id>/rows/', views.batch_rows, name='batch_rows'),
+    path('<int:batch_id>/cancel/', views.cancel_import, name='cancel_import'),
+    path('<int:batch_id>/revert/', views.revert_import, name='revert_import'),
     
     # Saved mappings
     path('mappings/', views.saved_mappings_list, name='saved_mappings_list'),
     path('mappings/<int:mapping_id>/load/', views.load_saved_mapping, name='load_saved_mapping'),
+    path('mappings/<int:mapping_id>/delete/', views.delete_saved_mapping, name='delete_saved_mapping'),
     
     # Unmatched items
     path('unmatched/', views.unmatched_index, name='unmatched_index'),

@@ -963,6 +963,16 @@ body {
     color: white;
 }
 
+.status-badge.status-cancelled {
+    background-color: #6c757d;
+    color: white;
+}
+
+.status-badge.status-reverted {
+    background-color: #17a2b8;
+    color: white;
+}
+
 .badge {
     display: inline-block;
     padding: var(--spacing-xs) var(--spacing-sm);

@@ -118,7 +118,7 @@ class ImportMappingForm(forms.Form):
         }
         
         # Create choice field for each expected field
-        header_choices = [('', '-- Select Header --')] + [(h, h) for h in discovered_headers]
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
         
         for field_name, field_label in section_fields.get(section, []):
             self.fields[f'map_{section}_{field_name}'] = forms.ChoiceField(
@@ -194,7 +194,7 @@ class AdditionalEngineMappingForm(forms.Form):
         ]
         
         # Create choice field for each additional engine field
-        header_choices = [('', '-- Select Header --')] + [(h, h) for h in discovered_headers]
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
         
         for field_name, field_label in additional_engine_fields:
             self.fields[f'map_engines_{field_name}'] = forms.ChoiceField(
@@ -228,7 +228,7 @@ class VendorMappingForm(forms.Form):
         ]
         
         # Create choice field for each vendor field
-        header_choices = [('', '-- Select Header --')] + [(h, h) for h in discovered_headers]
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
         
         for field_name, field_label in vendor_fields:
             self.fields[f'map_vendors_{field_name}'] = forms.ChoiceField(

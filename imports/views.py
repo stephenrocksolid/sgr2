@@ -206,57 +206,9 @@ def mapping_step(request, batch_id):
         has_engine_fields = any(v for v in engine_mapping.values() if v)
         has_part_fields = any(v for v in part_mapping.values() if v)
         
-        # Validate Engines: if any engine field is mapped, require make, model, and identifier
-        if has_engine_fields:
-            required_engine_fields = {
-                'engine_make': 'Engine Make',
-                'engine_model': 'Engine Model',
-                'engine_identifier': 'Engine Identifier'
-            }
-            missing_engine_field_labels = []
-            for field_name, field_label in required_engine_fields.items():
-                if not engine_mapping.get(field_name):
-                    missing_engine_field_labels.append(field_label)
-                    missing_fields['engines'].append(field_name)
-            
-            if missing_engine_field_labels:
-                validation_errors.append(
-                    f"Engine fields are mapped but missing required fields: {', '.join(missing_engine_field_labels)}"
-                )
-        
-        # Validate Machines: if any machine field is mapped, require make and model
-        if has_machine_fields:
-            required_machine_fields = {
-                'make': 'Make',
-                'model': 'Model'
-            }
-            missing_machine_field_labels = []
-            for field_name, field_label in required_machine_fields.items():
-                if not machine_mapping.get(field_name):
-                    missing_machine_field_labels.append(field_label)
-                    missing_fields['machines'].append(field_name)
-            
-            if missing_machine_field_labels:
-                validation_errors.append(
-                    f"Machine fields are mapped but missing required fields: {', '.join(missing_machine_field_labels)}"
-                )
-        
-        # Validate Parts: if any part field is mapped, require part_number and name
-        if has_part_fields:
-            required_part_fields = {
-                'part_number': 'Part Number',
-                'name': 'Name'
-            }
-            missing_part_field_labels = []
-            for field_name, field_label in required_part_fields.items():
-                if not part_mapping.get(field_name):
-                    missing_part_field_labels.append(field_label)
-                    missing_fields['parts'].append(field_name)
-            
-            if missing_part_field_labels:
-                validation_errors.append(
-                    f"Part fields are mapped but missing required fields: {', '.join(missing_part_field_labels)}"
-                )
+        # Flexible Import Mode: No required fields validation
+        # Fields are now optional - validation happens at row level (at least one field per entity)
+        # The processing logic in tasks.py handles validation
         
         # If there are validation errors, show them and re-render the form
         if validation_errors:
@@ -269,34 +221,48 @@ def mapping_step(request, batch_id):
             # Re-render the form with the validation errors
             # We'll continue to the GET section below to show the form again
         else:
-            # Validation passed, proceed with saving
-            # Create or update mapping
+            # Validation passed, proceed based on action
+            action = request.POST.get('action', 'continue')
             mapping_name = request.POST.get('mapping_name', '').strip()
             mapping_description = request.POST.get('mapping_description', '')
             
-            if mapping_name:
-                # User provided a name, create/update a reusable saved mapping
-                mapping, created = SavedImportMapping.objects.get_or_create(
-                    name=mapping_name,
-                    defaults={
-                        'description': mapping_description,
-                        'created_by': request.user if request.user.is_authenticated else None
-                    }
-                )
-                
-                # Update mapping
-                mapping.machine_mapping = machine_mapping
-                mapping.engine_mapping = engine_mapping
-                mapping.part_mapping = part_mapping
-                mapping.vendor_mapping = vendor_mapping
-                mapping.part_attribute_mappings = part_attribute_mappings
-                mapping.save()
-                
-                messages.success(request, f"Mapping '{mapping_name}' saved successfully.")
+            if action == 'save_and_continue':
+                # User wants to save the mapping for reuse
+                if not mapping_name:
+                    messages.error(request, "Please provide a name to save this mapping.")
+                    submitted_data = request.POST
+                    mapping_name_value = mapping_name
+                    mapping_description_value = mapping_description
+                else:
+                    # Create or update a reusable saved mapping
+                    mapping, created = SavedImportMapping.objects.get_or_create(
+                        name=mapping_name,
+                        defaults={
+                            'description': mapping_description,
+                            'created_by': request.user if request.user.is_authenticated else None
+                        }
+                    )
+                    
+                    # Update mapping
+                    mapping.machine_mapping = machine_mapping
+                    mapping.engine_mapping = engine_mapping
+                    mapping.part_mapping = part_mapping
+                    mapping.vendor_mapping = vendor_mapping
+                    mapping.part_attribute_mappings = part_attribute_mappings
+                    mapping.save()
+                    
+                    # Assign to batch
+                    batch.mapping = mapping
+                    batch.status = 'mapped'
+                    batch.save()
+                    
+                    messages.success(request, f"Mapping '{mapping_name}' saved successfully.")
+                    return redirect('imports:processing_step', batch_id=batch.id)
             else:
-                # No name provided, create an anonymous/temporary mapping
+                # action == 'continue' - just proceed without saving as a named mapping
+                # Create a temporary mapping for this session only
                 import datetime
-                temp_name = f"Import_{batch.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                temp_name = f"Temp_{batch.id}_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}"
                 mapping = SavedImportMapping.objects.create(
                     name=temp_name,
                     description=mapping_description or f"Temporary mapping for batch {batch.id}",
@@ -308,38 +274,37 @@ def mapping_step(request, batch_id):
                     created_by=request.user if request.user.is_authenticated else None
                 )
                 
-                messages.success(request, "Mapping saved successfully.")
-            
-            # Assign to batch
-            batch.mapping = mapping
-            batch.status = 'mapped'
-            batch.save()
-            
-            return redirect('imports:processing_step', batch_id=batch.id)
+                # Assign to batch
+                batch.mapping = mapping
+                batch.status = 'mapped'
+                batch.save()
+                
+                messages.success(request, "Proceeding to processing step.")
+                return redirect('imports:processing_step', batch_id=batch.id)
     
     # Create mapping forms for each section (with submitted data if validation failed)
     machine_form = ImportMappingForm(
         data=submitted_data,
-        discovered_headers=batch.discovered_headers,
+        discovered_headers=sorted(batch.discovered_headers),
         section='machines'
     )
     engine_form = ImportMappingForm(
         data=submitted_data,
-        discovered_headers=batch.discovered_headers,
+        discovered_headers=sorted(batch.discovered_headers),
         section='engines'
     )
     additional_engine_form = AdditionalEngineMappingForm(
         data=submitted_data,
-        discovered_headers=batch.discovered_headers
+        discovered_headers=sorted(batch.discovered_headers)
     )
     part_form = ImportMappingForm(
         data=submitted_data,
-        discovered_headers=batch.discovered_headers,
+        discovered_headers=sorted(batch.discovered_headers),
         section='parts'
     )
     vendor_form = VendorMappingForm(
         data=submitted_data,
-        discovered_headers=batch.discovered_headers
+        discovered_headers=sorted(batch.discovered_headers)
     )
     
     # Get auto-suggestions for engine fields
@@ -349,8 +314,8 @@ def mapping_step(request, batch_id):
     # Get all part attributes for mapping
     all_attrs = PartAttribute.objects.select_related('category').order_by('category__name', 'sort_order', 'name')
     
-    # Get saved mappings for dropdown
-    saved_mappings = SavedImportMapping.objects.all()
+    # Get saved mappings for dropdown (exclude temporary mappings)
+    saved_mappings = SavedImportMapping.objects.exclude(name__startswith='Temp_')
     
     # Prepare submitted attribute mappings for easier template access
     submitted_attr_mappings = {}
@@ -370,6 +335,7 @@ def mapping_step(request, batch_id):
         'all_attrs': all_attrs,
         'saved_mappings': saved_mappings,
         'engine_suggestions': engine_suggestions,
+        'sorted_discovered_headers': sorted(batch.discovered_headers),
         # Engine field grouping for template
         'engine_core_keys': getattr(engine_form, 'engine_core_keys', []),
         'engine_more_keys': getattr(additional_engine_form, 'engine_more_keys', []),
@@ -552,7 +518,7 @@ def batch_status(request, batch_id):
             'total_rows': batch.total_rows,
             'error_message': batch.error_message,
             'html': html,
-            'is_complete': batch.status in ['completed', 'failed'],
+            'is_complete': batch.status in ['completed', 'failed', 'cancelled'],
             'rows_stats': rows_stats,
             'celery_meta': celery_meta,
             'logs': logs_data
@@ -687,17 +653,83 @@ def load_saved_mapping(request, mapping_id):
         'machine_mapping': mapping.machine_mapping,
         'engine_mapping': mapping.engine_mapping,
         'part_mapping': mapping.part_mapping,
+        'vendor_mapping': mapping.vendor_mapping,
+        'part_attribute_mappings': mapping.part_attribute_mappings,
     })
 
 @login_required
 def saved_mappings_list(request):
-    """List of saved import mappings."""
-    mappings = SavedImportMapping.objects.all()
+    """List of saved import mappings (exclude temporary mappings)."""
+    mappings = SavedImportMapping.objects.exclude(name__startswith='Temp_')
     
     context = {
         'mappings': mappings,
     }
     return render(request, 'imports/saved_mappings_list.html', context)
+
+@login_required
+def delete_saved_mapping(request, mapping_id):
+    """Delete a saved mapping."""
+    if request.method == 'POST':
+        try:
+            mapping = get_object_or_404(SavedImportMapping, id=mapping_id)
+            mapping_name = mapping.name
+            mapping.delete()
+            return JsonResponse({
+                'success': True,
+                'message': f'Mapping "{mapping_name}" deleted successfully.'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method'
+    }, status=405)
+
+@login_required
+def cancel_import(request, batch_id):
+    """Request cancellation of an import batch."""
+    if request.method == 'POST':
+        try:
+            batch = get_object_or_404(ImportBatch, id=batch_id)
+            
+            # Only allow cancelling if processing or queued
+            if batch.status in ['processing', 'queued']:
+                batch.cancel_requested = True
+                batch.save()
+                
+                # If using Celery, also revoke the task
+                if batch.celery_id:
+                    try:
+                        from celery import current_app
+                        current_app.control.revoke(batch.celery_id, terminate=True)
+                    except Exception as celery_error:
+                        # Log but don't fail if Celery revoke fails
+                        print(f"Could not revoke Celery task: {celery_error}")
+                
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Cancellation requested. Import will stop after current chunk.'
+                })
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Cannot cancel import with status: {batch.status}'
+                }, status=400)
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            }, status=500)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Invalid request method'
+    }, status=405)
 
 # Unmatched Items Views
 @login_required
@@ -1001,3 +1033,66 @@ def create_sg_engine(request):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+@login_required
+def revert_import(request, batch_id):
+    """Revert an import by deleting all created records."""
+    from .revert import execute_revert, get_revert_preview
+    
+    batch = get_object_or_404(ImportBatch, id=batch_id)
+    
+    # Only allow reverting completed, failed, or cancelled imports
+    if batch.status not in ['completed', 'failed', 'cancelled']:
+        messages.error(request, f'Cannot revert import with status: {batch.get_status_display()}')
+        return redirect('imports:batch_detail', batch_id=batch.id)
+    
+    # Don't allow reverting already reverted imports
+    if batch.status == 'reverted':
+        messages.error(request, 'This import has already been reverted.')
+        return redirect('imports:batch_detail', batch_id=batch.id)
+    
+    if request.method == 'POST':
+        # Check for confirmation
+        confirm_checkbox = request.POST.get('confirm_delete', '') == 'on'
+        confirm_batch_id = request.POST.get('confirm_batch_id', '')
+        
+        if not confirm_checkbox:
+            messages.error(request, 'You must check the confirmation box.')
+            return redirect('imports:revert_import', batch_id=batch.id)
+        
+        if confirm_batch_id != str(batch.id):
+            messages.error(request, f'Batch ID confirmation failed. Please type "{batch.id}" to confirm.')
+            return redirect('imports:revert_import', batch_id=batch.id)
+        
+        try:
+            # Execute revert
+            result = execute_revert(batch, request.user)
+            
+            messages.success(
+                request, 
+                f'Import successfully reverted! Deleted: {result["machines"]} machines, '
+                f'{result["engines"]} engines, {result["parts"]} parts, {result["vendors"]} vendors.'
+            )
+            
+            if result.get('vendors_kept', 0) > 0:
+                messages.info(
+                    request,
+                    f'{result["vendors_kept"]} vendor(s) were kept because they are used elsewhere.'
+                )
+            
+            return redirect('imports:batch_detail', batch_id=batch.id)
+            
+        except Exception as e:
+            messages.error(request, f'Error reverting import: {str(e)}')
+            return redirect('imports:revert_import', batch_id=batch.id)
+    
+    # GET request - show preview
+    preview = get_revert_preview(batch)
+    
+    context = {
+        'batch': batch,
+        'preview': preview,
+    }
+    
+    return render(request, 'imports/revert_confirm.html', context)
