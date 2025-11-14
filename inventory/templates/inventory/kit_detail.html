@@ -163,6 +163,9 @@
         <a href="{% url 'inventory:kits_list' %}">Kits</a> / {{ kit.name }}
     </div>
     <h1 class="detail-title">{{ kit.name }}</h1>
+    <div class="detail-subtitle" style="font-weight: 600; font-size: 1.2rem;">
+        Total Cost: ${{ total_cost|floatformat:2 }}
+    </div>
     {% if kit.notes %}
         <div class="detail-subtitle">{{ kit.notes }}</div>
     {% endif %}

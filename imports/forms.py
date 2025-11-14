@@ -264,6 +264,112 @@ class SavedMappingForm(forms.ModelForm):
             })
         }
 
+class BuildListMappingForm(forms.Form):
+    """Form for mapping build list fields."""
+    
+    def __init__(self, *args, **kwargs):
+        discovered_headers = kwargs.pop('discovered_headers', [])
+        super().__init__(*args, **kwargs)
+        
+        # Define build list fields
+        buildlist_fields = [
+            ('name', 'Build List Name'),
+            ('notes', 'Build List Notes'),
+        ]
+        
+        # Create choice field for each build list field
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
+        
+        for field_name, field_label in buildlist_fields:
+            self.fields[f'map_buildlists_{field_name}'] = forms.ChoiceField(
+                choices=header_choices,
+                required=False,
+                label=field_label,
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+
+class BuildListItemMappingForm(forms.Form):
+    """Form for mapping build list item fields."""
+    
+    def __init__(self, *args, **kwargs):
+        discovered_headers = kwargs.pop('discovered_headers', [])
+        super().__init__(*args, **kwargs)
+        
+        # Define build list item fields
+        buildlistitem_fields = [
+            ('name', 'Item Name'),
+            ('description', 'Item Description'),
+            ('hour_qty', 'Hour Quantity'),
+        ]
+        
+        # Create choice field for each build list item field
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
+        
+        for field_name, field_label in buildlistitem_fields:
+            self.fields[f'map_buildlistitems_{field_name}'] = forms.ChoiceField(
+                choices=header_choices,
+                required=False,
+                label=field_label,
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+
+class KitMappingForm(forms.Form):
+    """Form for mapping kit fields."""
+    
+    def __init__(self, *args, **kwargs):
+        discovered_headers = kwargs.pop('discovered_headers', [])
+        super().__init__(*args, **kwargs)
+        
+        # Define kit fields
+        kit_fields = [
+            ('name', 'Kit Name'),
+            ('notes', 'Kit Notes'),
+        ]
+        
+        # Create choice field for each kit field
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
+        
+        for field_name, field_label in kit_fields:
+            self.fields[f'map_kits_{field_name}'] = forms.ChoiceField(
+                choices=header_choices,
+                required=False,
+                label=field_label,
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+
+class KitItemMappingForm(forms.Form):
+    """Form for mapping kit item fields (including part fields for auto-creation)."""
+    
+    def __init__(self, *args, **kwargs):
+        discovered_headers = kwargs.pop('discovered_headers', [])
+        super().__init__(*args, **kwargs)
+        
+        # Define kit item fields and part fields for auto-creation
+        kititem_fields = [
+            # Kit item specific
+            ('part_number', 'Part Number (Required)'),
+            ('quantity', 'Quantity'),
+            # Part fields for auto-creation when part doesn't exist
+            ('part_name', 'Part Name (for auto-creation)'),
+            ('part_category', 'Part Category (for auto-creation)'),
+            ('part_manufacturer', 'Part Manufacturer (for auto-creation)'),
+            ('part_unit', 'Part Unit (for auto-creation)'),
+            ('part_type', 'Part Type (for auto-creation)'),
+            ('part_manufacturer_type', 'Part Manufacturer Type (for auto-creation)'),
+            ('part_weight', 'Part Weight (for auto-creation)'),
+        ]
+        
+        # Create choice field for each kit item field
+        header_choices = [('', '-- Select Header --')] + [(h, h) for h in sorted(discovered_headers)]
+        
+        for field_name, field_label in kititem_fields:
+            self.fields[f'map_kititems_{field_name}'] = forms.ChoiceField(
+                choices=header_choices,
+                required=False,
+                label=field_label,
+                widget=forms.Select(attrs={'class': 'form-control'})
+            )
+
 class ProcessingOptionsForm(forms.Form):
     """Form for import processing options."""
     

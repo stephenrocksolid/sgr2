@@ -531,6 +531,10 @@ def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_inst
                 import_row.normalized_engine_data = normalized_data.get('engine', {})
                 import_row.normalized_part_data = normalized_data.get('part', {})
                 import_row.normalized_vendor_data = normalized_data.get('vendor', {})
+                import_row.normalized_buildlist_data = normalized_data.get('buildlist', {})
+                import_row.normalized_buildlistitem_data = normalized_data.get('buildlistitem', {})
+                import_row.normalized_kit_data = normalized_data.get('kit', {})
+                import_row.normalized_kititem_data = normalized_data.get('kititem', {})
                 
                 # Process each section based on mapping
                 if mapping.machine_mapping and mapping.machine_mapping != {}:
@@ -543,6 +547,13 @@ def process_data_chunk(batch, mapping, headers, chunk_data, start_row, task_inst
                     process_part_row(batch, mapping, normalized_data, import_row)
                 
                 # Vendor processing is now handled within engine/part processing
+                
+                # Process build lists and kits
+                if mapping.buildlist_mapping and mapping.buildlist_mapping != {}:
+                    process_buildlist_row(batch, mapping, normalized_data, import_row)
+                
+                if mapping.kit_mapping and mapping.kit_mapping != {}:
+                    process_kit_row(batch, mapping, normalized_data, import_row)
                 
                 # Create relationships
                 create_relationships(batch, mapping, normalized_data, import_row)
@@ -577,6 +588,10 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
         'engine': {},
         'part': {},
         'vendor': {},
+        'buildlist': {},
+        'buildlistitem': {},
+        'kit': {},
+        'kititem': {},
         'raw_data': row_data  # Include raw data for attribute processing
     }
     
@@ -702,6 +717,62 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             
             if normalized_value is not None:
                 normalized['vendor'][field_name] = normalized_value
+    
+    # Normalize build list data
+    for field_name, header_name in mapping.buildlist_mapping.items():
+        if header_name in row_data:
+            value = row_data[header_name]
+            
+            # All build list fields are strings
+            normalized_value = normalize_value(value, 'string')
+            
+            if normalized_value is not None:
+                normalized['buildlist'][field_name] = normalized_value
+    
+    # Normalize build list item data
+    for field_name, header_name in mapping.buildlistitem_mapping.items():
+        if header_name in row_data:
+            value = row_data[header_name]
+            
+            # Determine field type for normalization
+            if field_name in ['name', 'description']:
+                normalized_value = normalize_value(value, 'string')
+            elif field_name == 'hour_qty':
+                normalized_value = normalize_value(value, 'decimal')
+            else:
+                normalized_value = normalize_value(value, 'string')
+            
+            if normalized_value is not None:
+                normalized['buildlistitem'][field_name] = normalized_value
+    
+    # Normalize kit data
+    for field_name, header_name in mapping.kit_mapping.items():
+        if header_name in row_data:
+            value = row_data[header_name]
+            
+            # All kit fields are strings
+            normalized_value = normalize_value(value, 'string')
+            
+            if normalized_value is not None:
+                normalized['kit'][field_name] = normalized_value
+    
+    # Normalize kit item data
+    for field_name, header_name in mapping.kititem_mapping.items():
+        if header_name in row_data:
+            value = row_data[header_name]
+            
+            # Determine field type for normalization
+            if field_name == 'part_number':
+                normalized_value = normalize_value(value, 'uppercase')
+            elif field_name in ['quantity', 'part_weight']:
+                normalized_value = normalize_value(value, 'decimal')
+            elif field_name in ['part_name', 'part_category', 'part_manufacturer', 'part_unit', 'part_type', 'part_manufacturer_type']:
+                normalized_value = normalize_value(value, 'string')
+            else:
+                normalized_value = normalize_value(value, 'string')
+            
+            if normalized_value is not None:
+                normalized['kititem'][field_name] = normalized_value
     
     return normalized
 
@@ -1158,6 +1229,197 @@ def apply_part_attributes_from_row(part, row_dict, mapping, batch, import_row):
                 row_number=import_row.row_number
             )
             continue
+
+
+def process_buildlist_row(batch, mapping, normalized_data, import_row):
+    """Process a build list row with deduplication rules."""
+    from inventory.models import BuildList, BuildListItem
+    
+    buildlist_data = normalized_data.get('buildlist', {})
+    buildlistitem_data = normalized_data.get('buildlistitem', {})
+    
+    # Must have at least build list name or item data
+    if not buildlist_data and not buildlistitem_data:
+        return
+    
+    # Get or create build list by name (case-insensitive)
+    buildlist_name = buildlist_data.get('name')
+    if not buildlist_name:
+        error_msg = "Build list name is required"
+        import_row.add_error(error_msg)
+        raise Exception(error_msg)
+    
+    # Check for existing build list (case-insensitive)
+    existing_buildlist = BuildList.objects.filter(name__iexact=buildlist_name).first()
+    
+    if existing_buildlist:
+        if mapping.skip_duplicates and not mapping.update_existing:
+            # Skip - just track it
+            import_row.buildlist_id = existing_buildlist.id
+            buildlist = existing_buildlist
+        elif mapping.update_existing:
+            # Update existing
+            if buildlist_data.get('notes'):
+                existing_buildlist.notes = buildlist_data['notes']
+            existing_buildlist.save()
+            import_row.buildlist_updated = True
+            import_row.buildlist_id = existing_buildlist.id
+            buildlist = existing_buildlist
+        else:
+            # Not skipping, create with duplicate name
+            buildlist = BuildList.objects.create(
+                name=buildlist_name,
+                notes=buildlist_data.get('notes', ''),
+                created_by=batch.created_by
+            )
+            import_row.buildlist_created = True
+            import_row.buildlist_id = buildlist.id
+    else:
+        # Create new build list
+        buildlist = BuildList.objects.create(
+            name=buildlist_name,
+            notes=buildlist_data.get('notes', ''),
+            created_by=batch.created_by
+        )
+        import_row.buildlist_created = True
+        import_row.buildlist_id = buildlist.id
+    
+    # Create build list item if item data present
+    if buildlistitem_data and buildlistitem_data.get('name'):
+        item_name = buildlistitem_data.get('name')
+        item_description = buildlistitem_data.get('description', '')
+        item_hour_qty = buildlistitem_data.get('hour_qty', Decimal('0.00'))
+        
+        # Create build list item
+        buildlistitem = BuildListItem.objects.create(
+            build_list=buildlist,
+            name=item_name,
+            description=item_description,
+            hour_qty=item_hour_qty
+        )
+        import_row.buildlistitem_created = True
+        import_row.buildlistitem_id = buildlistitem.id
+    
+    import_row.save()
+
+
+def process_kit_row(batch, mapping, normalized_data, import_row):
+    """Process a kit row with deduplication rules and part auto-creation."""
+    from inventory.models import Kit, KitItem, Part, PartCategory
+    
+    kit_data = normalized_data.get('kit', {})
+    kititem_data = normalized_data.get('kititem', {})
+    
+    # Must have at least kit name or item data
+    if not kit_data and not kititem_data:
+        return
+    
+    # Get or create kit by name (case-insensitive)
+    kit_name = kit_data.get('name')
+    if not kit_name:
+        error_msg = "Kit name is required"
+        import_row.add_error(error_msg)
+        raise Exception(error_msg)
+    
+    # Check for existing kit (case-insensitive)
+    existing_kit = Kit.objects.filter(name__iexact=kit_name).first()
+    
+    if existing_kit:
+        if mapping.skip_duplicates and not mapping.update_existing:
+            # Skip - just track it
+            import_row.kit_id = existing_kit.id
+            kit = existing_kit
+        elif mapping.update_existing:
+            # Update existing
+            if kit_data.get('notes'):
+                existing_kit.notes = kit_data['notes']
+            existing_kit.save()
+            import_row.kit_updated = True
+            import_row.kit_id = existing_kit.id
+            kit = existing_kit
+        else:
+            # Not skipping, create with duplicate name
+            kit = Kit.objects.create(
+                name=kit_name,
+                notes=kit_data.get('notes', ''),
+                created_by=batch.created_by
+            )
+            import_row.kit_created = True
+            import_row.kit_id = kit.id
+    else:
+        # Create new kit
+        kit = Kit.objects.create(
+            name=kit_name,
+            notes=kit_data.get('notes', ''),
+            created_by=batch.created_by
+        )
+        import_row.kit_created = True
+        import_row.kit_id = kit.id
+    
+    # Create kit item if item data present
+    if kititem_data and kititem_data.get('part_number'):
+        part_number = kititem_data.get('part_number')
+        quantity = kititem_data.get('quantity', Decimal('1.00'))
+        
+        # Check if part exists
+        part = Part.objects.filter(part_number__iexact=part_number).first()
+        
+        if not part:
+            # Auto-create part with data from row
+            part_data = {
+                'part_number': part_number,
+                'name': kititem_data.get('part_name', part_number),
+            }
+            
+            # Add optional fields if present
+            if kititem_data.get('part_manufacturer'):
+                part_data['manufacturer'] = kititem_data['part_manufacturer']
+            if kititem_data.get('part_unit'):
+                part_data['unit'] = kititem_data['part_unit']
+            if kititem_data.get('part_type'):
+                part_data['type'] = kititem_data['part_type']
+            if kititem_data.get('part_manufacturer_type'):
+                part_data['manufacturer_type'] = kititem_data['part_manufacturer_type']
+            if kititem_data.get('part_weight'):
+                part_data['weight'] = kititem_data['part_weight']
+            
+            # Handle category (need to get or create PartCategory)
+            if kititem_data.get('part_category'):
+                category_name = kititem_data['part_category']
+                # Try to find existing category (case-insensitive)
+                category = PartCategory.objects.filter(name__iexact=category_name).first()
+                if category:
+                    part_data['category'] = category
+            
+            # Filter and validate part data
+            filtered_part_data = filter_valid_fields(part_data, Part)
+            validated_part_data = validate_and_truncate_fields(filtered_part_data, Part, batch, import_row.row_number)
+            
+            # Create new part
+            part = Part.objects.create(**validated_part_data)
+            import_row.part_auto_created = True
+            import_row.part_created = True
+            import_row.part_id = part.id
+        
+        # Create kit item linking kit to part
+        # Check if kit item already exists for this kit and part
+        existing_kititem = KitItem.objects.filter(kit=kit, part=part).first()
+        if not existing_kititem:
+            kititem = KitItem.objects.create(
+                kit=kit,
+                part=part,
+                quantity=quantity
+            )
+            import_row.kititem_created = True
+            import_row.kititem_id = kititem.id
+        else:
+            # Update quantity if update_existing is enabled
+            if mapping.update_existing:
+                existing_kititem.quantity = quantity
+                existing_kititem.save()
+            import_row.kititem_id = existing_kititem.id
+    
+    import_row.save()
 
 
 def create_relationships(batch, mapping, normalized_data, import_row):

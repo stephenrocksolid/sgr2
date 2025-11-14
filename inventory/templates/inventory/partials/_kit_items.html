@@ -8,8 +8,9 @@
                 <th>Part Number</th>
                 <th>Part Name</th>
                 <th>Qty</th>
+                <th>Cost of Primary Vendor</th>
                 <th>Notes</th>
-                <th style="width: 150px;">Actions</th>
+                <th style="width: 200px;">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -18,9 +19,20 @@
                     <td><strong>{{ item.part.part_number }}</strong></td>
                     <td>{{ item.part.name }}</td>
                     <td>{{ item.quantity }}</td>
+                    <td>
+                        {% if item.primary_vendor_price %}
+                            ${{ item.primary_vendor_price|floatformat:2 }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ item.notes|default:"—"|truncatewords:10 }}</td>
                     <td>
                         <div style="display: flex; gap: 0.5rem;">
+                            <a href="{% url 'inventory:part_detail' item.part.pk %}" 
+                               class="btn btn-sm btn-primary">
+                                View
+                            </a>
                             <button 
                                 class="btn btn-sm btn-secondary"
                                 hx-get="{% url 'inventory:kit_item_edit_form' kit.pk item.pk %}"

@@ -100,6 +100,10 @@ class SavedImportMapping(models.Model):
     part_mapping = models.JSONField(default=dict)
     vendor_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
     part_attribute_mappings = models.JSONField(default=dict, blank=True)  # attr_id -> header_name
+    buildlist_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
+    buildlistitem_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
+    kit_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
+    kititem_mapping = models.JSONField(default=dict, blank=True)  # field_name -> header_name
     
     # Processing options
     chunk_size = models.IntegerField(default=2000)
@@ -118,12 +122,16 @@ class SavedImportMapping(models.Model):
         return self.name
     
     def get_mapping_for_section(self, section):
-        """Get mapping for a specific section (machines, engines, parts, vendors)."""
+        """Get mapping for a specific section (machines, engines, parts, vendors, buildlists, kits)."""
         mapping_fields = {
             'machines': self.machine_mapping,
             'engines': self.engine_mapping,
             'parts': self.part_mapping,
             'vendors': self.vendor_mapping,
+            'buildlists': self.buildlist_mapping,
+            'buildlistitems': self.buildlistitem_mapping,
+            'kits': self.kit_mapping,
+            'kititems': self.kititem_mapping,
         }
         return mapping_fields.get(section, {})
 
@@ -141,6 +149,10 @@ class ImportRow(models.Model):
     normalized_engine_data = models.JSONField(default=dict, blank=True)
     normalized_part_data = models.JSONField(default=dict, blank=True)
     normalized_vendor_data = models.JSONField(default=dict, blank=True)
+    normalized_buildlist_data = models.JSONField(default=dict, blank=True)
+    normalized_buildlistitem_data = models.JSONField(default=dict, blank=True)
+    normalized_kit_data = models.JSONField(default=dict, blank=True)
+    normalized_kititem_data = models.JSONField(default=dict, blank=True)
     
     # Processing results
     machine_created = models.BooleanField(default=False)
@@ -158,6 +170,22 @@ class ImportRow(models.Model):
     vendor_created = models.BooleanField(default=False)
     vendor_updated = models.BooleanField(default=False)
     vendor_id = models.IntegerField(null=True, blank=True)
+    
+    buildlist_created = models.BooleanField(default=False)
+    buildlist_updated = models.BooleanField(default=False)
+    buildlist_id = models.IntegerField(null=True, blank=True)
+    
+    buildlistitem_created = models.BooleanField(default=False)
+    buildlistitem_id = models.IntegerField(null=True, blank=True)
+    
+    kit_created = models.BooleanField(default=False)
+    kit_updated = models.BooleanField(default=False)
+    kit_id = models.IntegerField(null=True, blank=True)
+    
+    kititem_created = models.BooleanField(default=False)
+    kititem_id = models.IntegerField(null=True, blank=True)
+    
+    part_auto_created = models.BooleanField(default=False)  # Part created during kit import
     
     # Relationships created
     machine_engine_created = models.BooleanField(default=False)

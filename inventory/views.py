@@ -73,7 +73,7 @@ def machines_list(request):
         machines = machines.order_by('make', 'model')
     
     # Pagination
-    paginator = Paginator(machines, 25)
+    paginator = Paginator(machines, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -221,7 +221,7 @@ def engines_list(request):
         engines = engines.order_by('engine_make', 'engine_model')
     
     # Pagination
-    paginator = Paginator(engines, 25)
+    paginator = Paginator(engines, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -351,7 +351,7 @@ def parts_list(request):
         parts = parts.order_by('part_number')
     
     # Pagination
-    paginator = Paginator(parts, 25)
+    paginator = Paginator(parts, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -1538,6 +1538,23 @@ def part_machine_remove(request, part_id, link_id):
     return part_machines_partial(request, part_id)
 
 
+@login_required
+def part_kits_partial(request, part_id):
+    """HTMX endpoint to render the part kits partial (read-only table)."""
+    part = get_object_or_404(Part, pk=part_id)
+    kit_items = (KitItem.objects
+                 .select_related("kit")
+                 .filter(part=part)
+                 .order_by("kit__name"))
+    
+    context = {
+        'part': part,
+        'kit_items': kit_items,
+    }
+    
+    return render(request, 'inventory/partials/_part_kits_partial.html', context)
+
+
 
 
 
@@ -1850,7 +1867,7 @@ def sg_engines_list(request):
         sg_engines = sg_engines.order_by('sg_make', 'sg_model')
     
     # Pagination
-    paginator = Paginator(sg_engines, 50)
+    paginator = Paginator(sg_engines, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -4026,7 +4043,7 @@ def engine_supercession_remove(request, engine_id, superseded_id):
 @login_required
 def build_lists_list(request):
     """Display list of build lists with search and sorting."""
-    from django.db.models import Count
+    from django.db.models import Count, Sum
     
     # Get search query and sorting parameters
     search = request.GET.get('search', '').strip()
@@ -4035,7 +4052,8 @@ def build_lists_list(request):
     
     # Base queryset with annotations
     build_lists = BuildList.objects.annotate(
-        engines_count=Count('engines')
+        engines_count=Count('engines'),
+        total_hours=Sum('items__hour_qty')
     ).all()
     
     # Apply search
@@ -4046,7 +4064,7 @@ def build_lists_list(request):
         )
     
     # Apply sorting
-    valid_sort_fields = ['name', 'engines_count', 'created_at']
+    valid_sort_fields = ['name', 'engines_count', 'total_hours', 'created_at']
     if sort_field in valid_sort_fields:
         if sort_order == 'desc':
             sort_field = f'-{sort_field}'
@@ -4055,7 +4073,7 @@ def build_lists_list(request):
         build_lists = build_lists.order_by('name')
     
     # Pagination
-    paginator = Paginator(build_lists, 50)
+    paginator = Paginator(build_lists, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -4074,10 +4092,16 @@ def build_lists_list(request):
 @login_required
 def build_list_detail(request, build_list_id):
     """Display build list detail with items and engines."""
+    from django.db.models import Sum
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
+    
+    # Calculate total hours from all items
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
     
     context = {
         'build_list': build_list,
+        'total_hours': total_hours,
     }
     
     return render(request, 'inventory/build_list_detail.html', context)
@@ -4382,6 +4406,7 @@ def engine_build_list_remove(request, engine_id, build_list_id):
 def kits_list(request):
     """Display list of kits with search and sorting."""
     from django.db.models import Count
+    from decimal import Decimal
     
     # Get search query and sorting parameters
     search = request.GET.get('search', '').strip()
@@ -4392,7 +4417,7 @@ def kits_list(request):
     kits = Kit.objects.annotate(
         engines_count=Count('engines'),
         parts_count=Count('items')
-    ).all()
+    ).prefetch_related('items__part__primary_vendor', 'items__part__vendor_links').all()
     
     # Apply search
     if search:
@@ -4411,9 +4436,22 @@ def kits_list(request):
         kits = kits.order_by('name')
     
     # Pagination
-    paginator = Paginator(kits, 50)
+    paginator = Paginator(kits, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+    
+    # Calculate total cost for each kit
+    for kit in page_obj.object_list:
+        total_cost = Decimal('0.00')
+        for item in kit.items.all():
+            if item.part.primary_vendor:
+                try:
+                    part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                    if part_vendor.price:
+                        total_cost += part_vendor.price * item.quantity
+                except:
+                    pass
+        kit.total_cost = total_cost
     
     context = {
         'page_obj': page_obj,
@@ -4430,10 +4468,27 @@ def kits_list(request):
 @login_required
 def kit_detail(request, kit_id):
     """Display kit detail with parts and engines."""
+    from decimal import Decimal
+    
     kit = get_object_or_404(Kit, pk=kit_id)
+    
+    # Calculate total cost from primary vendor prices
+    total_cost = Decimal('0.00')
+    items = kit.items.select_related('part__primary_vendor').all()
+    
+    for item in items:
+        if item.part.primary_vendor:
+            # Get the price from PartVendor relationship
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.price:
+                    total_cost += part_vendor.price * item.quantity
+            except:
+                pass
     
     context = {
         'kit': kit,
+        'total_cost': total_cost,
     }
     
     return render(request, 'inventory/kit_detail.html', context)
@@ -4499,7 +4554,17 @@ def kit_delete(request, kit_id):
 def kit_items_partial(request, kit_id):
     """HTMX partial for kit items table."""
     kit = get_object_or_404(Kit, pk=kit_id)
-    items = kit.items.select_related('part').all()
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    # Attach primary vendor price to each item
+    for item in items:
+        item.primary_vendor_price = None
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                item.primary_vendor_price = part_vendor.price
+            except:
+                pass
     
     context = {
         'kit': kit,
@@ -4883,7 +4948,7 @@ def vendor_index(request):
         vendors = vendors.order_by('name')
     
     # Pagination
-    paginator = Paginator(vendors, 50)
+    paginator = Paginator(vendors, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     

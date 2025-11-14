@@ -202,6 +202,9 @@
         <a href="{% url 'inventory:build_lists_list' %}">Build Lists</a> / {{ build_list.name }}
     </div>
     <h1 class="detail-title">{{ build_list.name }}</h1>
+    <div class="detail-subtitle" style="font-weight: 600; font-size: 1.2rem;">
+        Total Hours: {{ total_hours }}
+    </div>
     {% if build_list.notes %}
         <div class="detail-subtitle">{{ build_list.notes }}</div>
     {% endif %}

@@ -1,0 +1,10 @@
+build_list_name,build_list_notes,item_name,item_description,item_hour_qty
+6BT Rebuild,Standard rebuild procedure,Disassemble,Remove all components and label,4.5
+6BT Rebuild,Standard rebuild procedure,Clean & Inspect,Clean all parts and inspect for damage,2.0
+6BT Rebuild,Standard rebuild procedure,Reassemble,Install new parts and reassemble,6.0
+6BT Rebuild,Standard rebuild procedure,Test Run,Run engine and check all systems,1.5
+ISX Overhaul,Complete overhaul,Remove from chassis,Disconnect all systems and remove engine,3.0
+ISX Overhaul,Complete overhaul,Disassembly,Complete teardown and parts inspection,8.0
+ISX Overhaul,Complete overhaul,Machine work,Cylinder boring and honing,4.0
+ISX Overhaul,Complete overhaul,Assembly,Full rebuild with new parts,10.0
+

@@ -108,6 +108,9 @@ urlpatterns = [
     path('parts/<int:part_id>/machines/add/', views.part_machine_add, name='part_machine_add'),
     path('parts/<int:part_id>/machines/<int:link_id>/remove/', views.part_machine_remove, name='part_machine_remove'),
     
+    # Part-Kit relationship HTMX endpoints
+    path('parts/<int:part_id>/kits/partial/', views.part_kits_partial, name='part_kits_partial'),
+    
     # Part-Vendor relationship HTMX endpoints
     path('parts/<int:part_id>/vendors/', views.part_vendors_section, name='part_vendors_section'),
     path('parts/<int:part_id>/vendors/add/', views.part_vendor_add, name='part_vendor_add'),

@@ -12,7 +12,8 @@ from django.db.models import Count, Q
 from .models import ImportBatch, SavedImportMapping, ImportLog, ImportRow
 from .forms import (
     ImportFileUploadForm, CSVOptionsForm, XLSXOptionsForm, 
-    ImportMappingForm, AdditionalEngineMappingForm, VendorMappingForm, SavedMappingForm, ProcessingOptionsForm
+    ImportMappingForm, AdditionalEngineMappingForm, VendorMappingForm, SavedMappingForm, ProcessingOptionsForm,
+    BuildListMappingForm, BuildListItemMappingForm, KitMappingForm, KitItemMappingForm
 )
 from .utils import (
     process_csv_file, process_xlsx_file, get_xlsx_worksheet_data,
@@ -181,6 +182,10 @@ def mapping_step(request, batch_id):
         engine_mapping = create_mapping_dict(request.POST, 'engines')
         part_mapping = create_mapping_dict(request.POST, 'parts')
         vendor_mapping = create_mapping_dict(request.POST, 'vendors')
+        buildlist_mapping = create_mapping_dict(request.POST, 'buildlists')
+        buildlistitem_mapping = create_mapping_dict(request.POST, 'buildlistitems')
+        kit_mapping = create_mapping_dict(request.POST, 'kits')
+        kititem_mapping = create_mapping_dict(request.POST, 'kititems')
         
         # Handle part attribute mappings
         part_attribute_mappings = {}
@@ -249,6 +254,10 @@ def mapping_step(request, batch_id):
                     mapping.part_mapping = part_mapping
                     mapping.vendor_mapping = vendor_mapping
                     mapping.part_attribute_mappings = part_attribute_mappings
+                    mapping.buildlist_mapping = buildlist_mapping
+                    mapping.buildlistitem_mapping = buildlistitem_mapping
+                    mapping.kit_mapping = kit_mapping
+                    mapping.kititem_mapping = kititem_mapping
                     mapping.save()
                     
                     # Assign to batch
@@ -271,6 +280,10 @@ def mapping_step(request, batch_id):
                     part_mapping=part_mapping,
                     vendor_mapping=vendor_mapping,
                     part_attribute_mappings=part_attribute_mappings,
+                    buildlist_mapping=buildlist_mapping,
+                    buildlistitem_mapping=buildlistitem_mapping,
+                    kit_mapping=kit_mapping,
+                    kititem_mapping=kititem_mapping,
                     created_by=request.user if request.user.is_authenticated else None
                 )
                 
@@ -306,6 +319,22 @@ def mapping_step(request, batch_id):
         data=submitted_data,
         discovered_headers=sorted(batch.discovered_headers)
     )
+    buildlist_form = BuildListMappingForm(
+        data=submitted_data,
+        discovered_headers=sorted(batch.discovered_headers)
+    )
+    buildlistitem_form = BuildListItemMappingForm(
+        data=submitted_data,
+        discovered_headers=sorted(batch.discovered_headers)
+    )
+    kit_form = KitMappingForm(
+        data=submitted_data,
+        discovered_headers=sorted(batch.discovered_headers)
+    )
+    kititem_form = KitItemMappingForm(
+        data=submitted_data,
+        discovered_headers=sorted(batch.discovered_headers)
+    )
     
     # Get auto-suggestions for engine fields
     from .utils import suggest_engine_field_mappings
@@ -332,6 +361,10 @@ def mapping_step(request, batch_id):
         'additional_engine_form': additional_engine_form,
         'part_form': part_form,
         'vendor_form': vendor_form,
+        'buildlist_form': buildlist_form,
+        'buildlistitem_form': buildlistitem_form,
+        'kit_form': kit_form,
+        'kititem_form': kititem_form,
         'all_attrs': all_attrs,
         'saved_mappings': saved_mappings,
         'engine_suggestions': engine_suggestions,
@@ -655,6 +688,10 @@ def load_saved_mapping(request, mapping_id):
         'part_mapping': mapping.part_mapping,
         'vendor_mapping': mapping.vendor_mapping,
         'part_attribute_mappings': mapping.part_attribute_mappings,
+        'buildlist_mapping': mapping.buildlist_mapping,
+        'buildlistitem_mapping': mapping.buildlistitem_mapping,
+        'kit_mapping': mapping.kit_mapping,
+        'kititem_mapping': mapping.kititem_mapping,
     })
 
 @login_required

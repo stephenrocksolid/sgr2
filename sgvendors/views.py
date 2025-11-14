@@ -34,7 +34,7 @@ def index(request):
     ).order_by('name')
     
     # Pagination
-    paginator = Paginator(sg_vendors, 50)
+    paginator = Paginator(sg_vendors, 200)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -144,6 +144,8 @@ def search(request):
         })
     
     return JsonResponse(results, safe=False)
+
+
 
 
 

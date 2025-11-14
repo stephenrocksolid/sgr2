@@ -260,38 +260,106 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <h6>Original Data</h6>
-                        <pre class="bg-light p-3 rounded"><code>{{ row.original_data|pprint }}</code></pre>
+                <!-- Original Data Section -->
+                <div class="mb-4">
+                    <h6 class="border-bottom pb-2">📄 Original Data</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 30%;">Field</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for key, value in row.original_data.items %}
+                                <tr>
+                                    <td><code class="text-primary">{{ key }}</code></td>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <div class="col-md-6">
-                        <h6>Normalized Data</h6>
-                        <div class="mb-3">
-                            <strong>Machine:</strong>
-                            <pre class="bg-light p-2 rounded small">{{ row.normalized_machine_data|pprint }}</pre>
+                </div>
+
+                <!-- Normalized Data Section -->
+                <div class="mb-4">
+                    <h6 class="border-bottom pb-2">🔄 Normalized Data</h6>
+                    
+                    <!-- Machine Data -->
+                    <div class="mb-3">
+                        <strong class="text-success">🚜 Machine:</strong>
+                        {% if row.normalized_machine_data %}
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                    {% for key, value in row.normalized_machine_data.items %}
+                                    <tr>
+                                        <td style="width: 30%;"><code class="text-muted">{{ key }}</code></td>
+                                        <td>{{ value|default:"—" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="mb-3">
-                            <strong>Engine:</strong>
-                            <pre class="bg-light p-2 rounded small">{{ row.normalized_engine_data|pprint }}</pre>
+                        {% else %}
+                        <div class="text-muted small ms-3">(No machine data)</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Engine Data -->
+                    <div class="mb-3">
+                        <strong class="text-info">⚙️ Engine:</strong>
+                        {% if row.normalized_engine_data %}
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                    {% for key, value in row.normalized_engine_data.items %}
+                                    <tr>
+                                        <td style="width: 30%;"><code class="text-muted">{{ key }}</code></td>
+                                        <td>{{ value|default:"—" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
-                        <div class="mb-3">
-                            <strong>Part:</strong>
-                            <pre class="bg-light p-2 rounded small">{{ row.normalized_part_data|pprint }}</pre>
+                        {% else %}
+                        <div class="text-muted small ms-3">(No engine data)</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Part Data -->
+                    <div class="mb-3">
+                        <strong class="text-warning">🔧 Part:</strong>
+                        {% if row.normalized_part_data %}
+                        <div class="table-responsive mt-2">
+                            <table class="table table-sm table-bordered">
+                                <tbody>
+                                    {% for key, value in row.normalized_part_data.items %}
+                                    <tr>
+                                        <td style="width: 30%;"><code class="text-muted">{{ key }}</code></td>
+                                        <td>{{ value|default:"—" }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
+                        {% else %}
+                        <div class="text-muted small ms-3">(No part data)</div>
+                        {% endif %}
                     </div>
                 </div>
                 
                 {% if row.has_errors %}
-                <div class="row mt-3">
-                    <div class="col-12">
-                        <h6 class="text-danger">Errors</h6>
-                        <ul class="list-unstyled">
-                            {% for error in row.error_messages %}
-                                <li class="text-danger">{{ error }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
+                <!-- Errors Section -->
+                <div class="alert alert-danger">
+                    <h6 class="alert-heading">❌ Errors</h6>
+                    <ul class="mb-0">
+                        {% for error in row.error_messages %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
                 </div>
                 {% endif %}
             </div>

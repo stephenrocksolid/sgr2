@@ -342,6 +342,94 @@
                             {% endfor %}
                         </div>
                     </div>
+
+                    <!-- Build Lists Section -->
+                    <div class="mapping-section-card buildlist-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">📋</span>
+                                <h3>Build List Fields</h3>
+                            </div>
+                        </div>
+                        <p>Map fields for build lists and their labor items (optional)</p>
+                        <p class="info-note"><small><strong>Note:</strong> Each row can represent one item in a build list. Multiple rows with the same build list name will add items to the same build list.</small></p>
+                        
+                        <div class="field-mappings">
+                            <h4 style="margin-top: 10px; margin-bottom: 10px; font-size: 0.95em; color: #555;">Build List Information</h4>
+                            {% for field in buildlist_form %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="field-error">
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                            
+                            <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 0.95em; color: #555;">Build List Item Fields</h4>
+                            {% for field in buildlistitem_form %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="field-error">
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Kits Section -->
+                    <div class="mapping-section-card kit-section">
+                        <div class="section-header">
+                            <div class="section-title">
+                                <span class="section-icon">📦</span>
+                                <h3>Kit Fields</h3>
+                            </div>
+                        </div>
+                        <p>Map fields for kits and their parts (optional)</p>
+                        <p class="info-note"><small><strong>Note:</strong> Each row can represent one part in a kit. Multiple rows with the same kit name will add parts to the same kit. Parts will be auto-created if they don't exist.</small></p>
+                        
+                        <div class="field-mappings">
+                            <h4 style="margin-top: 10px; margin-bottom: 10px; font-size: 0.95em; color: #555;">Kit Information</h4>
+                            {% for field in kit_form %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="field-error">
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                            
+                            <h4 style="margin-top: 20px; margin-bottom: 10px; font-size: 0.95em; color: #555;">Kit Item Fields</h4>
+                            {% for field in kititem_form %}
+                                <div class="form-group">
+                                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                    {{ field }}
+                                    {% if field.errors %}
+                                        <div class="field-error">
+                                            {% for error in field.errors %}
+                                                {{ error }}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
 
                 <!-- More Engine Fields Section -->
@@ -766,6 +854,54 @@ function loadSavedMapping(mappingId) {
             if (data.vendor_mapping) {
                 for (const [fieldName, headerName] of Object.entries(data.vendor_mapping)) {
                     const select = document.querySelector(`select[name="map_vendors_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load build list mappings
+            if (data.buildlist_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.buildlist_mapping)) {
+                    const select = document.querySelector(`select[name="map_buildlists_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load build list item mappings
+            if (data.buildlistitem_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.buildlistitem_mapping)) {
+                    const select = document.querySelector(`select[name="map_buildlistitems_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load kit mappings
+            if (data.kit_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.kit_mapping)) {
+                    const select = document.querySelector(`select[name="map_kits_${fieldName}"]`);
+                    if (select && hasOption(select, headerName)) {
+                        select.value = headerName;
+                        select.classList.add('auto-mapped');
+                        mappedCount++;
+                    }
+                }
+            }
+            
+            // Load kit item mappings
+            if (data.kititem_mapping) {
+                for (const [fieldName, headerName] of Object.entries(data.kititem_mapping)) {
+                    const select = document.querySelector(`select[name="map_kititems_${fieldName}"]`);
                     if (select && hasOption(select, headerName)) {
                         select.value = headerName;
                         select.classList.add('auto-mapped');
