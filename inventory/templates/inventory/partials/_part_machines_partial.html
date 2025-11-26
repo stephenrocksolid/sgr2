@@ -6,41 +6,35 @@
                 <th>Make</th>
                 <th>Model</th>
                 <th>Type</th>
-                <th>Market</th>
                 <th>Primary</th>
-                <th>Notes</th>
-                <th>Actions</th>
+                <th style="width: 50px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for link in links %}
-                <tr>
-                    <td>
-                        <a href="{% url 'inventory:machine_detail' link.machine.pk %}" class="link">
-                            {{ link.machine.year }}
-                        </a>
-                    </td>
-                    <td>{{ link.machine.make }}</td>
-                    <td>{{ link.machine.model }}</td>
-                    <td>{{ link.machine.machine_type }}</td>
-                    <td>{{ link.machine.market_type }}</td>
+                <tr data-href="{% url 'inventory:machine_detail' link.machine.pk %}"
+                    onclick="if (event.target.tagName !== 'BUTTON' && event.target.tagName !== 'FORM') window.location.href='{% url 'inventory:machine_detail' link.machine.pk %}'">
+                    <td><strong>{{ link.machine.year|default:"—" }}</strong></td>
+                    <td>{{ link.machine.make|default:"—" }}</td>
+                    <td>{{ link.machine.model|default:"—" }}</td>
+                    <td>{{ link.machine.machine_type|default:"—" }}</td>
                     <td>
                         {% if link.is_primary %}
-                            <span class="badge badge-success">Primary</span>
+                            <span class="badge badge-success">✓</span>
                         {% else %}
-                            <span class="badge badge-secondary">Secondary</span>
+                            —
                         {% endif %}
                     </td>
-                    <td>{{ link.notes|default:"—"|truncatewords:10 }}</td>
-                    <td>
-                        <button class="btn btn-danger btn-sm"
-                                hx-post="{% url 'inventory:part_machine_remove' part.pk link.pk %}"
-                                hx-target="#part-machines-section"
-                                hx-confirm="Are you sure you want to remove this machine from the part?"
-                                hx-swap="innerHTML"
-                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-                            Remove
-                        </button>
+                    <td onclick="event.stopPropagation();">
+                        <form style="display: inline;"
+                              hx-post="{% url 'inventory:part_machine_remove' part.pk link.pk %}"
+                              hx-target="#part-machines-section"
+                              hx-confirm="Are you sure you want to remove this machine from the part?"
+                              hx-swap="innerHTML"
+                              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                            {% csrf_token %}
+                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
+                        </form>
                     </td>
                 </tr>
             {% endfor %}
@@ -48,120 +42,20 @@
     </table>
 {% else %}
     <div class="empty-message">
-        No machines assigned to this part yet.
+        <p>No machines assigned to this part yet.</p>
     </div>
 {% endif %}
 
-<div class="mt-3" id="part-machines-add-region">
-    {% if show_form or form.errors %}
-        <form
-            hx-post="{% url 'inventory:part_machine_add' part.id %}"
-            hx-target="#part-machines-section"
+<div class="mt-3">
+    <button class="add-button"
+            hx-get="{% url 'inventory:machine_search_modal_for_part' part.id %}"
+            hx-target="#modal-container"
             hx-swap="innerHTML">
-            {% csrf_token %}
-            <div class="form-grid">
-                <div>
-                    <label>Machine *</label>
-                    {{ form.machine }}
-                    {% if form.machine.errors %}
-                        <div class="form-error">{{ form.machine.errors|join:", " }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-actions">
-                    <div class="form-check">
-                        {{ form.is_primary }}
-                        <label class="form-check-label" for="{{ form.is_primary.id_for_label }}">
-                            Mark as primary machine
-                        </label>
-                    </div>
-                    <button class="btn btn-primary" type="submit">Add Machine</button>
-                    <button type="button" class="btn btn-secondary"
-                            hx-get="{% url 'inventory:part_machines_partial' part.id %}"
-                            hx-target="#part-machines-section"
-                            hx-swap="innerHTML">
-                        Cancel
-                    </button>
-                </div>
-                <div class="form-group">
-                    <label>Notes</label>
-                    {{ form.notes }}
-                </div>
-            </div>
-        </form>
-
-        {% if not form.fields.machine.queryset.exists %}
-            <div class="alert alert-info mt-2">
-                No available machines to add. All machines are already associated with this part.
-            </div>
-        {% endif %}
-    {% else %}
-        <button class="btn btn-secondary"
-                hx-get="{% url 'inventory:part_machines_partial' part.id %}?show_form=1"
-                hx-target="#part-machines-section"
-                hx-swap="innerHTML">
-            Add Machine
-        </button>
-    {% endif %}
+        Add Machine
+    </button>
 </div>
 
 <style>
-.form-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--gray-700);
-}
-
-.form-group input,
-.form-group textarea,
-.form-group select {
-    padding: 0.5rem;
-    border: 1px solid var(--gray-300);
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
-}
-
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
-    outline: none;
-    border-color: var(--brand-red);
-    box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.1);
-}
-
-.form-error {
-    color: var(--error);
-    font-size: 0.875rem;
-    margin-top: 0.25rem;
-}
-
-.form-check {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-bottom: 1rem;
-}
-
-.form-check input[type="checkbox"] {
-    margin: 0;
-}
-
-.form-check-label {
-    font-weight: normal;
-    margin: 0;
-}
-
 .badge {
     padding: 0.25rem 0.5rem;
     border-radius: 0.25rem;
@@ -171,11 +65,6 @@
 
 .badge-success {
     background-color: #10b981;
-    color: white;
-}
-
-.badge-secondary {
-    background-color: #6b7280;
     color: white;
 }
 </style>

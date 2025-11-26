@@ -392,66 +392,43 @@ def processing_step(request, batch_id):
         messages.error(request, "No mapping configuration found. Please complete the mapping step.")
         return redirect('imports:mapping_step', batch_id=batch.id)
     
-    if request.method == 'POST':
-        form = ProcessingOptionsForm(request.POST)
-        if form.is_valid():
-            try:
-                # Update mapping with processing options
-                mapping = batch.mapping
-                mapping.chunk_size = form.cleaned_data['chunk_size']
-                mapping.skip_duplicates = form.cleaned_data['skip_duplicates']
-                mapping.update_existing = form.cleaned_data['update_existing']
-                mapping.save()
-                
-                # Start processing task
-                from django.conf import settings
-                if getattr(settings, 'CELERY_ENABLED', False):
-                    # Use Celery for async processing
-                    result = process_import_batch.delay(batch.id)
-                    batch.celery_id = result.id
-                    batch.status = 'queued'
-                    batch.save(update_fields=['celery_id', 'status'])
-                else:
-                    # Run asynchronously in a background thread
-                    import threading
-                    from .tasks import process_import_batch_sync
-                    batch.status = 'processing'
-                    batch.save(update_fields=['status'])
-                    thread = threading.Thread(target=process_import_batch_sync, args=(batch.id,))
-                    thread.daemon = True
-                    thread.start()
-                
-                messages.success(request, "Import processing started. You can monitor progress below.")
-                return redirect('imports:processing_step', batch_id=batch.id)
-            except Exception as e:
-                messages.error(request, f"Error starting import: {str(e)}")
-                import traceback
-                print(traceback.format_exc())
-        else:
-            # Form validation failed - show errors
-            messages.error(request, "Please correct the errors below.")
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
-    else:
-        # Smart chunk size based on file size
-        default_chunk_size = 2000
-        if batch.total_rows > 20000:
-            default_chunk_size = 500  # Very large files
-        elif batch.total_rows > 10000:
-            default_chunk_size = 1000  # Large files
-        elif batch.total_rows > 5000:
-            default_chunk_size = 1500  # Medium files
-        
-        form = ProcessingOptionsForm(initial={
-            'chunk_size': batch.mapping.chunk_size if batch.mapping else default_chunk_size,
-            'skip_duplicates': batch.mapping.skip_duplicates if batch.mapping else True,
-            'update_existing': batch.mapping.update_existing if batch.mapping else False,
-        })
+    # If batch is mapped and not yet processing, start processing automatically
+    if batch.status == 'mapped':
+        try:
+            # Update mapping with hardcoded processing options
+            mapping = batch.mapping
+            mapping.chunk_size = 2000
+            mapping.skip_duplicates = True
+            mapping.update_existing = True
+            mapping.save()
+            
+            # Start processing task
+            from django.conf import settings
+            if getattr(settings, 'CELERY_ENABLED', False):
+                # Use Celery for async processing
+                result = process_import_batch.delay(batch.id)
+                batch.celery_id = result.id
+                batch.status = 'queued'
+                batch.save(update_fields=['celery_id', 'status'])
+            else:
+                # Run asynchronously in a background thread
+                import threading
+                from .tasks import process_import_batch_sync
+                batch.status = 'processing'
+                batch.save(update_fields=['status'])
+                thread = threading.Thread(target=process_import_batch_sync, args=(batch.id,))
+                thread.daemon = True
+                thread.start()
+            
+            messages.success(request, "Import processing started. You can monitor progress below.")
+            return redirect('imports:processing_step', batch_id=batch.id)
+        except Exception as e:
+            messages.error(request, f"Error starting import: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
     
     context = {
         'batch': batch,
-        'form': form,
         'step': 3,
         'total_steps': 3,
     }

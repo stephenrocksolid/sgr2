@@ -37,7 +37,7 @@ class ImportValidationTestCase(TestCase):
         self.assertTrue(has_engine_fields)
         
         # Check for required fields
-        required_engine_fields = ['engine_make', 'engine_model', 'engine_identifier']
+        required_engine_fields = ['engine_make', 'engine_model', 'identifier']
         missing_fields = []
         for field_name in required_engine_fields:
             if not mapping.engine_mapping.get(field_name):
@@ -45,7 +45,7 @@ class ImportValidationTestCase(TestCase):
         
         # Should have missing fields (model and identifier)
         self.assertIn('engine_model', missing_fields)
-        self.assertIn('engine_identifier', missing_fields)
+        self.assertIn('identifier', missing_fields)
         
     def test_machine_requires_make_model(self):
         """Test that machine import requires make and model."""
@@ -98,7 +98,7 @@ class ImportValidationTestCase(TestCase):
             engine_mapping={
                 'engine_make': 'Make',
                 'engine_model': 'Model',
-                'engine_identifier': 'ID'
+                'identifier': 'ID'
             },
             created_by=self.user
         )
@@ -107,7 +107,7 @@ class ImportValidationTestCase(TestCase):
         self.assertTrue(has_engine_fields)
         
         # Check for required fields
-        required_engine_fields = ['engine_make', 'engine_model', 'engine_identifier']
+        required_engine_fields = ['engine_make', 'engine_model', 'identifier']
         missing_fields = []
         for field_name in required_engine_fields:
             if not mapping.engine_mapping.get(field_name):
@@ -181,7 +181,7 @@ class RelationshipCreationTestCase(TestCase):
         self.mapping = SavedImportMapping.objects.create(
             name='Test Mapping',
             machine_mapping={'make': 'Make', 'model': 'Model'},
-            engine_mapping={'engine_make': 'Engine Make', 'engine_model': 'Engine Model', 'engine_identifier': 'ID'},
+            engine_mapping={'engine_make': 'Engine Make', 'engine_model': 'Engine Model', 'identifier': 'ID'},
             part_mapping={'part_number': 'Part Num', 'name': 'Name'},
             created_by=self.user
         )
@@ -200,7 +200,7 @@ class RelationshipCreationTestCase(TestCase):
         engine = Engine.objects.create(
             engine_make='Cummins',
             engine_model='6.7L',
-            sg_engine_identifier='ISB6.7'
+            identifier='ISB6.7'
         )
         
         # Create ImportRow with IDs
@@ -225,7 +225,7 @@ class RelationshipCreationTestCase(TestCase):
         engine = Engine.objects.create(
             engine_make='Cummins',
             engine_model='6.7L',
-            sg_engine_identifier='ISB6.7'
+            identifier='ISB6.7'
         )
         
         part = Part.objects.create(
@@ -295,7 +295,7 @@ class RelationshipCreationTestCase(TestCase):
         engine = Engine.objects.create(
             engine_make='Cummins',
             engine_model='6.7L',
-            sg_engine_identifier='ISB6.7'
+            identifier='ISB6.7'
         )
         
         part = Part.objects.create(
@@ -340,7 +340,7 @@ class RelationshipCreationTestCase(TestCase):
         engine = Engine.objects.create(
             engine_make='Cummins',
             engine_model='6.7L',
-            sg_engine_identifier='ISB6.7'
+            identifier='ISB6.7'
         )
         
         # Create ImportRow
@@ -373,6 +373,10 @@ class RelationshipCreationTestCase(TestCase):
         
         # Should still only have one relationship
         self.assertEqual(MachineEngine.objects.filter(machine=machine, engine=engine).count(), 1)
+
+
+
+
 
 
 

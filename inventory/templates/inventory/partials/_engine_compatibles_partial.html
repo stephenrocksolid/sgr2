@@ -2,53 +2,27 @@
     <table class="related-table">
         <thead>
             <tr>
-                <th>Engine</th>
-                <th>SG Make</th>
-                <th>SG Model</th>
-                <th>SG Identifier</th>
-                <th>Actions</th>
+                <th>Make</th>
+                <th>Model</th>
+                <th>Identifier</th>
+                <th style="width: 50px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for compatible in compatibles %}
-                <tr class="compatible-row" data-compatible-id="{{ compatible.id }}">
-                    <td>
-                        <strong>
-                            {% if compatible.sg_engine %}
-                                {{ compatible.sg_engine.sg_make }} {{ compatible.sg_engine.sg_model }}
-                            {% else %}
-                                {{ compatible.engine_make }} {{ compatible.engine_model }}
-                            {% endif %}
-                        </strong>
-                    </td>
-                    <td>
-                        {% if compatible.sg_engine %}
-                            {{ compatible.sg_engine.sg_make }}
-                        {% else %}
-                            {{ compatible.engine_make }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if compatible.sg_engine %}
-                            {{ compatible.sg_engine.sg_model }}
-                        {% else %}
-                            {{ compatible.engine_model }}
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if compatible.sg_engine_identifier %}
-                            {{ compatible.sg_engine_identifier }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td class="text-right">
+                <tr data-href="{% url 'inventory:engine_detail' compatible.pk %}" 
+                    onclick="window.location.href=this.dataset.href;">
+                    <td>{{ compatible.engine_make|default:"—" }}</td>
+                    <td>{{ compatible.engine_model|default:"—" }}</td>
+                    <td>{{ compatible.identifier|default:"—" }}</td>
+                    <td onclick="event.stopPropagation();">
                         <form hx-post="{% url 'inventory:engine_compatible_remove' engine.pk compatible.pk %}"
                               hx-target="#engine-compatibles-section"
                               hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this compatible relationship?">
+                              hx-confirm="Are you sure you want to remove this compatible relationship?"
+                              style="display: inline;">
                             {% csrf_token %}
-                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
                         </form>
                     </td>
                 </tr>
@@ -57,42 +31,6 @@
     </table>
 {% else %}
     <div class="empty-message">
-        <p class="text-muted">This engine has no compatible relationships yet.</p>
+        <p>This engine has no compatible relationships yet.</p>
     </div>
 {% endif %}
-
-<div class="mt-3" id="add-compatible-region">
-    {% if show_form or form.errors %}
-        <h4>Add Engine Compatible</h4>
-        <form hx-post="{% url 'inventory:engine_compatible_add' engine.pk %}"
-              hx-target="#engine-compatibles-section"
-              hx-swap="innerHTML"
-              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="{{ form.compatible_engine.id_for_label }}">Select SG Engine:</label>
-                {{ form.compatible_engine }}
-                {% if form.compatible_engine.errors %}<div class="text-danger">{{ form.compatible_engine.errors }}</div>{% endif %}
-            </div>
-            
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-            
-            <div class="form-actions">
-                <button class="btn btn-primary" type="submit">Add Compatible</button>
-                <button class="btn btn-secondary" type="button"
-                        hx-get="{% url 'inventory:engine_compatibles_partial' engine.pk %}"
-                        hx-target="#engine-compatibles-section" hx-swap="innerHTML">Cancel</button>
-            </div>
-        </form>
-    {% else %}
-        {% if form.fields.compatible_engine.choices|length > 1 %}
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:engine_compatibles_partial' engine.pk %}?show_form=1"
-                    hx-target="#engine-compatibles-section" hx-swap="innerHTML">Add Compatible</button>
-        {% else %}
-            <div class="alert alert-info">No available engines to add as compatibles.</div>
-        {% endif %}
-    {% endif %}
-</div>

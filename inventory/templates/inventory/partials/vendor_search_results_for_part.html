@@ -1,0 +1,35 @@
+{% if vendors %}
+    {% for vendor in vendors %}
+        <div class="vendor-result-row"
+             hx-get="{% url 'inventory:vendor_details_form_for_part' part.id %}?vendor_id={{ vendor.id }}"
+             hx-target="#modal-container"
+             hx-swap="innerHTML">
+            <div class="result-title">
+                {{ vendor.name }}
+            </div>
+            <div class="result-details">
+                {% if vendor.contact_name %}
+                    <span><strong>Contact:</strong> {{ vendor.contact_name }}</span>
+                {% endif %}
+                {% if vendor.phone %}
+                    <span><strong>Phone:</strong> {{ vendor.phone }}</span>
+                {% endif %}
+                {% if vendor.email %}
+                    <span><strong>Email:</strong> {{ vendor.email }}</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <p class="empty-state-text">
+            {% if request.GET.q %}
+                No vendors found matching your search.
+            {% else %}
+                Start typing to search for vendors...
+            {% endif %}
+        </p>
+    </div>
+{% endif %}
+

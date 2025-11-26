@@ -4,6 +4,7 @@
 {% block title %}Parts - SGR Part Manager{% endblock %}
 
 {% block extra_css %}
+<link rel="stylesheet" href="{% static 'inventory/css/inline-editor.css' %}">
 <style>
     /* Override main container padding for this page */
     .main-content-container {
@@ -189,6 +190,23 @@
     
     .clickable-row:hover {
         background-color: var(--gray-50);
+    }
+    
+    .action-link {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.25rem;
+        color: var(--gray-600);
+        transition: color 0.2s;
+    }
+    
+    .action-link:hover {
+        color: var(--primary);
+    }
+    
+    .action-link svg {
+        display: block;
     }
     
     .sort-link {
@@ -547,29 +565,19 @@
                     </a>
                 </th>
                 <th>Preferred Vendor</th>
-                <th>Vendors</th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=created_at&order={% if current_sort == 'created_at' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Created
-                        {% if current_sort == 'created_at' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
+                <th>Vendors                </th>
+                <th style="width: 80px; text-align: center;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for part in parts %}
-                <tr class="clickable-row" data-href="{% url 'inventory:part_detail' part.pk %}">
-                    <td><strong>{{ part.part_number }}</strong></td>
-                    <td>{{ part.name }}</td>
+                <tr class="clickable-row" data-href="{% url 'inventory:part_detail' part.pk %}" data-part-id="{{ part.pk }}">
+                    <td class="editable" data-field="part_number"><strong>{{ part.part_number }}</strong></td>
+                    <td class="editable" data-field="name">{{ part.name }}</td>
                     <td>{{ part.category.name|default:"—" }}</td>
-                    <td>{{ part.manufacturer|default:"—" }}</td>
-                    <td>{{ part.unit|default:"—" }}</td>
-                    <td>{{ part.type|default:"—" }}</td>
+                    <td class="editable" data-field="manufacturer">{{ part.manufacturer|default:"—" }}</td>
+                    <td class="editable" data-field="unit">{{ part.unit|default:"—" }}</td>
+                    <td class="editable" data-field="type">{{ part.type|default:"—" }}</td>
                     <td>{{ part.primary_vendor.name|default:"—" }}</td>
                     <td>
                         {% with vendor_count=part.vendor_links.count %}
@@ -591,7 +599,15 @@
                             {% endif %}
                         {% endwith %}
                     </td>
-                    <td>{{ part.created_at|date:"M j, Y" }}</td>
+                    <td style="text-align: center;">
+                        <a href="{% url 'inventory:part_detail' part.pk %}" class="action-link" title="Open details" onclick="event.stopPropagation();">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                        </a>
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
@@ -632,9 +648,14 @@
 {% block extra_js %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Clickable table rows
+        // Clickable table rows - only navigate if not clicking on editable cells
         document.querySelectorAll('.clickable-row[data-href]').forEach(row => {
-            row.addEventListener('click', function() {
+            row.addEventListener('click', function(e) {
+                // Don't navigate if clicking on editable cell, action link, or if row is being edited
+                if (e.target.closest('td.editable') || e.target.closest('.action-link') || this.classList.contains('editing')) {
+                    return;
+                }
+                
                 window.location.href = this.dataset.href;
             });
         });
@@ -747,5 +768,11 @@
             closeModal();
         });
     });
+    
+    // Initialize inline editor for parts
+    document.addEventListener('DOMContentLoaded', function() {
+        new InlineEditor('part', '/inventory/parts/0/field-update/');
+    });
 </script>
+<script src="{% static 'inventory/js/inline-editor.js' %}"></script>
 {% endblock %}

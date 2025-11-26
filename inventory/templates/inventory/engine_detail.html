@@ -5,29 +5,31 @@
 
 {% block extra_css %}
 <style>
+    /* Compact header - reduced from 2rem to 1rem padding */
     .detail-header {
         background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
         color: white;
-        padding: 2rem;
-        margin: -1rem -1rem 2rem -1rem;
+        padding: 1rem;
+        margin: -1rem -1rem 1rem -1rem;
         border-radius: var(--border-radius);
     }
     
     .detail-title {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
     }
     
     .detail-subtitle {
-        font-size: 1.1rem;
+        font-size: 0.875rem;
         opacity: 0.9;
-        margin-bottom: 1rem;
+        margin-bottom: 0.5rem;
     }
     
     .breadcrumb {
-        font-size: 0.875rem;
+        font-size: 0.75rem;
         opacity: 0.8;
+        margin-bottom: 0.5rem;
     }
     
     .breadcrumb a {
@@ -39,38 +41,42 @@
         text-decoration: underline;
     }
     
+    /* Compact grid - reduced gap from 2rem to 1rem */
     .detail-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 2rem;
-        margin-bottom: 2rem;
+        gap: 1rem;
+        margin-bottom: 1rem;
     }
     
+    /* Compact sections - reduced padding from 1.5rem to 0.75rem */
     .detail-section {
         background: white;
         border: 1px solid var(--gray-200);
         border-radius: var(--border-radius);
-        padding: 1.5rem;
+        padding: 0.75rem;
     }
     
+    /* Compact section title */
     .section-title {
-        font-size: 1.25rem;
+        font-size: 1rem;
         font-weight: 600;
         color: var(--gray-900);
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.25rem;
         border-bottom: 2px solid var(--red-600);
     }
     
+    /* Compact field grid - reduced gap from 1rem to 0.5rem */
     .field-grid {
         display: grid;
-        gap: 1rem;
+        gap: 0.5rem;
     }
     
     .field-row {
         display: grid;
         grid-template-columns: 1fr 2fr;
-        gap: 1rem;
+        gap: 0.5rem;
         align-items: start;
     }
     
@@ -86,7 +92,7 @@
     
     .field-value {
         color: var(--gray-900);
-        font-size: 0.9rem;
+        font-size: 0.875rem;
     }
     
     .field-value.empty {
@@ -196,11 +202,113 @@
         border-bottom: 1px solid var(--gray-200);
     }
     
+    /* Compact related table styling - matching machines_list.html */
+    .related-table {
+        width: 100%;
+        margin-top: 0.5rem;
+        border-spacing: 0;
+        font-size: 0.875rem;
+    }
+    
+    .related-table thead {
+        background: var(--gray-50);
+    }
+    
+    .related-table th {
+        padding: 0.375rem 0.5rem;
+        line-height: 1.3;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        text-align: left;
+        border-bottom: 1px solid var(--gray-300);
+    }
+    
+    .related-table td {
+        padding: 0.375rem 0.5rem;
+        line-height: 1.3;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    .related-table tbody tr {
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    
+    .related-table tbody tr:hover {
+        background-color: var(--gray-50);
+    }
+    
+    .primary-badge {
+        background: var(--green-100);
+        color: var(--green-800);
+        padding: 0.125rem 0.375rem;
+        border-radius: var(--border-radius);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    /* Icon button styling */
+    .btn-icon {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.875rem;
+        border: none;
+        background: none;
+        cursor: pointer;
+        color: var(--gray-600);
+        transition: color 0.2s;
+    }
+    
+    .btn-icon:hover {
+        color: var(--red-600);
+    }
+    
+    .btn-icon.btn-danger {
+        color: var(--red-600);
+    }
+    
+    .btn-icon.btn-danger:hover {
+        color: var(--red-800);
+    }
+    
+    /* Consistent Add button styling */
+    .add-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        background: white;
+        color: var(--gray-700);
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .add-button:hover {
+        background: var(--gray-50);
+        border-color: var(--gray-400);
+    }
+    
+    .add-button::before {
+        content: '+';
+        font-weight: 700;
+        font-size: 1rem;
+    }
+    
+    /* Compact action buttons */
     .action-buttons {
         display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
+        gap: 0.5rem;
+        margin-top: 1rem;
         flex-wrap: wrap;
+    }
+    
+    .action-buttons .btn {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
     }
     
     .flex {
@@ -258,16 +366,43 @@
         margin-top: 1rem;
     }
     
+    /* Loading placeholder - more compact */
+    .loading-placeholder {
+        text-align: center;
+        padding: 1rem;
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
+    
+    .spinner-border {
+        width: 1.5rem;
+        height: 1.5rem;
+    }
+    
+    /* Empty message styling */
+    .empty-message {
+        padding: 1rem;
+        text-align: center;
+        color: var(--gray-500);
+        font-size: 0.875rem;
+        font-style: italic;
+    }
+    
     .empty-state {
         text-align: center;
-        padding: 2rem;
+        padding: 1rem;
         color: var(--gray-500);
+        font-size: 0.875rem;
+    }
+    
+    .text-right {
+        text-align: right;
     }
     
     @media (max-width: 768px) {
         .detail-grid {
             grid-template-columns: 1fr;
-            gap: 1rem;
+            gap: 0.75rem;
         }
         
         .field-row {
@@ -276,12 +411,12 @@
         }
         
         .detail-header {
-            margin: -1rem -1rem 1rem -1rem;
-            padding: 1.5rem;
+            margin: -1rem -1rem 0.75rem -1rem;
+            padding: 0.75rem;
         }
         
         .detail-title {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
         }
     }
 </style>
@@ -465,58 +600,21 @@
         </div>
     </div>
     
-    <!-- Injection System -->
-    <div class="detail-section injection-section">
-        <h2 class="section-title">Injection System</h2>
+    <!-- Engine Characteristics -->
+    <div class="detail-section characteristics-section">
+        <h2 class="section-title">Engine Characteristics</h2>
         <div class="field-grid">
             <div class="field-row">
-                <span class="field-label">Direct Injection (DI):</span>
-                <span class="field-value">
-                    {% if engine.di %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
+                <span class="field-label">Injection Type:</span>
+                <span class="field-value">{{ engine.injection_type|default:"—" }}</span>
             </div>
             <div class="field-row">
-                <span class="field-label">Indirect Injection (IDI):</span>
-                <span class="field-value">
-                    {% if engine.idi %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
+                <span class="field-label">Valve Configuration:</span>
+                <span class="field-value">{{ engine.valve_config|default:"—" }}</span>
             </div>
             <div class="field-row">
-                <span class="field-label">Common Rail:</span>
-                <span class="field-value">
-                    {% if engine.common_rail %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Valve Configuration -->
-    <div class="detail-section valves-section">
-        <h2 class="section-title">Valve Configuration</h2>
-        <div class="field-grid">
-            <div class="field-row">
-                <span class="field-label">2 Valve:</span>
-                <span class="field-value">
-                    {% if engine.two_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
-            </div>
-            <div class="field-row">
-                <span class="field-label">4 Valve:</span>
-                <span class="field-value">
-                    {% if engine.four_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
-            </div>
-            <div class="field-row">
-                <span class="field-label">5 Valve:</span>
-                <span class="field-value">
-                    {% if engine.five_valve %}<span class="badge badge-success">✓ Yes</span>{% else %}<span class="badge badge-secondary">— No</span>{% endif %}
-                </span>
-            </div>
-            <div class="field-row">
-                <span class="field-label">Valve Summary:</span>
-                <span class="field-value">
-                    <span class="valve-summary">{{ engine.valves_display }}</span>
-                </span>
+                <span class="field-label">Fuel System Type:</span>
+                <span class="field-value">{{ engine.fuel_system_type|default:"—" }}</span>
             </div>
         </div>
     </div>
@@ -625,15 +723,14 @@
             </div>
         </div>
         
-        <div class="flex gap-2 my-2">
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:engine_machine_add_form' engine.id %}"
-                    hx-target="#engine-machines-add"
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:machine_search_modal' engine.id %}"
+                    hx-target="#modal-container"
                     hx-swap="innerHTML">
                 Add Machine
             </button>
         </div>
-        <div id="engine-machines-add"></div>
     </div>
     
     <!-- Parts for this Engine -->
@@ -652,15 +749,14 @@
             </div>
         </div>
         
-        <div class="flex gap-2 my-2">
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:engine_part_add_form' engine.id %}"
-                    hx-target="#engine-parts-add"
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:part_search_modal_for_engine' engine.id %}"
+                    hx-target="#modal-container"
                     hx-swap="innerHTML">
                 Add Part
             </button>
         </div>
-        <div id="engine-parts-add"></div>
     </div>
     
     <!-- Engine Interchanges -->
@@ -678,6 +774,15 @@
                 <p class="mt-2 text-muted">Loading interchanges...</p>
             </div>
         </div>
+        
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:engine_search_modal_interchange' engine.id %}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML">
+                Add Interchange
+            </button>
+        </div>
     </div>
     
     <!-- Engine Compatibles -->
@@ -694,6 +799,15 @@
                 </div>
                 <p class="mt-2 text-muted">Loading compatibles...</p>
             </div>
+        </div>
+        
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:engine_search_modal_compatible' engine.id %}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML">
+                Add Compatible
+            </button>
         </div>
     </div>
     
@@ -713,73 +827,72 @@
             </div>
         </div>
         
-        <div class="flex gap-2 my-2">
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:engine_supercession_form' engine.id 'older' %}"
-                    hx-target="#supercession-form-region"
+        <div style="margin-top: 0.75rem; display: flex; gap: 0.5rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:engine_search_modal_supercession' engine.id 'older' %}"
+                    hx-target="#modal-container"
                     hx-swap="innerHTML">
                 Add Engine This Supersedes (Older)
             </button>
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:engine_supercession_form' engine.id 'newer' %}"
-                    hx-target="#supercession-form-region"
+            <button class="add-button"
+                    hx-get="{% url 'inventory:engine_search_modal_supercession' engine.id 'newer' %}"
+                    hx-target="#modal-container"
                     hx-swap="innerHTML">
                 Add Engine That Supersedes This (Newer)
             </button>
         </div>
-        <div id="supercession-form-region"></div>
     </div>
 </div>
 
 <!-- Build Lists -->
 <div class="detail-section build-lists-section">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Build Lists</span>
-            <button 
-                class="btn btn-sm btn-primary"
-                hx-get="{% url 'inventory:engine_build_list_add_form' engine.pk %}"
-                hx-target="#engine-build-list-form-container"
-                hx-swap="innerHTML">
-                + Add Build List
-            </button>
-        </div>
-        
-        <div id="engine-build-list-form-container"></div>
-        
+        <h2 class="section-title">Build Lists</h2>
         <div 
             id="engine-build-lists-container"
             hx-get="{% url 'inventory:engine_build_lists_partial' engine.pk %}"
             hx-trigger="load"
             hx-swap="innerHTML">
-            <div class="empty-state">
-                <p>Loading build lists...</p>
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading build lists...</p>
             </div>
+        </div>
+        
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:build_list_search_modal' engine.pk %}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML">
+                Add Build List
+            </button>
         </div>
     </div>
     
     <!-- Kits -->
     <div class="detail-section kits-section" id="kits-section">
-        <div class="section-title" style="display: flex; justify-content: space-between; align-items: center;">
-            <span>Kits</span>
-            <button
-                class="btn btn-sm btn-primary"
-                hx-get="{% url 'inventory:engine_kit_add_form' engine.pk %}"
-                hx-target="#engine-kit-form-container"
-                hx-swap="innerHTML">
-                + Add Kit
-            </button>
-        </div>
-        
-        <div id="engine-kit-form-container"></div>
-        
+        <h2 class="section-title">Kits</h2>
         <div
             id="engine-kits-container"
             hx-get="{% url 'inventory:engine_kits_partial' engine.pk %}"
             hx-trigger="load"
             hx-swap="innerHTML">
-            <div class="empty-state">
-                <p>Loading kits...</p>
+            <div class="loading-placeholder">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading kits...</p>
             </div>
+        </div>
+        
+        <div style="margin-top: 0.75rem;">
+            <button class="add-button"
+                    hx-get="{% url 'inventory:kit_search_modal' engine.pk %}"
+                    hx-target="#modal-container"
+                    hx-swap="innerHTML">
+                Add Kit
+            </button>
         </div>
     </div>
     
@@ -813,13 +926,15 @@
 <!-- Action Buttons -->
 <div class="action-buttons">
     <a href="{% url 'inventory:engines_list' %}" class="btn btn-secondary">
-        ← Back to Engines
+        <span style="margin-right: 0.25rem;">←</span> Back
     </a>
     <a href="{% url 'inventory:engine_edit' engine.pk %}" class="btn btn-primary">
-        Edit Engine
+        <span style="margin-right: 0.25rem;">✎</span> Edit
     </a>
-
 </div>
+
+<!-- Modal Container for HTMX modals -->
+<div id="modal-container"></div>
 
 {% endblock %}
 
@@ -830,14 +945,39 @@
         // Example: Add click handlers for engine rows if needed
         console.log('Engine detail page loaded');
         
+        // Handle modal focus and escape key - single global handler
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'modal-container') {
+                // Focus the search input in the modal
+                setTimeout(() => {
+                    const searchInputs = evt.detail.target.querySelectorAll('input[type="text"][autofocus], input.search-input');
+                    if (searchInputs.length > 0) {
+                        searchInputs[0].focus();
+                    }
+                }, 100);
+                
+                // Add escape key handler for this specific modal
+                const escapeHandler = function(e) {
+                    if (e.key === 'Escape') {
+                        const modals = document.querySelectorAll('.modal-overlay');
+                        modals.forEach(modal => modal.remove());
+                        document.removeEventListener('keydown', escapeHandler);
+                    }
+                };
+                document.addEventListener('keydown', escapeHandler);
+            }
+        });
+        
         // Clear build list form when successfully added
         document.body.addEventListener('clearEngineBuildListForm', function() {
-            document.getElementById('engine-build-list-form-container').innerHTML = '';
+            const container = document.getElementById('engine-build-list-form-container');
+            if (container) container.innerHTML = '';
         });
         
         // Clear kit form when successfully added
         document.body.addEventListener('clearEngineKitForm', function() {
-            document.getElementById('engine-kit-form-container').innerHTML = '';
+            const container = document.getElementById('engine-kit-form-container');
+            if (container) container.innerHTML = '';
         });
         
         // Clear casting form when successfully added/edited

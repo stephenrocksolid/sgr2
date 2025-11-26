@@ -220,7 +220,7 @@
                             </div>
                         </div>
                         <p>Map fields for engine data (core)</p>
-                        <p class="required-note"><small><strong>Required if any engine field is mapped:</strong> Engine Make<span class="required-asterisk">*</span>, Engine Model<span class="required-asterisk">*</span>, Engine Identifier<span class="required-asterisk">*</span></small></p>
+                        <p class="required-note"><small><strong>Required if any engine field is mapped:</strong> Engine Make<span class="required-asterisk">*</span>, Engine Model<span class="required-asterisk">*</span>, Identifier<span class="required-asterisk">*</span></small></p>
                         
                         {% if engine_suggestions %}
                         <div class="auto-suggestions">
@@ -702,7 +702,7 @@ function updateProgress() {
     // Engine progress
     const engineSelects = document.querySelectorAll('.engine-section select');
     const engineRequired = Array.from(engineSelects).filter(s => 
-        s.name.includes('engine_make') || s.name.includes('engine_model') || s.name.includes('engine_identifier')
+        s.name.includes('engine_make') || s.name.includes('engine_model') || s.name.includes('identifier')
     );
     const engineMapped = engineRequired.filter(s => s.value && s.value !== '');
     updateProgressDisplay('engine-progress', engineMapped.length, engineRequired.length);
@@ -1068,16 +1068,31 @@ function applySuggestion(fieldName, headerName) {
 
 {% block extra_css %}
 <style>
-.wizard-header {
-    margin-bottom: var(--spacing-xl);
-}
+    /* Override main container padding for this page */
+    .main-content-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+    }
 
-.wizard-steps {
-    display: flex;
-    justify-content: space-between;
-    margin-top: var(--spacing-lg);
-    max-width: 600px;
-}
+    /* Compact wizard header */
+    .wizard-header {
+        margin-bottom: 0.75rem;
+    }
+
+    .wizard-header h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0 0 0.5rem 0;
+    }
+
+    /* Compact wizard steps */
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        max-width: 600px;
+    }
 
 .step {
     display: flex;
@@ -1090,7 +1105,7 @@ function applySuggestion(fieldName, headerName) {
 .step:not(:last-child)::after {
     content: '';
     position: absolute;
-    top: 20px;
+    top: 15px;
     left: 50%;
     width: 100%;
     height: 2px;
@@ -1107,8 +1122,8 @@ function applySuggestion(fieldName, headerName) {
 }
 
 .step-number {
-    width: 40px;
-    height: 40px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background-color: var(--gray-300);
     color: var(--gray-600);
@@ -1116,6 +1131,7 @@ function applySuggestion(fieldName, headerName) {
     align-items: center;
     justify-content: center;
     font-weight: bold;
+    font-size: 0.875rem;
     position: relative;
     z-index: 2;
 }
@@ -1131,66 +1147,8 @@ function applySuggestion(fieldName, headerName) {
 }
 
 .step-label {
-    margin-top: var(--spacing-sm);
-}
-
-.auto-suggestions {
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.auto-suggestions h4 {
-    color: #495057;
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    font-weight: 600;
-}
-
-.auto-suggestions p {
-    color: #6c757d;
-    margin-bottom: 1rem;
-    font-size: 0.875rem;
-}
-
-.suggestion-list {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.suggestion-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem;
-    background-color: white;
-    border: 1px solid #e9ecef;
-    border-radius: 0.25rem;
-}
-
-.suggestion-item .field-name {
-    font-weight: 600;
-    color: #495057;
-    min-width: 120px;
-}
-
-.suggestion-item .arrow {
-    color: #6c757d;
-    font-weight: bold;
-}
-
-.suggestion-item .header-name {
-    color: #495057;
-    flex: 1;
-    font-family: monospace;
-    background-color: #f8f9fa;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-}
-    font-size: var(--font-size-sm);
+    margin-top: 0.375rem;
+    font-size: 0.75rem;
     color: var(--gray-600);
     text-align: center;
 }
@@ -1205,6 +1163,65 @@ function applySuggestion(fieldName, headerName) {
     font-weight: 500;
 }
 
+.auto-suggestions {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.auto-suggestions h4 {
+    color: #495057;
+    margin-bottom: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.auto-suggestions p {
+    color: #6c757d;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+}
+
+.suggestion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.suggestion-item {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem;
+    background-color: white;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+}
+
+.suggestion-item .field-name {
+    font-weight: 600;
+    color: #495057;
+    min-width: 100px;
+    font-size: 0.8rem;
+}
+
+.suggestion-item .arrow {
+    color: #6c757d;
+    font-weight: bold;
+    font-size: 0.8rem;
+}
+
+.suggestion-item .header-name {
+    color: #495057;
+    flex: 1;
+    font-family: monospace;
+    background-color: #f8f9fa;
+    padding: 0.25rem 0.375rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
 .wizard-content {
     max-width: 1400px;
     margin: 0 auto;
@@ -1212,28 +1229,44 @@ function applySuggestion(fieldName, headerName) {
 
 .mapping-section {
     background: white;
-    padding: 16px;
+    padding: 1rem;
     border-radius: var(--border-radius);
     box-shadow: var(--shadow-sm);
 }
 
+.mapping-section h2 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0 0 0.375rem 0;
+}
+
+.mapping-section > p {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    margin-bottom: 0.75rem;
+}
+
 .file-info {
     background: var(--gray-50);
-    padding: 10px 12px;
+    padding: 0.75rem;
     border-radius: var(--border-radius);
-    margin-bottom: 12px;
+    margin-bottom: 0.75rem;
+    border: 1px solid var(--gray-200);
 }
 
 .file-info h3 {
-    font-size: 1em;
-    margin-bottom: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-top: 0;
 }
 
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 8px;
-    margin-top: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.5rem;
 }
 
 .info-item {
@@ -1244,26 +1277,26 @@ function applySuggestion(fieldName, headerName) {
 .info-item label {
     font-weight: 500;
     color: var(--gray-700);
-    margin-bottom: 2px;
-    font-size: 0.9em;
+    margin-bottom: 0.125rem;
+    font-size: 0.75rem;
 }
 
 .info-item span {
     color: var(--gray-600);
-    font-size: 0.9em;
+    font-size: 0.875rem;
 }
 
 .mapping-sections {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 16px;
-    margin-bottom: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
 }
 
 .mapping-section-card {
     background: white;
-    padding: 16px;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border-radius: 6px;
     border: 1px solid var(--gray-200);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     transition: all 0.3s ease;
@@ -1311,44 +1344,51 @@ function applySuggestion(fieldName, headerName) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .section-title {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .section-icon {
-    font-size: 1.5em;
+    font-size: 1.25em;
     line-height: 1;
 }
 
 .mapping-section-card h3 {
     margin: 0;
     color: var(--gray-800);
-    font-size: 1.1em;
+    font-size: 0.95em;
     font-weight: 600;
 }
 
 .mapping-section-card p {
     color: var(--gray-600);
-    font-size: 0.85em;
-    margin-bottom: 8px;
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
     line-height: 1.3;
+}
+
+.mapping-section-card h4 {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: #555;
 }
 
  .field-mappings {
      display: flex;
      flex-direction: column;
-     gap: 8px;
+     gap: 0.5rem;
  }
  
  .field-mappings.three-columns {
      display: grid;
      grid-template-columns: repeat(3, 1fr);
-     gap: 8px;
+     gap: 0.5rem;
  }
  
  @media (max-width: 1024px) {
@@ -1367,11 +1407,11 @@ function applySuggestion(fieldName, headerName) {
 .section-progress {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 0.375rem;
 }
 
 .progress-text {
-    font-size: 0.75em;
+    font-size: 0.7rem;
     color: #666;
     font-weight: 500;
 }
@@ -1379,9 +1419,9 @@ function applySuggestion(fieldName, headerName) {
 .progress-badge {
     background: #4CAF50;
     color: white;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75em;
+    padding: 0.125rem 0.5rem;
+    border-radius: 10px;
+    font-size: 0.7rem;
     font-weight: 600;
 }
 
@@ -1396,8 +1436,8 @@ function applySuggestion(fieldName, headerName) {
 }
 
 .form-group label {
-    font-size: 0.9em;
-    margin-bottom: 3px;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
     display: block;
     font-weight: 500;
     transition: color 0.3s ease;
@@ -1406,11 +1446,11 @@ function applySuggestion(fieldName, headerName) {
 .form-group select,
 .form-group input,
 .form-group textarea {
-    padding: 6px 8px;
-    font-size: 0.9em;
+    padding: 0.375rem 0.5rem;
+    font-size: 0.8rem;
     height: auto;
     transition: all 0.3s ease;
-    border: 2px solid #ddd;
+    border: 1px solid #ddd;
 }
 
 .form-group select:focus,
@@ -1441,58 +1481,62 @@ function applySuggestion(fieldName, headerName) {
 
 .mapping-options {
     background: var(--blue-50);
-    padding: 12px;
+    padding: 0.75rem;
     border-radius: var(--border-radius);
     border: 1px solid var(--blue-200);
-    margin-bottom: 16px;
+    margin-bottom: 0.75rem;
 }
 
 .mapping-options h3 {
     margin-top: 0;
-    margin-bottom: 4px;
+    margin-bottom: 0.375rem;
     color: var(--blue-800);
-    font-size: 1.1em;
+    font-size: 0.95em;
 }
 
 .mapping-options p {
     color: var(--blue-700);
-    font-size: 0.85em;
-    margin-bottom: 8px;
+    font-size: 0.75rem;
+    margin-bottom: 0.5rem;
 }
 
 .mapping-options .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 0.5rem;
 }
 
 .preview-section {
     border-top: 1px solid var(--gray-200);
-    padding-top: 12px;
-    margin-top: 8px;
+    padding-top: 0.75rem;
+    margin-top: 0.5rem;
 }
 
 .preview-section h3 {
-    font-size: 1em;
-    margin-bottom: 8px;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.preview-section > p {
+    font-size: 0.75rem;
 }
 
 .preview-table {
-    font-size: 0.85em;
+    font-size: 0.8rem;
 }
 
 .preview-table th {
     background: var(--gray-100);
     font-weight: 600;
-    padding: 6px 8px;
+    padding: 0.375rem 0.5rem;
 }
 
 .preview-table td {
-    padding: 5px 8px;
+    padding: 0.375rem 0.5rem;
 }
 
 .form-actions {
     display: flex;
-    gap: 10px;
-    margin-top: 16px;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
 }
 
 /* Enhanced button styles */
@@ -1500,15 +1544,16 @@ function applySuggestion(fieldName, headerName) {
     background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
     box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .btn-primary:hover {
@@ -1529,15 +1574,16 @@ function applySuggestion(fieldName, headerName) {
 .btn-secondary {
     background: white;
     color: #666;
-    border: 2px solid #ddd;
-    padding: 10px 20px;
-    border-radius: 6px;
+    border: 1px solid #ddd;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .btn-secondary:hover {
@@ -1571,34 +1617,38 @@ function applySuggestion(fieldName, headerName) {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .card-header h3 {
     margin: 0;
-    font-size: 1.1em;
+    font-size: 0.95em;
+}
+
+.card-body {
+    padding: 0;
 }
 
 .filter-controls {
-    margin-bottom: 8px;
+    margin-bottom: 0.5rem;
 }
 
 .filter-row {
     display: flex;
-    gap: 8px;
+    gap: 0.5rem;
     align-items: center;
 }
 
 .filter-row input {
-    padding: 5px 8px;
+    padding: 0.375rem 0.5rem;
     border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
-    font-size: 0.85em;
+    font-size: 0.8rem;
 }
 
 .attr-item {
     border: 1px solid var(--gray-200);
-    padding: 8px;
+    padding: 0.5rem;
     border-radius: var(--border-radius);
     background: white;
 }
@@ -1606,22 +1656,22 @@ function applySuggestion(fieldName, headerName) {
 .attr-item label {
     font-weight: 500;
     color: var(--gray-700);
-    margin-bottom: 3px;
+    margin-bottom: 0.25rem;
     display: block;
-    font-size: 0.85em;
+    font-size: 0.75rem;
 }
 
 .attr-item select {
     width: 100%;
-    padding: 5px 6px;
+    padding: 0.375rem 0.5rem;
     border: 1px solid var(--gray-300);
     border-radius: var(--border-radius);
-    font-size: 0.85em;
+    font-size: 0.8rem;
 }
 
 .attr-item p {
-    margin-top: 2px;
-    font-size: 0.75em;
+    margin-top: 0.125rem;
+    font-size: 0.7rem;
     color: var(--gray-500);
 }
 
@@ -1636,16 +1686,48 @@ function applySuggestion(fieldName, headerName) {
     background-color: #fff3cd;
     border: 1px solid #ffc107;
     border-radius: 4px;
-    padding: 6px 10px;
-    margin-top: 4px;
-    margin-bottom: 6px;
+    padding: 0.375rem 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.375rem;
     color: #856404;
-    font-size: 0.85em;
+    font-size: 0.75rem;
     line-height: 1.3;
 }
 
 .required-note strong {
     color: #856404;
+}
+
+.info-note {
+    background-color: #d1ecf1;
+    border: 1px solid #17a2b8;
+    border-radius: 4px;
+    padding: 0.375rem 0.5rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0.375rem;
+    color: #0c5460;
+    font-size: 0.75rem;
+    line-height: 1.3;
+}
+
+.flexible-import-notice {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.flexible-import-notice h4 {
+    margin: 0 0 0.375rem 0;
+    color: #856404;
+    font-size: 0.875rem;
+}
+
+.flexible-import-notice p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.75rem;
 }
 
 /* Missing field styling */
@@ -1754,22 +1836,22 @@ select.auto-mapped {
 /* Mapping controls toolbar */
 .mapping-controls-toolbar {
     background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
-    border: 2px solid #d1d9e6;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    border: 1px solid #d1d9e6;
+    border-radius: 6px;
+    padding: 0.75rem;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .toolbar-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 0.5rem;
 }
 
 .mapping-controls-section h3 {
-    font-size: 1.2em;
+    font-size: 0.95em;
     color: #2c3e50;
     margin: 0;
     font-weight: 600;
@@ -1779,15 +1861,15 @@ select.auto-mapped {
     background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
     color: #212529;
     border: none;
-    padding: 6px 14px;
-    border-radius: 5px;
+    padding: 0.375rem 0.75rem;
+    border-radius: 4px;
     font-weight: 600;
-    font-size: 0.85em;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -1798,7 +1880,7 @@ select.auto-mapped {
 
 .mapping-controls-buttons {
     display: flex;
-    gap: 20px;
+    gap: 0.75rem;
     align-items: flex-end;
     flex-wrap: wrap;
 }
@@ -1806,43 +1888,44 @@ select.auto-mapped {
 .control-group {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0.375rem;
     flex: 1;
-    min-width: 250px;
+    min-width: 200px;
 }
 
 .control-group label {
     font-weight: 600;
     color: #555;
-    font-size: 0.9em;
+    font-size: 0.8rem;
 }
 
 .control-group select.form-control {
-    padding: 10px;
-    border-radius: 6px;
-    border: 2px solid #d1d9e6;
-    font-size: 0.95em;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #d1d9e6;
+    font-size: 0.875rem;
     background-color: white;
 }
 
 .control-group select.form-control:focus {
     border-color: #2196F3;
     outline: none;
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.1);
+    box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
 }
 
 .btn-info {
     background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .btn-info:hover {
@@ -1859,14 +1942,15 @@ select.auto-mapped {
     background: linear-gradient(135deg, #28a745 0%, #218838 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .btn-success:hover {
@@ -1884,9 +1968,9 @@ select.auto-mapped {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px solid #e0e0e0;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #e0e0e0;
 }
 
 .form-actions-left {
@@ -1905,10 +1989,10 @@ select.auto-mapped {
     position: fixed;
     top: 20px;
     right: 20px;
-    padding: 16px 24px;
-    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
     font-weight: 500;
-    font-size: 0.95em;
+    font-size: 0.875rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 10000;
     max-width: 400px;
@@ -1949,10 +2033,10 @@ select.auto-mapped {
 /* Mapping Management Panel */
 .mapping-management-panel {
     background: white;
-    border: 2px solid #d1d9e6;
-    border-radius: 10px;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+    border: 1px solid #d1d9e6;
+    border-radius: 6px;
+    margin-bottom: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     overflow: hidden;
     animation: slideDown 0.3s ease;
 }
@@ -1970,8 +2054,8 @@ select.auto-mapped {
 
 .panel-header {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    padding: 15px 20px;
-    border-bottom: 2px solid #d1d9e6;
+    padding: 0.75rem;
+    border-bottom: 1px solid #d1d9e6;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -1980,7 +2064,7 @@ select.auto-mapped {
 .panel-header h3 {
     margin: 0;
     color: #2c3e50;
-    font-size: 1.1em;
+    font-size: 0.95em;
     font-weight: 600;
 }
 
@@ -2006,13 +2090,13 @@ select.auto-mapped {
 }
 
 .panel-content {
-    padding: 20px;
+    padding: 0.75rem;
 }
 
 .mappings-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.95em;
+    font-size: 0.875rem;
 }
 
 .mappings-table thead {
@@ -2020,11 +2104,12 @@ select.auto-mapped {
 }
 
 .mappings-table th {
-    padding: 12px;
+    padding: 0.5rem;
     text-align: left;
     font-weight: 600;
     color: #495057;
-    border-bottom: 2px solid #dee2e6;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #dee2e6;
 }
 
 .mappings-table tbody tr {
@@ -2037,8 +2122,9 @@ select.auto-mapped {
 }
 
 .mappings-table td {
-    padding: 12px;
+    padding: 0.5rem;
     color: #495057;
+    font-size: 0.8rem;
 }
 
 .mapping-name {
@@ -2064,16 +2150,16 @@ select.auto-mapped {
 }
 
 .btn-action {
-    padding: 6px 12px;
+    padding: 0.375rem 0.75rem;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 0.85em;
+    font-size: 0.75rem;
     font-weight: 600;
     transition: all 0.2s ease;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 0.25rem;
 }
 
 .btn-delete {
@@ -2089,8 +2175,8 @@ select.auto-mapped {
 .no-mappings {
     text-align: center;
     color: #6c757d;
-    padding: 40px 20px;
-    font-size: 1em;
+    padding: 2rem 1rem;
+    font-size: 0.875rem;
 }
 </style>
 {% endblock %}

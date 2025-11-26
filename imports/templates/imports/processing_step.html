@@ -29,7 +29,7 @@
     <div class="wizard-content">
         <div class="processing-section">
             <h2>Step 4: Process Your Import</h2>
-            <p>Configure processing options and start the import.</p>
+            <p>Monitor the progress of your import.</p>
             
             {% if messages %}
             <div class="messages-container">
@@ -64,56 +64,17 @@
                         <label>Status:</label>
                         <span class="status-badge status-{{ batch.status }}">{{ batch.get_status_display }}</span>
                     </div>
+                    <div class="info-item">
+                        <label>Chunk Size:</label>
+                        <span>2000 rows</span>
+                    </div>
+                    <div class="info-item">
+                        <label>Options:</label>
+                        <span>Skip Duplicates, Update Existing</span>
+                    </div>
                 </div>
             </div>
 
-            {% if batch.status == 'mapped' %}
-                <div class="processing-options">
-                    <h3>Processing Options</h3>
-                    <form method="post" class="options-form">
-                        {% csrf_token %}
-                        
-                        <div class="form-group">
-                            <label for="{{ form.chunk_size.id_for_label }}">Chunk Size</label>
-                            {{ form.chunk_size }}
-                            <div class="help-text">{{ form.chunk_size.help_text }}</div>
-                            {% if form.chunk_size.errors %}
-                                <div class="field-error">
-                                    {% for error in form.chunk_size.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                {{ form.skip_duplicates }}
-                                <span class="checkmark"></span>
-                                Skip Duplicates
-                            </label>
-                            <div class="help-text">{{ form.skip_duplicates.help_text }}</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                {{ form.update_existing }}
-                                <span class="checkmark"></span>
-                                Update Existing Records
-                            </label>
-                            <div class="help-text">{{ form.update_existing.help_text }}</div>
-                            <div class="help-text" id="combined-help" style="display: none; color: #666; font-style: italic; margin-top: 5px;">
-                                When both options are enabled, duplicates are updated instead of created.
-                            </div>
-                        </div>
-
-                        <div class="form-actions">
-                            <button type="submit" class="btn btn-primary">Start Import</button>
-                            <a href="{% url 'imports:mapping_step' batch.id %}" class="btn btn-secondary">Back</a>
-                        </div>
-                    </form>
-                </div>
-            {% endif %}
 
             <div class="processing-status" id="processing-status">
                 {% if batch.status == 'processing' or batch.status == 'queued' or batch.status == 'completed' or batch.status == 'failed' %}
@@ -136,11 +97,11 @@
                                     {{ batch.processed_rows }} of {{ batch.total_rows }} rows processed ({{ batch.progress_percentage }}%)
                                 </div>
                             </div>
-                            <div class="cancel-action" style="margin-top: 15px; text-align: center;">
+                            <div class="cancel-action">
                                 <button type="button" id="cancel-import-btn" class="btn btn-danger" onclick="cancelImport()">
                                     🛑 Stop Import
                                 </button>
-                                <p id="cancel-status" style="display: none; margin-top: 10px; color: #856404;">
+                                <p id="cancel-status" style="display: none;">
                                     Stopping import... (will complete current chunk)
                                 </p>
                             </div>
@@ -157,7 +118,7 @@
                         <!-- Processing results will be loaded here when complete -->
                     </div>
                     
-                    <div class="logs-section" style="margin-top: var(--spacing-lg);">
+                    <div class="logs-section">
                         <h4>Recent Logs</h4>
                         <div id="logs-container" class="logs-display">
                             <!-- Logs will be loaded here -->
@@ -255,17 +216,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (logsContainer) {
                         if (data.logs.length > 0) {
                             logsContainer.innerHTML = data.logs.map(log => `
-                                <div class="log-entry log-${log.level}" style="padding: 10px; margin-bottom: 5px; border-radius: 4px; background: ${log.level === 'error' ? '#f8d7da' : log.level === 'warning' ? '#fff3cd' : '#d1ecf1'};">
-                                    <div style="display: flex; gap: 10px; margin-bottom: 5px; font-size: 12px;">
+                                <div class="log-entry log-${log.level}" style="padding: 0.5rem; margin-bottom: 0.375rem; border-radius: 4px; background: ${log.level === 'error' ? '#f8d7da' : log.level === 'warning' ? '#fff3cd' : '#d1ecf1'};">
+                                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 0.75rem;">
                                         <strong style="text-transform: uppercase;">${log.level}</strong>
                                         <span style="color: #666;">${log.created_at}</span>
-                                        ${log.row_number ? `<span style="background: #e9ecef; padding: 2px 6px; border-radius: 3px;">Row ${log.row_number}</span>` : ''}
+                                        ${log.row_number ? `<span style="background: #e9ecef; padding: 0.125rem 0.375rem; border-radius: 3px;">Row ${log.row_number}</span>` : ''}
                                     </div>
-                                    <div style="font-size: 14px;">${log.message}</div>
+                                    <div style="font-size: 0.8rem;">${log.message}</div>
                                 </div>
                             `).join('');
                         } else {
-                            logsContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 20px;">No logs available yet.</p>';
+                            logsContainer.innerHTML = '<p style="text-align: center; color: #999; padding: 1rem; font-size: 0.875rem;">No logs available yet.</p>';
                         }
                     }
                 }
@@ -277,7 +238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (resultsContainer && data.status === 'completed') {
                         const stats = data.rows_stats;
                         resultsContainer.innerHTML = `
-                            <div class="file-info" style="margin-top: var(--spacing-lg);">
+                            <div class="file-info" style="margin-top: 0.75rem;">
                                 <h4>Processing Results</h4>
                                 <div class="info-grid">
                                     <div class="info-item">
@@ -309,7 +270,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span>${stats.relationships_created}</span>
                                     </div>
                                 </div>
-                                <div style="margin-top: var(--spacing-md); text-align: right;">
+                                <div style="margin-top: 0.5rem; text-align: right;">
                                     <a href="{% url 'imports:batch_rows' batch.id %}" class="btn btn-secondary">View All Rows</a>
                                 </div>
                             </div>
@@ -392,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             successMessage = document.createElement('div');
                             successMessage.className = 'alert alert-success success-completion-message';
                             successMessage.innerHTML = '<strong>Success!</strong> Import completed successfully!';
-                            successMessage.style.marginBottom = 'var(--spacing-lg)';
+                            successMessage.style.marginBottom = '0.75rem';
                             const processingSection = document.querySelector('.processing-section');
                             if (processingSection) {
                                 processingSection.insertBefore(successMessage, processingSection.firstChild);
@@ -418,179 +379,200 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_css %}
 <style>
-.wizard-header {
-    margin-bottom: var(--spacing-xl);
-}
+    /* Override main container padding for this page */
+    .main-content-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0.5rem !important;
+    }
 
-.wizard-steps {
-    display: flex;
-    justify-content: space-between;
-    margin-top: var(--spacing-lg);
-    max-width: 600px;
-}
+    /* Compact wizard header */
+    .wizard-header {
+        margin-bottom: 0.75rem;
+    }
 
-.step {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    flex: 1;
-    position: relative;
-}
+    .wizard-header h1 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0 0 0.5rem 0;
+    }
 
-.step:not(:last-child)::after {
-    content: '';
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    width: 100%;
-    height: 2px;
-    background-color: var(--gray-300);
-    z-index: 1;
-}
+    /* Compact wizard steps */
+    .wizard-steps {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        max-width: 600px;
+    }
 
-.step.completed::after {
-    background-color: var(--success);
-}
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+        position: relative;
+    }
 
-.step.active::after {
-    background-color: var(--primary);
-}
+    .step:not(:last-child)::after {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 50%;
+        width: 100%;
+        height: 2px;
+        background-color: var(--gray-300);
+        z-index: 1;
+    }
 
-.step-number {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background-color: var(--gray-300);
-    color: var(--gray-600);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: bold;
-    position: relative;
-    z-index: 2;
-}
+    .step.completed::after {
+        background-color: var(--success);
+    }
 
-.step.active .step-number {
-    background-color: var(--primary);
-    color: white;
-}
+    .step.active::after {
+        background-color: var(--primary);
+    }
 
-.step.completed .step-number {
-    background-color: var(--success);
-    color: white;
-}
+    .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background-color: var(--gray-300);
+        color: var(--gray-600);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.875rem;
+        position: relative;
+        z-index: 2;
+    }
 
-.step-label {
-    margin-top: var(--spacing-sm);
-    font-size: var(--font-size-sm);
-    color: var(--gray-600);
-    text-align: center;
-}
+    .step.active .step-number {
+        background-color: var(--primary);
+        color: white;
+    }
 
-.step.active .step-label {
-    color: var(--primary);
-    font-weight: 500;
-}
+    .step.completed .step-number {
+        background-color: var(--success);
+        color: white;
+    }
 
-.step.completed .step-label {
-    color: var(--success);
-    font-weight: 500;
-}
+    .step-label {
+        margin-top: 0.375rem;
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-align: center;
+    }
 
-.wizard-content {
-    max-width: 800px;
-    margin: 0 auto;
-}
+    .step.active .step-label {
+        color: var(--primary);
+        font-weight: 500;
+    }
 
-.processing-section {
-    background: white;
-    padding: var(--spacing-xl);
-    border-radius: var(--border-radius);
-    box-shadow: var(--shadow-sm);
-}
+    .step.completed .step-label {
+        color: var(--success);
+        font-weight: 500;
+    }
 
-.file-info {
-    background: var(--gray-50);
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius);
-    margin-bottom: var(--spacing-xl);
-}
+    /* Compact wizard content */
+    .wizard-content {
+        max-width: 800px;
+        margin: 0 auto;
+    }
 
-.info-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-md);
-}
+    .processing-section {
+        background: white;
+        padding: 1rem;
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow-sm);
+    }
 
-.info-item {
-    display: flex;
-    flex-direction: column;
-}
+    .processing-section h2 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin: 0 0 0.5rem 0;
+    }
 
-.info-item label {
-    font-weight: 500;
-    color: var(--gray-700);
-    margin-bottom: var(--spacing-xs);
-}
+    .processing-section > p {
+        font-size: 0.875rem;
+        color: var(--gray-600);
+        margin-bottom: 0.75rem;
+    }
 
-.info-item span {
-    color: var(--gray-600);
-}
+    /* Compact file info section */
+    .file-info {
+        background: var(--gray-50);
+        padding: 0.75rem;
+        border-radius: var(--border-radius);
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--gray-200);
+    }
 
-.processing-options {
-    background: var(--blue-50);
-    padding: var(--spacing-lg);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--blue-200);
-    margin-bottom: var(--spacing-xl);
-}
+    .file-info h3,
+    .file-info h4 {
+        font-size: 0.875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        margin-top: 0;
+        color: var(--gray-700);
+    }
 
-.processing-options h3 {
-    margin-top: 0;
-    margin-bottom: var(--spacing-lg);
-    color: var(--blue-800);
-}
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
 
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    font-weight: 500;
-}
+    .info-item {
+        display: flex;
+        flex-direction: column;
+    }
 
-.checkbox-label input[type="checkbox"] {
-    margin-right: var(--spacing-sm);
-}
+    .info-item label {
+        font-weight: 500;
+        color: var(--gray-700);
+        margin-bottom: 0.125rem;
+        font-size: 0.75rem;
+    }
 
-.help-text {
-    font-size: var(--font-size-sm);
-    color: var(--gray-500);
-    margin-top: var(--spacing-xs);
-}
+    .info-item span {
+        color: var(--gray-600);
+        font-size: 0.875rem;
+    }
 
+
+/* Compact processing status */
 .processing-status {
-    margin-top: var(--spacing-xl);
+    margin-top: 0.75rem;
+}
+
+.processing-status h3 {
+    font-size: 0.95em;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
 }
 
 .status-card {
     background: var(--gray-50);
-    padding: var(--spacing-lg);
+    padding: 0.75rem;
     border-radius: var(--border-radius);
     border: 1px solid var(--gray-200);
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 0.75rem;
 }
 
 .status-header {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    margin-bottom: var(--spacing-md);
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
 }
 
 .processing-indicator {
     color: var(--primary);
     font-weight: 500;
+    font-size: 0.875rem;
     animation: pulse 2s infinite;
 }
 
@@ -601,16 +583,16 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .progress-container {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 0.5rem;
 }
 
 .progress-bar {
     width: 100%;
-    height: 8px;
+    height: 6px;
     background-color: var(--gray-200);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 0.375rem;
 }
 
 .progress-fill {
@@ -620,49 +602,62 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 .progress-text {
-    font-size: var(--font-size-sm);
+    font-size: 0.875rem;
     color: var(--gray-600);
 }
 
 .error-message {
     background: var(--error);
     color: white;
-    padding: var(--spacing-md);
+    padding: 0.75rem;
     border-radius: var(--border-radius);
-    margin-top: var(--spacing-md);
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
 }
 
+/* Compact logs section */
 .logs-section {
-    margin-top: var(--spacing-lg);
+    margin-top: 0.75rem;
 }
 
 .logs-section h4 {
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 0.5rem;
     color: var(--gray-700);
+    font-size: 0.875rem;
+    font-weight: 600;
 }
 
+.logs-display {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Compact completion actions */
 .completion-actions {
     display: flex;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-xl);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
     justify-content: center;
 }
 
+/* Compact form actions */
 .form-actions {
     display: flex;
-    gap: var(--spacing-md);
-    margin-top: var(--spacing-xl);
+    gap: 0.5rem;
+    margin-top: 0.75rem;
 }
 
+/* Compact messages */
 .messages-container {
-    margin-bottom: var(--spacing-lg);
+    margin-bottom: 0.75rem;
 }
 
 .alert {
-    padding: 12px 16px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    border-left: 4px solid;
+    padding: 0.75rem;
+    border-radius: 4px;
+    margin-bottom: 0.75rem;
+    border-left: 3px solid;
+    font-size: 0.875rem;
 }
 
 .alert-success {
@@ -683,13 +678,21 @@ document.addEventListener('DOMContentLoaded', function() {
     color: #856404;
 }
 
+.alert-info {
+    background-color: #d1ecf1;
+    border-left-color: #17a2b8;
+    color: #0c5460;
+}
+
+/* Compact buttons */
 .btn-danger {
     background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
     color: white;
     border: none;
-    padding: 10px 20px;
-    border-radius: 6px;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
     font-weight: 600;
+    font-size: 0.875rem;
     cursor: pointer;
     transition: all 0.3s ease;
 }
@@ -704,40 +707,32 @@ document.addEventListener('DOMContentLoaded', function() {
     cursor: not-allowed;
 }
 
-.alert-info {
-    background-color: #d1ecf1;
-    border-left-color: #17a2b8;
-    color: #0c5460;
+.cancel-action {
+    margin-top: 0.75rem;
+    text-align: center;
+}
+
+.cancel-action p {
+    margin-top: 0.5rem;
+    color: #856404;
+    font-size: 0.875rem;
+}
+
+@media (max-width: 768px) {
+    .wizard-steps {
+        max-width: 100%;
+    }
+    
+    .step-label {
+        font-size: 0.65rem;
+    }
+
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const skipDuplicatesCheckbox = document.querySelector('input[name="skip_duplicates"]');
-    const updateExistingCheckbox = document.querySelector('input[name="update_existing"]');
-    const combinedHelp = document.getElementById('combined-help');
-    
-    function updateCombinedHelp() {
-        if (skipDuplicatesCheckbox && updateExistingCheckbox && combinedHelp) {
-            if (skipDuplicatesCheckbox.checked && updateExistingCheckbox.checked) {
-                combinedHelp.style.display = 'block';
-            } else {
-                combinedHelp.style.display = 'none';
-            }
-        }
-    }
-    
-    if (skipDuplicatesCheckbox) {
-        skipDuplicatesCheckbox.addEventListener('change', updateCombinedHelp);
-    }
-    if (updateExistingCheckbox) {
-        updateExistingCheckbox.addEventListener('change', updateCombinedHelp);
-    }
-    
-    // Initial check
-    updateCombinedHelp();
-});
-</script>
 {% endblock %}
 
 

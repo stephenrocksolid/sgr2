@@ -1,0 +1,102 @@
+/* Inline Editor Styles */
+
+/* Editable cell styling */
+td.editable {
+    cursor: cell;
+    position: relative;
+    transition: background-color 0.15s ease;
+}
+
+td.editable:hover:not(:has(.inline-editor-wrapper)) {
+    background-color: #f0f8ff;
+    outline: 1px solid #4a90e2;
+    outline-offset: -1px;
+}
+
+/* Prevent row click while editing */
+tr.editing {
+    pointer-events: none;
+}
+
+tr.editing td.editable {
+    pointer-events: auto;
+}
+
+/* Input wrapper */
+.inline-editor-wrapper {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 28px;
+}
+
+/* Input field styling */
+.inline-editor {
+    width: 100%;
+    padding: 4px 8px;
+    border: 2px solid #4a90e2;
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: inherit;
+    box-sizing: border-box;
+    background-color: white;
+    outline: none;
+}
+
+.inline-editor:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* Saving state */
+.saving {
+    color: #6b7280;
+    font-style: italic;
+    font-size: 0.875rem;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+/* Success flash animation */
+.saved-flash {
+    animation: flash-green 1s ease-out;
+}
+
+@keyframes flash-green {
+    0% { background-color: transparent; }
+    30% { background-color: #d4edda; }
+    100% { background-color: transparent; }
+}
+
+/* Visual indicator for editable cells */
+td.editable::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 6px 6px 0;
+    border-color: transparent #cbd5e1 transparent transparent;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+td.editable:hover::after {
+    opacity: 0.6;
+}
+
+/* Ensure clickable rows still work when not editing */
+.clickable-row:not(.editing) {
+    cursor: pointer;
+}
+
+.clickable-row.editing {
+    cursor: default;
+}
+

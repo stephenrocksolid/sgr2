@@ -2,33 +2,37 @@
     <table class="related-table">
         <thead>
             <tr>
-                <th>Part</th>
                 <th>Part Number</th>
                 <th>Name</th>
                 <th>Category</th>
-                <th>Primary Part</th>
+                <th>Primary</th>
                 <th>Notes</th>
-                <th>Actions</th>
+                <th style="width: 50px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for machine_part in machine_parts %}
-                <tr class="part-row" data-part-id="{{ machine_part.id }}">
-                    <td>
-                        <strong>{{ machine_part.part.part_number }} - {{ machine_part.part.name }}</strong>
-                    </td>
+                <tr class="part-row machine-part-row"
+                    data-href="{% url 'inventory:part_detail' machine_part.part.pk %}">
                     <td>{{ machine_part.part.part_number }}</td>
                     <td>{{ machine_part.part.name }}</td>
                     <td>{{ machine_part.part.category|default:"—" }}</td>
-                    <td>{{ machine_part.is_primary|yesno:"Yes,No" }}</td>
+                    <td>
+                        {% if machine_part.is_primary %}
+                            <span class="primary-badge">Primary</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ machine_part.notes|default:"—" }}</td>
                     <td class="text-right">
                         <form hx-post="{% url 'inventory:machine_part_remove' machine.pk machine_part.pk %}"
                               hx-target="#machine-parts-section"
                               hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this part from the machine?">
+                              hx-confirm="Are you sure you want to remove this part from the machine?"
+                              style="display: inline;">
                             {% csrf_token %}
-                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
                         </form>
                     </td>
                 </tr>
@@ -37,59 +41,28 @@
     </table>
 {% else %}
     <div class="empty-message">
-        <p class="text-muted">This machine is not associated with any parts yet.</p>
+        <p>This machine is not associated with any parts yet.</p>
     </div>
 {% endif %}
 
-<div class="mt-3" id="add-part-region">
-    {% if show_form or form.errors %}
-        <h4>Add Part to Machine</h4>
-        <form hx-post="{% url 'inventory:machine_part_add' machine.pk %}"
-              hx-target="#machine-parts-section"
-              hx-swap="innerHTML"
-              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-            {% csrf_token %}
-            <div class="form-group">
-                <label for="{{ form.part.id_for_label }}">Select Part:</label>
-                {{ form.part }}
-                {% if form.part.errors %}<div class="text-danger">{{ form.part.errors }}</div>{% endif %}
-            </div>
-            
-            <div class="form-group">
-                <label>
-                    {{ form.is_primary }}
-                    Primary Part
-                </label>
-            </div>
-            
-            <div class="form-group">
-                <label for="{{ form.notes.id_for_label }}">Notes:</label>
-                {{ form.notes }}
-                {% if form.notes.errors %}<div class="text-danger">{{ form.notes.errors }}</div>{% endif %}
-            </div>
-            
-            {% if form.non_field_errors %}
-                <div class="alert alert-danger">{% for error in form.non_field_errors %}{{ error }}{% endfor %}</div>
-            {% endif %}
-            
-            <div class="form-actions">
-                <button class="btn btn-primary" type="submit">Add Part</button>
-                <button class="btn btn-secondary" type="button"
-                        hx-get="{% url 'inventory:machine_parts_partial' machine.pk %}"
-                        hx-target="#machine-parts-section" hx-swap="innerHTML">Cancel</button>
-            </div>
-        </form>
-    {% else %}
-        {% if form.fields.part.choices|length > 1 %}
-            <button class="btn btn-secondary"
-                    hx-get="{% url 'inventory:machine_parts_partial' machine.pk %}?show_form=1"
-                    hx-target="#machine-parts-section" hx-swap="innerHTML">Add Part</button>
-        {% else %}
-            <div class="alert alert-info">No available parts to add.</div>
-        {% endif %}
-    {% endif %}
+<div class="mt-3">
+    <button class="add-button"
+            hx-get="{% url 'inventory:part_search_modal' machine.pk %}"
+            hx-target="#modal-container"
+            hx-swap="innerHTML">
+        Add Part
+    </button>
 </div>
 
-
-
-
+<script>
+if (!window.__machinePartRowHandlerAttached) {
+    document.addEventListener('click', function(event) {
+        const row = event.target.closest('.machine-part-row');
+        if (!row || event.target.closest('button') || event.target.closest('form')) {
+            return;
+        }
+        window.location.href = row.dataset.href;
+    });
+    window.__machinePartRowHandlerAttached = true;
+}
+</script>

@@ -443,66 +443,6 @@ class KitItemForm(forms.ModelForm):
         }
 
 
-class PartEngineLinkForm(forms.ModelForm):
-    """Form for linking engines to parts."""
-    
-    class Meta:
-        model = EnginePart
-        fields = ["engine", "notes"]
-        widgets = {
-            'engine': forms.Select(attrs={'class': 'form-control'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        part = kwargs.pop("part", None)
-        super().__init__(*args, **kwargs)
-        assert part is not None, "PartEngineLinkForm requires `part=`"
-        # SG Engines NOT already linked to this part (via their associated Engine records)
-        self.fields["engine"].queryset = (
-            Engine.objects
-            .filter(sg_engine__isnull=False)  # Only engines with SG Engine associations
-            .exclude(enginepart__part=part)
-            .order_by("sg_engine__sg_make", "sg_engine__sg_model", "sg_engine__identifier")
-        )
-        # Optional: placeholder text
-        self.fields["engine"].empty_label = "Select an SG Engine…"
-        
-        # Update the choices to show SG Engine information
-        choices = []
-        for engine in self.fields["engine"].queryset:
-            sg_engine = engine.sg_engine
-            display_text = f"{sg_engine.sg_make} {sg_engine.sg_model} ({sg_engine.identifier})"
-            choices.append((engine.id, display_text))
-        
-        self.fields["engine"].choices = [("", "Select an SG Engine…")] + choices
-
-
-class PartMachineLinkForm(forms.ModelForm):
-    """Form for linking machines to parts."""
-    
-    class Meta:
-        model = MachinePart
-        fields = ["machine", "is_primary", "notes"]
-        widgets = {
-            'machine': forms.Select(attrs={'class': 'form-control'}),
-            'is_primary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        part = kwargs.pop("part", None)
-        super().__init__(*args, **kwargs)
-        assert part is not None, "PartMachineLinkForm requires `part=`"
-        # Machines NOT already linked to this part
-        self.fields["machine"].queryset = (
-            Machine.objects
-            .exclude(machinepart__part=part)
-            .order_by("make", "model", "year", "id")
-        )
-        self.fields["machine"].empty_label = "Select a machine…"
-
-
 class MachineForm(forms.ModelForm):
     """Form for creating and editing Machine objects."""
     
@@ -529,7 +469,7 @@ class EngineForm(forms.ModelForm):
             "cpl_number", "ar_number", "build_list", "engine_code", "serial_number",
             "cylinder", "valves_per_cyl", "bore_stroke", "compression_ratio", "firing_order",
             "crankshaft_no", "piston_no", "piston_marked_no", "piston_notes", "oh_kit_no",
-            "di", "idi", "common_rail", "two_valve", "four_valve", "five_valve",
+            "injection_type", "valve_config", "fuel_system_type",
             "overview_comments", "interference", "camshaft", "valve_adjustment",
             "rod_journal_diameter", "main_journal_diameter_pos1", "main_journal_diameter_1",
             "big_end_housing_bore",
@@ -566,12 +506,9 @@ class EngineForm(forms.ModelForm):
             "big_end_housing_bore": forms.NumberInput(attrs={"class": "form-control", "step": "0.001", "min": "0"}),
             # New fields
             "serial_number": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 1Z2345..."}),
-            "di": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "idi": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "common_rail": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "two_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "four_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "five_valve": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "injection_type": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., DI, IDI"}),
+            "valve_config": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., 2V, 4V, 5V"}),
+            "fuel_system_type": forms.TextInput(attrs={"class": "form-control", "placeholder": "e.g., Common Rail, Standard"}),
         }
 
 

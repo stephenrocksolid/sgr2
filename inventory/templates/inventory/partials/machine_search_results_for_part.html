@@ -1,0 +1,26 @@
+{% if machines %}
+    {% for machine in machines %}
+        <div class="machine-result-row"
+             hx-post="{% url 'inventory:part_machine_add' part.id %}"
+             hx-vals='{"machine_id": "{{ machine.id }}"}'
+             hx-target="#part-machines-section"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) document.querySelector('.modal-overlay').remove();">
+            <div class="result-title">
+                {{ machine.year }} {{ machine.make }} {{ machine.model }}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <p class="empty-state-text">
+            {% if request.GET.q %}
+                No machines found matching your search.
+            {% else %}
+                Start typing to search for machines...
+            {% endif %}
+        </p>
+    </div>
+{% endif %}
+

@@ -1,0 +1,43 @@
+{% if build_lists %}
+    {% for build_list in build_lists %}
+        <div class="build-list-result-row"
+             hx-post="{% url 'inventory:engine_build_list_add' engine.pk %}"
+             hx-vals='{"build_list_id": "{{ build_list.id }}"}'
+             hx-target="#engine-build-lists-container"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) document.getElementById('build-list-search-modal').remove()">
+            
+            <div class="build-list-info">
+                <div class="build-list-title">
+                    {{ build_list.name }}
+                    {% if build_list.items.count %}
+                        <span class="build-list-badge">{{ build_list.items.count }} item{{ build_list.items.count|pluralize }}</span>
+                    {% endif %}
+                </div>
+                {% if build_list.notes %}
+                    <div class="build-list-details">
+                        {{ build_list.notes|truncatewords:15 }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="select-indicator">
+                <span style="font-size: 0.875rem;">Click to add</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    {% endfor %}
+{% elif query %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <div class="empty-state-text">No build lists found matching "{{ query }}"</div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">📋</div>
+        <div class="empty-state-text">Start typing to search for build lists</div>
+    </div>
+{% endif %}
+

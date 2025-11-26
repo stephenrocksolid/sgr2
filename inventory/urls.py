@@ -15,19 +15,23 @@ urlpatterns = [
     path('machines/<int:pk>/edit/', views.machine_edit, name='machine_edit'),
     path('machines/<int:pk>/update/', views.machine_update, name='machine_update'),
     
-    # Machine-Engine relationship HTMX endpoints (legacy - kept for compatibility)
-    path('machines/<int:machine_id>/engines/', views.machine_engines_list, name='machine_engines_list'),
-    path('machines/<int:machine_id>/engines/add-form/', views.machine_add_engine_form, name='machine_add_engine_form'),
-    
     # New stable container endpoints
     path('machines/<int:machine_id>/engines/partial/', views.machine_engines_partial, name='machine_engines_partial'),
     path('machines/<int:machine_id>/engines/add/', views.machine_engine_add, name='machine_engine_add'),
     path('machines/<int:machine_id>/engines/<int:link_id>/remove/', views.machine_engine_remove, name='machine_engine_remove'),
     
+    # Engine search modal endpoints
+    path('machines/<int:machine_id>/engines/search/', views.engine_search_modal, name='engine_search_modal'),
+    path('machines/<int:machine_id>/engines/search/results/', views.engine_search_results, name='engine_search_results'),
+    
     # Machine-Part relationship HTMX endpoints (stable container)
     path('machines/<int:machine_id>/parts/partial/', views.machine_parts_partial, name='machine_parts_partial'),
     path('machines/<int:machine_id>/parts/add/', views.machine_part_add, name='machine_part_add'),
     path('machines/<int:machine_id>/parts/<int:link_id>/remove/', views.machine_part_remove, name='machine_part_remove'),
+    
+    # Part search modal endpoints
+    path('machines/<int:machine_id>/parts/search/', views.part_search_modal, name='part_search_modal'),
+    path('machines/<int:machine_id>/parts/search/results/', views.part_search_results, name='part_search_results'),
     
     # Engine views
     path('engines/', views.engines_list, name='engines_list'),
@@ -42,16 +46,36 @@ urlpatterns = [
     path('engines/<int:engine_id>/machines/add/', views.engine_machine_add, name='engine_machine_add'),
     path('engines/<int:engine_id>/machines/<int:link_id>/remove/', views.engine_machine_remove, name='engine_machine_remove'),
     
-    # NEW: inline add forms + create
-    path('engines/<int:engine_id>/machines/add/form/', views.engine_machine_add_form, name='engine_machine_add_form'),
+    # Machine search modal endpoints (for adding machines to engines)
+    path('engines/<int:engine_id>/machines/search/', views.machine_search_modal, name='machine_search_modal'),
+    path('engines/<int:engine_id>/machines/search/results/', views.machine_search_results, name='machine_search_results'),
+    
+    # Engine search modal endpoints (for interchanges and compatibles)
+    path('engines/<int:engine_id>/interchanges/search/', views.engine_search_modal_interchange, name='engine_search_modal_interchange'),
+    path('engines/<int:engine_id>/interchanges/search/results/', views.engine_search_results_interchange, name='engine_search_results_interchange'),
+    path('engines/<int:engine_id>/compatibles/search/', views.engine_search_modal_compatible, name='engine_search_modal_compatible'),
+    path('engines/<int:engine_id>/compatibles/search/results/', views.engine_search_results_compatible, name='engine_search_results_compatible'),
+    
+    # Engine search modal endpoints (for supercessions)
+    path('engines/<int:engine_id>/supercessions/search/<str:direction>/', views.engine_search_modal_supercession, name='engine_search_modal_supercession'),
+    path('engines/<int:engine_id>/supercessions/search/<str:direction>/results/', views.engine_search_results_supercession, name='engine_search_results_supercession'),
+    
+    # Build List search modal endpoints (for adding build lists to engines)
+    path('engines/<int:engine_id>/build-lists/search/', views.build_list_search_modal, name='build_list_search_modal'),
+    path('engines/<int:engine_id>/build-lists/search/results/', views.build_list_search_results, name='build_list_search_results'),
+    
+    # Kit search modal endpoints (for adding kits to engines)
+    path('engines/<int:engine_id>/kits/search/', views.kit_search_modal, name='kit_search_modal'),
+    path('engines/<int:engine_id>/kits/search/results/', views.kit_search_results, name='kit_search_results'),
     
     # Engine-Part relationship HTMX endpoints (stable container)
     path('engines/<int:engine_id>/parts/partial/', views.engine_parts_partial, name='engine_parts_partial'),
     path('engines/<int:engine_id>/parts/add/', views.engine_part_add, name='engine_part_add'),
     path('engines/<int:engine_id>/parts/<int:link_id>/remove/', views.engine_part_remove, name='engine_part_remove'),
     
-    # NEW: inline add forms + create
-    path('engines/<int:engine_id>/parts/add/form/', views.engine_part_add_form, name='engine_part_add_form'),
+    # Part search modal endpoints (for adding parts to engines)
+    path('engines/<int:engine_id>/parts/search/', views.part_search_modal_for_engine, name='part_search_modal_for_engine'),
+    path('engines/<int:engine_id>/parts/search/results/', views.part_search_results_for_engine, name='part_search_results_for_engine'),
     
     # Engine-Engine relationship HTMX endpoints
     # Engine-Interchange relationship HTMX endpoints (stable container)
@@ -102,11 +126,15 @@ urlpatterns = [
     path('parts/<int:part_id>/engines/partial/', views.part_engines_partial, name='part_engines_partial'),
     path('parts/<int:part_id>/engines/add/', views.part_engine_add, name='part_engine_add'),
     path('parts/<int:part_id>/engines/<int:link_id>/remove/', views.part_engine_remove, name='part_engine_remove'),
+    path('parts/<int:part_id>/engines/search/', views.engine_search_modal_for_part, name='engine_search_modal_for_part'),
+    path('parts/<int:part_id>/engines/search/results/', views.engine_search_results_for_part, name='engine_search_results_for_part'),
     
     # Part-Machine relationship HTMX endpoints
     path('parts/<int:part_id>/machines/partial/', views.part_machines_partial, name='part_machines_partial'),
     path('parts/<int:part_id>/machines/add/', views.part_machine_add, name='part_machine_add'),
     path('parts/<int:part_id>/machines/<int:link_id>/remove/', views.part_machine_remove, name='part_machine_remove'),
+    path('parts/<int:part_id>/machines/search/', views.machine_search_modal_for_part, name='machine_search_modal_for_part'),
+    path('parts/<int:part_id>/machines/search/results/', views.machine_search_results_for_part, name='machine_search_results_for_part'),
     
     # Part-Kit relationship HTMX endpoints
     path('parts/<int:part_id>/kits/partial/', views.part_kits_partial, name='part_kits_partial'),
@@ -115,6 +143,9 @@ urlpatterns = [
     path('parts/<int:part_id>/vendors/', views.part_vendors_section, name='part_vendors_section'),
     path('parts/<int:part_id>/vendors/add/', views.part_vendor_add, name='part_vendor_add'),
     path('parts/<int:part_id>/vendors/add-form/', views.part_vendor_add_form, name='part_vendor_add_form'),
+    path('parts/<int:part_id>/vendors/search/', views.vendor_search_modal_for_part, name='vendor_search_modal_for_part'),
+    path('parts/<int:part_id>/vendors/search/results/', views.vendor_search_results_for_part, name='vendor_search_results_for_part'),
+    path('parts/<int:part_id>/vendors/add-details/', views.vendor_details_form_for_part, name='vendor_details_form_for_part'),
     path('parts/<int:part_id>/vendors/<int:part_vendor_id>/edit/', views.part_vendor_edit, name='part_vendor_edit'),
     path('parts/<int:part_id>/vendors/<int:part_vendor_id>/delete/', views.part_vendor_delete, name='part_vendor_delete'),
     path('parts/<int:part_id>/vendors/<int:part_vendor_id>/set-primary/', views.part_vendor_set_primary, name='part_vendor_set_primary'),
@@ -128,7 +159,8 @@ urlpatterns = [
     
     # Build list items (HTMX)
     path('build-lists/<int:build_list_id>/items/partial/', views.build_list_items_partial, name='build_list_items_partial'),
-    path('build-lists/<int:build_list_id>/items/add/form/', views.build_list_item_add_form, name='build_list_item_add_form'),
+    path('build-lists/<int:build_list_id>/total-hours/', views.build_list_total_hours_partial, name='build_list_total_hours_partial'),
+    path('build-lists/<int:build_list_id>/items/add/modal/', views.build_list_item_add_modal, name='build_list_item_add_modal'),
     path('build-lists/<int:build_list_id>/items/add/', views.build_list_item_add, name='build_list_item_add'),
     path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/form/', views.build_list_item_edit_form, name='build_list_item_edit_form'),
     path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/', views.build_list_item_edit, name='build_list_item_edit'),
@@ -136,7 +168,8 @@ urlpatterns = [
     
     # Engine assignments from build list side (HTMX)
     path('build-lists/<int:build_list_id>/engines/partial/', views.build_list_engines_partial, name='build_list_engines_partial'),
-    path('build-lists/<int:build_list_id>/engines/add/form/', views.build_list_engine_add_form, name='build_list_engine_add_form'),
+    path('build-lists/<int:build_list_id>/engines/search/', views.engine_search_modal_for_build_list, name='engine_search_modal_for_build_list'),
+    path('build-lists/<int:build_list_id>/engines/search/results/', views.engine_search_results_for_build_list, name='engine_search_results_for_build_list'),
     path('build-lists/<int:build_list_id>/engines/add/', views.build_list_engine_add, name='build_list_engine_add'),
     path('build-lists/<int:build_list_id>/engines/<int:engine_id>/remove/', views.build_list_engine_remove, name='build_list_engine_remove'),
     
@@ -155,15 +188,20 @@ urlpatterns = [
     
     # Kit items (HTMX)
     path('kits/<int:kit_id>/items/partial/', views.kit_items_partial, name='kit_items_partial'),
-    path('kits/<int:kit_id>/items/add/form/', views.kit_item_add_form, name='kit_item_add_form'),
+    path('kits/<int:kit_id>/total-cost/', views.kit_total_cost_partial, name='kit_total_cost_partial'),
+    path('kits/<int:kit_id>/items/popover/', views.kit_items_popover, name='kit_items_popover'),
+    path('kits/<int:kit_id>/parts/search/', views.part_search_modal_for_kit, name='part_search_modal_for_kit'),
+    path('kits/<int:kit_id>/parts/search/results/', views.part_search_results_for_kit, name='part_search_results_for_kit'),
+    path('kits/<int:kit_id>/parts/details/', views.part_details_form_for_kit, name='part_details_form_for_kit'),
     path('kits/<int:kit_id>/items/add/', views.kit_item_add, name='kit_item_add'),
-    path('kits/<int:kit_id>/items/<int:item_id>/edit/form/', views.kit_item_edit_form, name='kit_item_edit_form'),
+    path('kits/<int:kit_id>/items/<int:item_id>/edit/modal/', views.kit_item_edit_modal, name='kit_item_edit_modal'),
     path('kits/<int:kit_id>/items/<int:item_id>/edit/', views.kit_item_edit, name='kit_item_edit'),
     path('kits/<int:kit_id>/items/<int:item_id>/delete/', views.kit_item_delete, name='kit_item_delete'),
     
     # Engine assignments from kit side (HTMX)
     path('kits/<int:kit_id>/engines/partial/', views.kit_engines_partial, name='kit_engines_partial'),
-    path('kits/<int:kit_id>/engines/add/form/', views.kit_engine_add_form, name='kit_engine_add_form'),
+    path('kits/<int:kit_id>/engines/search/', views.engine_search_modal_for_kit, name='engine_search_modal_for_kit'),
+    path('kits/<int:kit_id>/engines/search/results/', views.engine_search_results_for_kit, name='engine_search_results_for_kit'),
     path('kits/<int:kit_id>/engines/add/', views.kit_engine_add, name='kit_engine_add'),
     path('kits/<int:kit_id>/engines/<int:engine_id>/remove/', views.kit_engine_remove, name='kit_engine_remove'),
     
@@ -260,6 +298,11 @@ urlpatterns = [
     path('sg-engines/', views.sg_engines_list, name='sg_engines_list'),
     path('sg-engines/<int:pk>/', views.sg_engine_detail, name='sg_engine_detail'),
     path('sg-engines/<int:pk>/edit/', views.sg_engine_edit, name='sg_engine_edit'),
+    
+    # Inline editing API endpoints
+    path('engines/<int:engine_id>/field-update/', views.engine_field_update, name='engine_field_update'),
+    path('machines/<int:machine_id>/field-update/', views.machine_field_update, name='machine_field_update'),
+    path('parts/<int:part_id>/field-update/', views.part_field_update, name='part_field_update'),
     
     # Import views - commented out for now as they're not implemented
     # path('imports/', views.imports_list, name='imports_list'),

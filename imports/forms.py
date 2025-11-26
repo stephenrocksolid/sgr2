@@ -104,7 +104,7 @@ class ImportMappingForm(forms.Form):
                 # Core engine fields only
                 ('engine_make', 'Engine Make'),
                 ('engine_model', 'Engine Model'),
-                ('engine_identifier', 'Engine Identifier'),
+                ('identifier', 'Engine Identifier'),
             ],
             'parts': [
                 ('part_number', 'Part Number'),
@@ -167,15 +167,10 @@ class AdditionalEngineMappingForm(forms.Form):
             ('piston_notes', 'Piston Notes'),
             ('oh_kit_no', 'Overhaul Kit Number'),
             
-            # Injection System
-            ('di', 'DI (Direct Injection)'),
-            ('idi', 'IDI (Indirect Injection)'),
-            ('common_rail', 'Common Rail'),
-            
-            # Valve Configuration
-            ('two_valve', '2V (2 Valve)'),
-            ('four_valve', '4V (4 Valve)'),
-            ('five_valve', '5V (5 Valve)'),
+            # Engine Characteristics
+            ('injection_type', 'Injection Type'),
+            ('valve_config', 'Valve Configuration'),
+            ('fuel_system_type', 'Fuel System Type'),
             
             # Overview
             ('overview_comments', 'Overview Comments'),

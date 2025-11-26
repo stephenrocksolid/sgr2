@@ -1,0 +1,49 @@
+{% if sg_engines %}
+    {% for sg_engine in sg_engines %}
+        <div class="sg-engine-result-row"
+             hx-post="{% url 'inventory:engine_compatible_add' engine.pk %}"
+             hx-vals='{"sg_engine_id": "{{ sg_engine.id }}"}'
+             hx-target="#engine-compatibles-section"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) document.getElementById('sg-engine-search-modal').remove()">
+            
+            <div class="sg-engine-info">
+                <div class="sg-engine-title">
+                    {{ sg_engine.sg_make }} {{ sg_engine.sg_model }}
+                    {% if sg_engine.identifier %}
+                        <span class="sg-engine-badge">{{ sg_engine.identifier }}</span>
+                    {% endif %}
+                </div>
+                <div class="sg-engine-details">
+                    {% if sg_engine.displacement %}
+                        {{ sg_engine.displacement }}L •
+                    {% endif %}
+                    {% if sg_engine.configuration %}
+                        {{ sg_engine.configuration }} •
+                    {% endif %}
+                    {% if sg_engine.fuel_type %}
+                        {{ sg_engine.fuel_type }}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="select-indicator">
+                <span style="font-size: 0.875rem;">Click to add</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    {% endfor %}
+{% elif query %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <div class="empty-state-text">No SG engines found matching "{{ query }}"</div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">⚙️</div>
+        <div class="empty-state-text">Start typing to search for SG engines</div>
+    </div>
+{% endif %}
+

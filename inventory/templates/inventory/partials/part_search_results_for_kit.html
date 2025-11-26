@@ -1,0 +1,34 @@
+{% if parts %}
+    {% for part in parts %}
+        <div class="part-result-row"
+             hx-get="{% url 'inventory:part_details_form_for_kit' kit.id %}?part_id={{ part.id }}"
+             hx-target="#modal-container"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) this.closest('.modal-overlay').remove();">
+            <div class="result-title">
+                {{ part.part_number }} - {{ part.name }}
+            </div>
+            <div class="result-details">
+                {% if part.category %}
+                    <span class="result-badge">{{ part.category.name }}</span>
+                {% endif %}
+                {% if part.primary_vendor %}
+                    <span><strong>Vendor:</strong> {{ part.primary_vendor.name }}</span>
+                {% endif %}
+            </div>
+        </div>
+    {% endfor %}
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <p class="empty-state-text">
+            {% if request.GET.q %}
+                No parts found matching your search.
+            {% else %}
+                Start typing to search for parts...
+            {% endif %}
+        </p>
+    </div>
+{% endif %}
+
+

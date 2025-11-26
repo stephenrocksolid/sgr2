@@ -70,11 +70,11 @@ def _nz(s):
 def build_engine_key(row, mapping):
     """
     Returns (make, model, identifier) normalized from the row using Step-3 mapping.
-    Supports either 'sg_engine_identifier' or 'engine_identifier' or 'engine_id' as the mapped key.
+    Supports 'identifier' as the mapped key.
     """
     mk_key = mapping.get('engine_make')    # mapped header name
     md_key = mapping.get('engine_model')
-    id_key = mapping.get('sg_engine_identifier') or mapping.get('engine_identifier') or mapping.get('engine_id')
+    id_key = mapping.get('identifier')
     make = _nz(row.get(mk_key))
     model = _nz(row.get(md_key))
     ident = _nz(row.get(id_key))
@@ -274,7 +274,7 @@ def process_csv_import(batch, mapping, task_instance=None):
     
     # Preload existing engine keys for fast duplicate detection
     existing_engine_keys = set()
-    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'sg_engine_identifier'):
+    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'identifier'):
         existing_engine_keys.add((_nz(make), _nz(model), _nz(ident)))
     
     # Track keys we create/update in this run to avoid dupes within the batch
@@ -387,7 +387,7 @@ def process_xlsx_import(batch, mapping, task_instance=None):
     
     # Preload existing engine keys for fast duplicate detection
     existing_engine_keys = set()
-    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'sg_engine_identifier'):
+    for make, model, ident in Engine.objects.values_list('engine_make', 'engine_model', 'identifier'):
         existing_engine_keys.add((_nz(make), _nz(model), _nz(ident)))
     
     # Track keys we create/update in this run to avoid dupes within the batch
@@ -628,7 +628,7 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             value_lower = value.lower().strip()
             
             # Truthy values
-            if value_lower in ('true', '1', 'yes', 'y', '✓', 'di', 'idi', 'common rail', 'common-rail', 'cr', '2v', '2 valve', 'two valve', '4v', '4 valve', 'four valve', '5v', '5 valve', 'five valve'):
+            if value_lower in ('true', '1', 'yes', 'y', '✓'):
                 return True
             # Falsy values
             elif value_lower in ('false', '0', 'no', 'n', 'x', ''):
@@ -663,7 +663,7 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             value = row_data[header_name]
             
             # Determine field type for normalization
-            if field_name in ['engine_make', 'engine_model', 'sg_engine_identifier', 'sg_engine_notes',
+            if field_name in ['engine_make', 'engine_model', 'identifier', 'sg_engine_identifier', 'sg_engine_notes',
                              'cpl_number', 'ar_number', 'build_list', 'engine_code', 'serial_number',
                              'crankshaft_no', 'piston_no', 'piston_marked_no', 'piston_notes', 'oh_kit_no', 
                              'bore_stroke', 'firing_order', 'overview_comments', 'interference', 'camshaft', 
@@ -674,8 +674,8 @@ def normalize_row_data(row_data: Dict[str, Any], mapping: SavedImportMapping) ->
             elif field_name in ['compression_ratio', 'rod_journal_diameter', 'main_journal_diameter_pos1',
                                'main_journal_diameter_1', 'big_end_housing_bore', 'price']:
                 normalized_value = normalize_value(value, 'decimal')
-            elif field_name in ['di', 'idi', 'common_rail', 'two_valve', 'four_valve', 'five_valve']:
-                normalized_value = normalize_value(value, 'boolean')
+            elif field_name in ['injection_type', 'valve_config', 'fuel_system_type']:
+                normalized_value = normalize_value(value, 'string')
             else:
                 normalized_value = normalize_value(value, 'string')
             
@@ -902,7 +902,7 @@ def process_engine_row(batch, mapping, normalized_data, import_row, existing_eng
                 target = Engine.objects.filter(
                     engine_make__iexact=eng_key[0],
                     engine_model__iexact=eng_key[1],
-                    sg_engine_identifier__iexact=eng_key[2],
+                    identifier__iexact=eng_key[2],
                 ).first()
                 if target:
                     # Update existing engine
@@ -1085,6 +1085,9 @@ def process_part_row(batch, mapping, normalized_data, import_row):
             # Track part vendor relationship creation
             if created:
                 import_row.part_vendor_created = True
+            
+            # Auto-set primary vendor if only one vendor exists
+            part.auto_set_primary_vendor()
     
     import_row.part_created = True
     import_row.part_id = part.id
@@ -1522,5 +1525,8 @@ def create_relationships(batch, mapping, normalized_data, import_row):
             if vendor_data.get('primary_vendor_name') == vendor_name:
                 part.primary_vendor = vendor
                 part.save()
+            
+            # Auto-set primary vendor if only one vendor exists
+            part.auto_set_primary_vendor()
     
     import_row.save()

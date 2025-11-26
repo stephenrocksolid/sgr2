@@ -52,8 +52,8 @@
                                     {% if part_vendor.vendor != part.primary_vendor %}
                                         <button class="btn btn-sm btn-primary" 
                                                 hx-post="{% url 'inventory:part_vendor_set_primary' part.id part_vendor.id %}"
-                                                hx-target="#vendors-content"
-                                                hx-swap="outerHTML"
+                                                hx-target="#vendors-section"
+                                                hx-swap="innerHTML"
                                                 hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                                             Set Primary Vendor
                                         </button>
@@ -64,8 +64,8 @@
                                     </button>
                                     <button class="btn btn-sm btn-danger" 
                                             hx-post="{% url 'inventory:part_vendor_delete' part.id part_vendor.id %}"
-                                            hx-target="#vendors-content"
-                                            hx-swap="outerHTML"
+                                            hx-target="#vendors-section"
+                                            hx-swap="innerHTML"
                                             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
                                             hx-confirm="Are you sure you want to remove this vendor?">
                                         Remove
@@ -84,16 +84,13 @@
     
     <!-- Add Vendor Button -->
     <div class="mt-3">
-        <button class="btn btn-primary"
-                hx-get="{% url 'inventory:part_vendor_add_form' part.id %}"
-                hx-target="#add-vendor-form"
+        <button class="add-button"
+                hx-get="{% url 'inventory:vendor_search_modal_for_part' part.id %}"
+                hx-target="#modal-container"
                 hx-swap="innerHTML">
             Add Vendor
         </button>
     </div>
-    
-    <!-- Add Vendor Form Container -->
-    <div id="add-vendor-form"></div>
 </div>
 </div>
 
@@ -198,6 +195,31 @@
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
+}
+
+.add-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-button:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.add-button::before {
+    content: '+';
+    font-weight: 700;
+    font-size: 1rem;
 }
 
 

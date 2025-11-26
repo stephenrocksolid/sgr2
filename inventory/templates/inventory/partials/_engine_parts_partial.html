@@ -2,21 +2,18 @@
     <table class="related-table">
         <thead>
             <tr>
-                <th>Part</th>
                 <th>Part Number</th>
                 <th>Name</th>
                 <th>Category</th>
                 <th>Manufacturer</th>
                 <th>Notes</th>
-                <th>Actions</th>
+                <th style="width: 50px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for engine_part in engine_parts %}
-                <tr class="part-row" data-part-id="{{ engine_part.id }}">
-                    <td>
-                        <strong>{{ engine_part.part.part_number }} - {{ engine_part.part.name }}</strong>
-                    </td>
+                <tr class="part-row engine-part-row"
+                    data-href="{% url 'inventory:part_detail' engine_part.part.pk %}">
                     <td>{{ engine_part.part.part_number }}</td>
                     <td>{{ engine_part.part.name }}</td>
                     <td>{{ engine_part.part.category|default:"—" }}</td>
@@ -26,9 +23,10 @@
                         <form hx-post="{% url 'inventory:engine_part_remove' engine.pk engine_part.pk %}"
                               hx-target="#engine-parts-section"
                               hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this part from the engine?">
+                              hx-confirm="Are you sure you want to remove this part from the engine?"
+                              style="display: inline;">
                             {% csrf_token %}
-                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
                         </form>
                     </td>
                 </tr>
@@ -37,7 +35,20 @@
     </table>
 {% else %}
     <div class="empty-message">
-        <p class="text-muted">This engine is not associated with any parts yet.</p>
+        <p>This engine is not associated with any parts yet.</p>
     </div>
 {% endif %}
+
+<script>
+if (!window.__enginePartRowHandlerAttached) {
+    document.addEventListener('click', function(event) {
+        const row = event.target.closest('.engine-part-row');
+        if (!row || event.target.closest('button') || event.target.closest('form')) {
+            return;
+        }
+        window.location.href = row.dataset.href;
+    });
+    window.__enginePartRowHandlerAttached = true;
+}
+</script>
 

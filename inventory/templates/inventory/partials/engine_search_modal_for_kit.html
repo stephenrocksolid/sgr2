@@ -1,0 +1,192 @@
+{% load static %}
+
+<div class="modal-overlay" onclick="if(event.target === this) this.remove();">
+    <div class="modal-content" onclick="event.stopPropagation();">
+        <div class="modal-header">
+            <h3>Add Engine to Kit</h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove();" title="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <input type="text"
+                   name="q"
+                   class="search-input"
+                   placeholder="Search by make, model, serial number, status..."
+                   autofocus
+                   hx-get="{% url 'inventory:engine_search_results_for_kit' kit.id %}"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#engine-results"
+                   hx-include="[name='q']"
+                   hx-indicator=".search-indicator">
+            <div class="search-indicator htmx-indicator">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+            </div>
+            <div id="engine-results" class="search-results">
+                {% include 'inventory/partials/engine_search_results_for_kit.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background: white;
+    border-radius: var(--border-radius);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius);
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: var(--border-radius);
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--red-600);
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.search-indicator {
+    display: none;
+    text-align: center;
+    padding: 0.5rem;
+    color: var(--gray-600);
+}
+
+.search-indicator.htmx-request {
+    display: block;
+}
+
+.search-results {
+    margin-top: 1rem;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.engine-result-row {
+    padding: 0.75rem;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.engine-result-row:hover {
+    background: var(--gray-50);
+    border-color: var(--red-600);
+}
+
+.result-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+}
+
+.result-details {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.result-badge {
+    background: var(--gray-100);
+    color: var(--gray-700);
+    padding: 0.125rem 0.375rem;
+    border-radius: var(--border-radius);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--gray-500);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 0.5rem;
+}
+
+.empty-state-text {
+    font-size: 0.875rem;
+    margin: 0;
+}
+</style>
+
+

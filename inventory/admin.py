@@ -23,10 +23,9 @@ class CastingInline(admin.TabularInline):
 
 @admin.register(Engine)
 class EngineAdmin(admin.ModelAdmin):
-    list_display = ['engine_make', 'engine_model', 'serial_number', 'di', 'idi', 'common_rail', 'valves_display', 'sg_engine', 'cpl_number', 'price', 'status']
+    list_display = ['engine_make', 'engine_model', 'serial_number', 'injection_type', 'valve_config', 'fuel_system_type', 'sg_engine', 'cpl_number', 'price', 'status']
     list_filter = [
-        'engine_make', 'status', 'created_at',
-        'di', 'idi', 'common_rail', 'two_valve', 'four_valve', 'five_valve'
+        'engine_make', 'status', 'created_at'
     ]
     search_fields = ['engine_make', 'engine_model', 'serial_number', 'cpl_number', 'ar_number']
     readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
@@ -49,11 +48,8 @@ class EngineAdmin(admin.ModelAdmin):
         ('Geometry', {
             'fields': ('cylinder', 'valves_per_cyl', 'bore_stroke', 'compression_ratio', 'firing_order')
         }),
-        ('Injection', {
-            'fields': ('di', 'idi', 'common_rail')
-        }),
-        ('Valves', {
-            'fields': ('two_valve', 'four_valve', 'five_valve')
+        ('Engine Characteristics', {
+            'fields': ('injection_type', 'valve_config', 'fuel_system_type')
         }),
         ('Overview', {
             'fields': ('overview_comments', 'interference', 'camshaft', 'valve_adjustment')

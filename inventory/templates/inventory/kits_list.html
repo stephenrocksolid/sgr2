@@ -297,6 +297,143 @@
             justify-content: center;
         }
     }
+    
+    /* Kit Popover Styles */
+    .kit-preview-trigger {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 1.1rem;
+        padding: 0.25rem;
+        color: var(--gray-600);
+        transition: color 0.2s, transform 0.1s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .kit-preview-trigger:hover {
+        color: var(--red-600);
+        transform: scale(1.1);
+    }
+    
+    .kit-preview-trigger:active {
+        transform: scale(0.95);
+    }
+    
+    .kit-popover {
+        position: absolute;
+        z-index: 1000;
+        background: white;
+        border: 1px solid var(--gray-300);
+        border-radius: var(--border-radius);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        min-width: 300px;
+        max-width: 400px;
+        margin-top: 0.5rem;
+        right: 0;
+        margin-right: 40px;
+    }
+    
+    .kit-popover-content {
+        padding: 0;
+    }
+    
+    .kit-popover-header {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid var(--gray-200);
+        background: var(--gray-50);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .kit-popover-header strong {
+        color: var(--gray-900);
+        font-size: 0.95rem;
+    }
+    
+    .kit-popover-count {
+        color: var(--gray-600);
+        font-size: 0.85rem;
+    }
+    
+    .kit-popover-list {
+        padding: 0.75rem 1rem;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .kit-popover-list ul {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+    
+    .kit-popover-list li {
+        padding: 0;
+        font-size: 0.875rem;
+        border-bottom: 1px solid var(--gray-100);
+    }
+    
+    .kit-popover-list li:last-child {
+        border-bottom: none;
+    }
+    
+    .kit-popover-list .part-line {
+        display: grid;
+        grid-template-columns: 45px 110px 140px auto;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.375rem 0;
+    }
+    
+    .kit-popover-list .part-qty {
+        color: var(--gray-600);
+        font-weight: 600;
+    }
+    
+    .kit-popover-list .part-number {
+        color: var(--gray-900);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .kit-popover-list .part-name {
+        color: var(--gray-800);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    
+    .kit-popover-list .part-cost {
+        color: var(--gray-600);
+        font-size: 0.8rem;
+        font-weight: 600;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+    
+    .kit-popover-list .more-items {
+        color: var(--gray-500);
+        font-style: italic;
+        text-align: left;
+        padding: 0.5rem 0;
+    }
+    
+    .kit-popover-list .empty-message {
+        color: var(--gray-500);
+        font-style: italic;
+        text-align: left;
+        padding: 1rem 0;
+        margin: 0;
+    }
+    
+    /* Position table cells for popover anchoring */
+    .table tbody td {
+        position: relative;
+    }
 </style>
 {% endblock %}
 
@@ -371,6 +508,7 @@
                         {% endif %}
                     </a>
                 </th>
+                <th style="width: 40px;"></th>
             </tr>
         </thead>
         <tbody>
@@ -382,10 +520,24 @@
                     <td>${{ kit.total_cost|floatformat:2 }}</td>
                     <td>{{ kit.engines_count }}</td>
                     <td>{{ kit.created_at|date:"M j, Y" }}</td>
+                    <td style="text-align: center; padding: 0.5rem;">
+                        <button 
+                            class="kit-preview-trigger"
+                            data-kit-id="{{ kit.pk }}"
+                            hx-get="{% url 'inventory:kit_items_popover' kit.pk %}"
+                            hx-target="#kit-popover-{{ kit.pk }}"
+                            hx-swap="innerHTML"
+                            hx-trigger="click"
+                            onclick="event.stopPropagation(); toggleKitPopover({{ kit.pk }})"
+                            title="Preview kit parts">
+                            📋
+                        </button>
+                        <div id="kit-popover-{{ kit.pk }}" class="kit-popover" style="display: none;"></div>
+                    </td>
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray-500);">
                         No kits found matching your criteria.
                     </td>
                 </tr>
@@ -421,12 +573,72 @@
 
 {% block extra_js %}
 <script>
+    // Kit Popover Management - Global scope
+    let currentOpenPopover = null;
+    
+    function toggleKitPopover(kitId) {
+        const popover = document.getElementById(`kit-popover-${kitId}`);
+        
+        // Close any currently open popover
+        if (currentOpenPopover && currentOpenPopover !== popover) {
+            currentOpenPopover.style.display = 'none';
+        }
+        
+        // Toggle the clicked popover
+        if (popover.style.display === 'none' || popover.style.display === '') {
+            popover.style.display = 'block';
+            currentOpenPopover = popover;
+            
+            // Position popover (adjust if off-screen)
+            positionKitPopover(popover);
+        } else {
+            popover.style.display = 'none';
+            currentOpenPopover = null;
+        }
+    }
+    
+    function positionKitPopover(popover) {
+        const rect = popover.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        
+        // If popover goes off bottom of screen, position it upward
+        if (rect.bottom > viewportHeight) {
+            popover.style.marginTop = '-' + (popover.offsetHeight + 30) + 'px';
+        }
+    }
+    
     document.addEventListener('DOMContentLoaded', function() {
         // Clickable table rows
         document.querySelectorAll('.clickable-row[data-href]').forEach(row => {
             row.addEventListener('click', function() {
                 window.location.href = this.dataset.href;
             });
+        });
+        
+        // Close popover when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.kit-preview-trigger') && !e.target.closest('.kit-popover')) {
+                if (currentOpenPopover) {
+                    currentOpenPopover.style.display = 'none';
+                    currentOpenPopover = null;
+                }
+            }
+        });
+        
+        // Close popover on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && currentOpenPopover) {
+                currentOpenPopover.style.display = 'none';
+                currentOpenPopover = null;
+            }
+        });
+        
+        // Close popover when scrolling
+        document.querySelector('.table-wrap')?.addEventListener('scroll', function() {
+            if (currentOpenPopover) {
+                currentOpenPopover.style.display = 'none';
+                currentOpenPopover = null;
+            }
         });
     });
 </script>

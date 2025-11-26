@@ -4,65 +4,27 @@
             <tr>
                 <th>Kit Name</th>
                 <th>Quantity</th>
-                <th>Kit Notes</th>
-                <th>Actions</th>
+                <th>Notes</th>
             </tr>
         </thead>
         <tbody>
             {% for item in kit_items %}
-                <tr>
-                    <td>
-                        <a href="{% url 'inventory:kit_detail' item.kit.pk %}" style="color: var(--red-600); text-decoration: none;">
-                            <strong>{{ item.kit.name }}</strong>
-                        </a>
-                    </td>
+                <tr data-href="{% url 'inventory:kit_detail' item.kit.pk %}"
+                    onclick="if (event.target.tagName !== 'BUTTON' && event.target.tagName !== 'FORM') window.location.href='{% url 'inventory:kit_detail' item.kit.pk %}'">
+                    <td><strong>{{ item.kit.name }}</strong></td>
                     <td>{{ item.quantity }}</td>
-                    <td>{{ item.kit.notes|default:"—"|truncatewords:15 }}</td>
-                    <td>
-                        <a href="{% url 'inventory:kit_detail' item.kit.pk %}" class="btn btn-secondary btn-sm">
-                            View Kit
-                        </a>
-                    </td>
+                    <td>{{ item.kit.notes|default:"—"|truncatewords:10 }}</td>
                 </tr>
             {% endfor %}
         </tbody>
     </table>
 {% else %}
     <div class="empty-message">
-        This part is not used in any kits.
+        <p>This part is not used in any kits.</p>
     </div>
 {% endif %}
 
-<style>
-.related-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 1rem;
-}
 
-.related-table th,
-.related-table td {
-    padding: 0.75rem;
-    text-align: left;
-    border-bottom: 1px solid var(--gray-200);
-}
 
-.related-table th {
-    background-color: var(--gray-50);
-    font-weight: 600;
-    color: var(--gray-700);
-    font-size: 0.875rem;
-}
 
-.related-table tbody tr:hover {
-    background-color: var(--gray-50);
-}
-
-.empty-message {
-    padding: 2rem;
-    text-align: center;
-    color: var(--gray-500);
-    font-style: italic;
-}
-</style>
 

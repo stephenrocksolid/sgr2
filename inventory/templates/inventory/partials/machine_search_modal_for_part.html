@@ -1,0 +1,192 @@
+{% load static %}
+
+<div class="modal-overlay" onclick="if(event.target === this) this.remove();">
+    <div class="modal-content" onclick="event.stopPropagation();">
+        <div class="modal-header">
+            <h3>Add Machine to Part</h3>
+            <button class="modal-close" onclick="this.closest('.modal-overlay').remove();" title="Close">✕</button>
+        </div>
+        
+        <div class="modal-body">
+            <input type="text" 
+                   name="q"
+                   class="search-input" 
+                   placeholder="Search by year, make, model, type..."
+                   autofocus
+                   hx-get="{% url 'inventory:machine_search_results_for_part' part.id %}"
+                   hx-trigger="keyup changed delay:300ms, search"
+                   hx-target="#machine-results"
+                   hx-indicator=".search-indicator"
+                   hx-include="[name='q']">
+            
+            <div class="search-indicator htmx-indicator">
+                <div class="spinner-border spinner-border-sm" role="status">
+                    <span class="visually-hidden">Searching...</span>
+                </div>
+            </div>
+            
+            <div id="machine-results" class="search-results">
+                {% include 'inventory/partials/machine_search_results_for_part.html' %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 0.5rem;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0;
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.search-input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    transition: border-color 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--red-600);
+}
+
+.search-indicator {
+    text-align: center;
+    padding: 0.5rem;
+    display: none;
+}
+
+.search-indicator.htmx-request {
+    display: block;
+}
+
+.search-results {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.machine-result-row {
+    padding: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+}
+
+.machine-result-row:hover {
+    border-color: var(--red-600);
+    background: var(--gray-50);
+}
+
+.machine-result-row:active {
+    transform: scale(0.98);
+}
+
+.result-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+}
+
+.result-details {
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.result-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--gray-500);
+}
+
+.empty-state-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state-text {
+    font-size: 1rem;
+    margin: 0;
+}
+</style>
+

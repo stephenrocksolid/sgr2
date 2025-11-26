@@ -1,65 +1,59 @@
 {% load static %}
 
 {% if items %}
-<div class="table-wrap">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Part Number</th>
-                <th>Part Name</th>
-                <th>Qty</th>
-                <th>Cost of Primary Vendor</th>
-                <th>Notes</th>
-                <th style="width: 200px;">Actions</th>
+<table class="related-table">
+    <thead>
+        <tr>
+            <th>Part Number</th>
+            <th>Part Name</th>
+            <th style="width: 80px;">Qty</th>
+            <th style="width: 100px;">Cost</th>
+            <th>Notes</th>
+            <th style="width: 120px; text-align: right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+            <tr onclick="window.location='{% url 'inventory:part_detail' item.part.pk %}';">
+                <td><strong>{{ item.part.part_number }}</strong></td>
+                <td>{{ item.part.name }}</td>
+                <td>{{ item.quantity }}</td>
+                <td>
+                    {% if item.primary_vendor_price %}
+                        ${{ item.primary_vendor_price|floatformat:2 }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>{{ item.notes|default:"—"|truncatewords:10 }}</td>
+                <td style="text-align: right;" onclick="event.stopPropagation();">
+                    <button 
+                        class="btn-icon"
+                        hx-get="{% url 'inventory:kit_item_edit_modal' kit.pk item.pk %}"
+                        hx-target="#modal-container"
+                        hx-swap="innerHTML"
+                        title="Edit">
+                        ✎
+                    </button>
+                    <button 
+                        class="btn-icon btn-danger"
+                        hx-post="{% url 'inventory:kit_item_delete' kit.pk item.pk %}"
+                        hx-target="#kit-items-table-container"
+                        hx-swap="innerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        onclick="return confirm('Remove this part from the kit?');"
+                        title="Remove">
+                        ✕
+                    </button>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            {% for item in items %}
-                <tr id="kit-item-row-{{ item.id }}">
-                    <td><strong>{{ item.part.part_number }}</strong></td>
-                    <td>{{ item.part.name }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>
-                        {% if item.primary_vendor_price %}
-                            ${{ item.primary_vendor_price|floatformat:2 }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>{{ item.notes|default:"—"|truncatewords:10 }}</td>
-                    <td>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <a href="{% url 'inventory:part_detail' item.part.pk %}" 
-                               class="btn btn-sm btn-primary">
-                                View
-                            </a>
-                            <button 
-                                class="btn btn-sm btn-secondary"
-                                hx-get="{% url 'inventory:kit_item_edit_form' kit.pk item.pk %}"
-                                hx-target="#kit-item-form-container"
-                                hx-swap="innerHTML">
-                                Edit
-                            </button>
-                            <form method="post" 
-                                  action="{% url 'inventory:kit_item_delete' kit.pk item.pk %}"
-                                  hx-post="{% url 'inventory:kit_item_delete' kit.pk item.pk %}"
-                                  hx-target="#kit-items-table-container"
-                                  hx-swap="innerHTML"
-                                  onsubmit="return confirm('Remove this part from the kit?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
 <div class="empty-state">
     <p>No parts added yet.</p>
-    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Part" to add parts to this kit.</p>
+    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "Add Part" to add parts to this kit.</p>
 </div>
 {% endif %}
 

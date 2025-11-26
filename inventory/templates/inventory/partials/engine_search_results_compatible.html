@@ -1,0 +1,49 @@
+{% if engines %}
+    {% for engine in engines %}
+        <div class="engine-result-row"
+             hx-post="{% url 'inventory:engine_compatible_add' parent_engine.pk %}"
+             hx-vals='{"engine_id": "{{ engine.id }}"}'
+             hx-target="#engine-compatibles-section"
+             hx-swap="innerHTML"
+             hx-on::after-request="if(event.detail.successful) document.getElementById('engine-search-modal').remove()">
+            
+            <div class="engine-info">
+                <div class="engine-title">
+                    {{ engine.engine_make|default:"Unknown" }} {{ engine.engine_model|default:"Unknown" }}
+                    {% if engine.identifier %}
+                        <span class="engine-badge">{{ engine.identifier }}</span>
+                    {% endif %}
+                    {% if engine.serial_number %}
+                        <span class="engine-badge">S/N: {{ engine.serial_number }}</span>
+                    {% endif %}
+                </div>
+                <div class="engine-details">
+                    {% if engine.sg_engine %}
+                        SG Engine: {{ engine.sg_engine.sg_make }} {{ engine.sg_engine.sg_model }}
+                        {% if engine.sg_engine.identifier %}
+                            ({{ engine.sg_engine.identifier }})
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="select-indicator">
+                <span style="font-size: 0.875rem;">Click to add</span>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                    <path d="M6 12l4-4-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
+        </div>
+    {% endfor %}
+{% elif query %}
+    <div class="empty-state">
+        <div class="empty-state-icon">🔍</div>
+        <div class="empty-state-text">No engines found matching "{{ query }}"</div>
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-state-icon">⚙️</div>
+        <div class="empty-state-text">Start typing to search for engines</div>
+    </div>
+{% endif %}
+

@@ -148,16 +148,12 @@ class Engine(AuditMixin):
     
     # Serial Number
     serial_number = models.CharField(max_length=120, blank=True, null=True, db_index=True, verbose_name="S/N")
+    identifier = models.CharField(max_length=100, blank=True, null=True, verbose_name="Identifier")
     
-    # Injection System
-    di = models.BooleanField(default=False, verbose_name="DI (Direct Injection)")
-    idi = models.BooleanField(default=False, verbose_name="IDI (Indirect Injection)")
-    common_rail = models.BooleanField(default=False, verbose_name="Common Rail")
-    
-    # Valve Configuration
-    two_valve = models.BooleanField(default=False, verbose_name="2V (2 Valve)")
-    four_valve = models.BooleanField(default=False, verbose_name="4V (4 Valve)")
-    five_valve = models.BooleanField(default=False, verbose_name="5V (5 Valve)")
+    # Engine characteristics - free text fields
+    injection_type = models.CharField(max_length=50, blank=True, verbose_name="Injection Type")
+    valve_config = models.CharField(max_length=50, blank=True, verbose_name="Valve Configuration")
+    fuel_system_type = models.CharField(max_length=50, blank=True, verbose_name="Fuel System Type")
     
     # Engine relationships
     vendor = models.ForeignKey('Vendor', null=True, blank=True, on_delete=models.SET_NULL, related_name='engines')
@@ -186,15 +182,6 @@ class Engine(AuditMixin):
         if self.serial_number:
             return f"{base_name} (SN: {self.serial_number})"
         return base_name
-    
-    @property
-    def valves_display(self):
-        """Display valve configuration flags."""
-        flags = []
-        if self.two_valve: flags.append("2V")
-        if self.four_valve: flags.append("4V")
-        if self.five_valve: flags.append("5V")
-        return ", ".join(flags) or "-"
     
     @property
     def supersedes(self):
@@ -388,6 +375,27 @@ class Part(AuditMixin):
     @property
     def vendor_offers(self):
         return self.vendor_links.select_related('vendor').all()
+    
+    def auto_set_primary_vendor(self):
+        """
+        Automatically set primary_vendor if there's exactly one vendor.
+        Always overrides existing primary_vendor if only 1 vendor exists.
+        Returns True if primary_vendor was changed, False otherwise.
+        """
+        vendor_count = self.vendor_links.count()
+        if vendor_count == 1:
+            single_vendor = self.vendor_links.first().vendor
+            if self.primary_vendor != single_vendor:
+                self.primary_vendor = single_vendor
+                self.save(update_fields=['primary_vendor'])
+                return True
+        elif vendor_count == 0:
+            # Clear primary_vendor if no vendors exist
+            if self.primary_vendor is not None:
+                self.primary_vendor = None
+                self.save(update_fields=['primary_vendor'])
+                return True
+        return False
 
 
 class EnginePart(AuditMixin):

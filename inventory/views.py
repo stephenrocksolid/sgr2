@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from django.contrib import messages
 from django.urls import reverse
 from .models import Machine, Engine, Part, PartVendor, MachineEngine, EnginePart, SGEngine, MachinePart, PartAttribute, PartAttributeValue, PartAttributeChoice, PartCategory, Vendor, VendorContact, BuildList, BuildListItem, Kit, KitItem, Casting, EngineSupercession
-from .forms import SGEngineForm, MachineEngineForm, MachinePartForm, EngineMachineForm, EnginePartForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitForm, KitItemForm, PartEngineLinkForm, PartMachineLinkForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, VendorContactForm, VendorContactFormSet, PartVendorForm, PartVendorFormSet, BuildListForm, BuildListItemForm, CastingForm
+from .forms import SGEngineForm, EngineInterchangeForm, EngineCompatibleForm, EngineSupercessionForm, KitForm, KitItemForm, MachineForm, EngineForm, PartForm, PartSpecsForm, VendorForm, VendorContactForm, VendorContactFormSet, PartVendorForm, PartVendorFormSet, BuildListForm, BuildListItemForm, CastingForm
 from django.contrib.auth.decorators import login_required
 from io import StringIO
 from datetime import datetime
@@ -166,14 +166,14 @@ def engines_list(request):
     KEY_MAP = {
         'make': 'engine_make__icontains',
         'model': 'engine_model__icontains',
-        'id': 'sg_engine_identifier__icontains',
-        'identifier': 'sg_engine_identifier__icontains',
+        'identifier': 'identifier__icontains',
+        'id': 'identifier__icontains',
+        'sg_identifier': 'sg_engine__identifier__icontains',
         'sg_make': 'sg_engine__sg_make__icontains',
         'sg_model': 'sg_engine__sg_model__icontains',
         'cpl': 'cpl_number__icontains',
         'status': 'status__icontains',
         'sn': 'serial_number__icontains',
-        'notes': 'sg_engine_notes__icontains',
     }
     
     # Get search query and sorting parameters
@@ -201,22 +201,26 @@ def engines_list(request):
             for term in generic:
                 g |= (Q(engine_make__icontains=term) |
                       Q(engine_model__icontains=term) |
+                      Q(identifier__icontains=term) |
                       Q(sg_engine_identifier__icontains=term) |
                       Q(sg_engine__sg_make__icontains=term) |
                       Q(sg_engine__sg_model__icontains=term) |
                       Q(cpl_number__icontains=term) |
                       Q(status__icontains=term) |
-                      Q(serial_number__icontains=term) |
-                      Q(sg_engine_notes__icontains=term))
+                      Q(serial_number__icontains=term))
             expr &= g
         
         engines = engines.filter(expr).distinct()
     
     # Apply sorting
-    if sort_field in ['engine_make', 'engine_model', 'cpl_number', 'ar_number', 'status', 'created_at']:
-        if sort_order == 'desc':
-            sort_field = f'-{sort_field}'
-        engines = engines.order_by(sort_field)
+    sortable_fields = [
+        'engine_make', 'engine_model', 'cpl_number', 'ar_number', 'status', 'created_at',
+        'serial_number', 'identifier', 'price', 'injection_type', 'valve_config', 'fuel_system_type',
+        'sg_engine__sg_make', 'sg_engine__sg_model', 'sg_engine__identifier'
+    ]
+    if sort_field in sortable_fields:
+        order_by_field = f'-{sort_field}' if sort_order == 'desc' else sort_field
+        engines = engines.order_by(order_by_field)
     else:
         engines = engines.order_by('engine_make', 'engine_model')
     
@@ -435,6 +439,8 @@ def part_create(request):
                 part = form.save()
                 vset.instance = part
                 vset.save()
+                # Auto-set primary vendor if only one vendor exists
+                part.auto_set_primary_vendor()
             messages.success(request, "Part created successfully.")
             return redirect('inventory:part_detail', part_id=part.id)
     else:
@@ -511,6 +517,9 @@ def part_update(request, pk):
     
     # Save vendor relationships
     vset.save()
+    
+    # Auto-set primary vendor if only one vendor exists
+    part.auto_set_primary_vendor()
 
     # Build specs form for the (new) category and validate
     specs_form = PartSpecsForm(request.POST, part=part)
@@ -749,105 +758,73 @@ def filter_value_control(request):
     return render(request, 'inventory/partials/_parts_filter_value_control.html', context)
 
 
-# Machine-Engine relationship views
-@login_required
-def machine_engines_list(request, machine_id):
-    """HTMX endpoint to list engines for a machine."""
-    machine = get_object_or_404(Machine, pk=machine_id)
-    machine_engines = machine.machineengine_set.select_related('engine').all()
-    
-    context = {
-        'machine': machine,
-        'machine_engines': machine_engines,
-    }
-    
-    return render(request, 'inventory/partials/machine_engines_list.html', context)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def add_machine_engine(request, machine_id):
-    """HTMX endpoint to add an engine to a machine."""
-    machine = get_object_or_404(Machine, pk=machine_id)
-    engine_id = request.POST.get('engine_id')
-    notes = request.POST.get('notes', '')
-    is_primary = request.POST.get('is_primary') == 'on'
-    
-    if not engine_id:
-        return HttpResponse("Engine is required", status=400)
-    
-    try:
-        engine = Engine.objects.get(id=engine_id)
-    except Engine.DoesNotExist:
-        return HttpResponse("Engine not found", status=400)
-    
-    # Check if this combination already exists
-    if MachineEngine.objects.filter(machine=machine, engine=engine).exists():
-        return HttpResponse("This engine is already assigned to this machine", status=400)
-    
-    # Create the relationship
-    MachineEngine.objects.create(
-        machine=machine,
-        engine=engine,
-        notes=notes,
-        is_primary=is_primary
-    )
-    
-    # Return the updated engines list
-    return machine_engines_list(request, machine_id)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def remove_machine_engine(request, machine_id, engine_id):
-    """HTMX endpoint to remove an engine from a machine."""
-    machine = get_object_or_404(Machine, pk=machine_id)
-    
-    try:
-        machine_engine = MachineEngine.objects.get(machine=machine, engine_id=engine_id)
-        machine_engine.delete()
-    except MachineEngine.DoesNotExist:
-        return HttpResponse("Engine not found on this machine", status=404)
-    
-    # Return the updated engines list
-    return machine_engines_list(request, machine_id)
-
-
-@login_required
-def machine_add_engine_form(request, machine_id):
-    """HTMX endpoint to render the add engine form."""
-    machine = get_object_or_404(Machine, pk=machine_id)
-    
-    # Get engines that are NOT already associated with this machine
-    existing_engine_ids = machine.machineengine_set.values_list('engine_id', flat=True)
-    available_engines = Engine.objects.exclude(id__in=existing_engine_ids).order_by('engine_make', 'engine_model')
-    
-    context = {
-        'machine': machine,
-        'available_engines': available_engines,
-    }
-    
-    return render(request, 'inventory/partials/machine_add_engine_form.html', context)
-
-
 @login_required
 def machine_engines_partial(request, machine_id):
-    """HTMX endpoint to render the complete engines section (table + form)."""
+    """HTMX endpoint to render the machine engines section (table only)."""
     machine = get_object_or_404(Machine, pk=machine_id)
     machine_engines = machine.machineengine_set.select_related('engine', 'engine__sg_engine').all()
-    show_form = request.GET.get('show_form') == '1'
-    form = MachineEngineForm(machine=machine)  # unbound
     
     context = {
         'machine': machine,
         'machine_engines': machine_engines,
-        'form': form,
-        'show_form': show_form,
     }
     
     return render(request, 'inventory/partials/machine_engines_partial.html', context)
+
+
+@login_required
+def engine_search_modal(request, machine_id):
+    """HTMX endpoint to render the engine search modal."""
+    machine = get_object_or_404(Machine, pk=machine_id)
+    
+    # Get engines not already associated with this machine
+    # Show first 50 by default
+    engines = Engine.objects.exclude(
+        machineengine__machine=machine
+    ).select_related('sg_engine').order_by('engine_make', 'engine_model')[:50]
+    
+    context = {
+        'machine': machine,
+        'engines': engines,
+        'query': '',
+    }
+    
+    return render(request, 'inventory/partials/engine_search_modal.html', context)
+
+
+@login_required
+def engine_search_results(request, machine_id):
+    """HTMX endpoint to return filtered engine search results."""
+    machine = get_object_or_404(Machine, pk=machine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get engines not already associated with this machine
+    engines = Engine.objects.exclude(
+        machineengine__machine=machine
+    ).select_related('sg_engine')
+    
+    # Apply search filter
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(identifier__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query) |
+            Q(sg_engine__identifier__icontains=query)
+        )
+    
+    # Limit results to prevent performance issues
+    engines = engines.order_by('engine_make', 'engine_model')[:100]
+    
+    context = {
+        'machine': machine,
+        'engines': engines,
+        'query': query,
+    }
+    
+    return render(request, 'inventory/partials/engine_search_results.html', context)
 
 
 @login_required
@@ -860,28 +837,35 @@ def machine_engine_add(request, machine_id):
     if request.method != 'POST':
         return HttpResponseBadRequest()
     
-    form = MachineEngineForm(request.POST, machine=machine)
-    if form.is_valid():
-        form.save()
-        # Success: re-render partial with show_form=False (collapsed)
-        machine_engines = machine.machineengine_set.select_related('engine', 'engine__sg_engine').all()
-        return render(request, 'inventory/partials/machine_engines_partial.html', {
-            'machine': machine, 
-            'machine_engines': machine_engines,
-            'form': MachineEngineForm(machine=machine),  # new clean form (unused in collapsed state)
-            'show_form': False,
-        })
+    engine_id = request.POST.get('engine_id')
+    if not engine_id:
+        return HttpResponseBadRequest("engine_id is required")
     
-    # Errors: keep the form visible with errors
-    machine_engines = machine.machineengine_set.select_related('engine', 'engine__sg_engine').all()
-    response = render(request, 'inventory/partials/machine_engines_partial.html', {
-        'machine': machine, 
-        'machine_engines': machine_engines,
-        'form': form, 
-        'show_form': True,
-    })
-    response.status_code = 400
-    return response
+    try:
+        engine = Engine.objects.get(pk=engine_id)
+    except Engine.DoesNotExist:
+        return HttpResponseBadRequest("Invalid engine_id")
+    
+    is_primary = str(request.POST.get('is_primary', 'false')).lower() in ('true', '1', 'yes', 'on')
+    notes = request.POST.get('notes', '').strip()
+    
+    try:
+        link, created = MachineEngine.objects.get_or_create(
+            machine=machine,
+            engine=engine,
+            defaults={
+                'is_primary': is_primary,
+                'notes': notes
+            }
+        )
+        if not created and (link.is_primary != is_primary or link.notes != notes):
+            link.is_primary = is_primary
+            link.notes = notes
+            link.save(update_fields=['is_primary', 'notes'])
+    except IntegrityError:
+        pass
+    
+    return machine_engines_partial(request, machine_id)
 
 
 @login_required
@@ -896,15 +880,7 @@ def machine_engine_remove(request, machine_id, link_id):
     link = get_object_or_404(MachineEngine, pk=link_id, machine=machine)
     link.delete()
     
-    # Re-render the same partial; keep the add form collapsed after delete
-    machine_engines = machine.machineengine_set.select_related('engine', 'engine__sg_engine').all()
-    ctx = {
-        "machine": machine,
-        "machine_engines": machine_engines,
-        "form": MachineEngineForm(machine=machine),
-        "show_form": False,
-    }
-    return render(request, "inventory/partials/machine_engines_partial.html", ctx)
+    return machine_engines_partial(request, machine_id)
 
 
 # Machine-Part relationship views
@@ -990,20 +966,70 @@ def machine_add_part_form(request, machine_id):
 # New stable container Machine-Part relationship views
 @login_required
 def machine_parts_partial(request, machine_id):
-    """HTMX endpoint to render the machine parts partial (table + form)."""
+    """HTMX endpoint to render the machine parts partial."""
     machine = get_object_or_404(Machine, pk=machine_id)
     machine_parts = machine.machinepart_set.select_related('part', 'part__category').all()
-    show_form = request.GET.get('show_form') == '1'
-    form = MachinePartForm(machine=machine)
     
     context = {
         'machine': machine,
         'machine_parts': machine_parts,
-        'form': form,
-        'show_form': show_form,
     }
     
     return render(request, 'inventory/partials/_machine_parts_partial.html', context)
+
+
+@login_required
+def part_search_modal(request, machine_id):
+    """HTMX endpoint to render the part search modal."""
+    machine = get_object_or_404(Machine, pk=machine_id)
+    
+    # Get parts not already associated with this machine
+    # Show first 50 by default
+    parts = Part.objects.exclude(
+        machinepart__machine=machine
+    ).select_related('category').order_by('part_number')[:50]
+    
+    context = {
+        'machine': machine,
+        'parts': parts,
+        'query': '',
+    }
+    
+    return render(request, 'inventory/partials/part_search_modal.html', context)
+
+
+@login_required
+def part_search_results(request, machine_id):
+    """HTMX endpoint to return filtered part search results."""
+    machine = get_object_or_404(Machine, pk=machine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get parts not already associated with this machine
+    parts = Part.objects.exclude(
+        machinepart__machine=machine
+    ).select_related('category')
+    
+    # Apply search filter
+    if query:
+        parts = parts.filter(
+            Q(part_number__icontains=query) |
+            Q(name__icontains=query) |
+            Q(manufacturer__icontains=query) |
+            Q(type__icontains=query) |
+            Q(manufacturer_type__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+    
+    # Limit results to prevent performance issues
+    parts = parts.order_by('part_number')[:100]
+    
+    context = {
+        'machine': machine,
+        'parts': parts,
+        'query': query,
+    }
+    
+    return render(request, 'inventory/partials/part_search_results.html', context)
 
 
 @login_required
@@ -1011,32 +1037,37 @@ def machine_parts_partial(request, machine_id):
 @login_required
 def machine_part_add(request, machine_id):
     """HTMX endpoint to add a part to a machine."""
-    if request.method != "POST":
-        return HttpResponseBadRequest()
-    
     machine = get_object_or_404(Machine, pk=machine_id)
-    form = MachinePartForm(request.POST, machine=machine)
     
-    if form.is_valid():
-        form.save()
-        machine_parts = machine.machinepart_set.select_related('part', 'part__category').all()
-        return render(request, 'inventory/partials/_machine_parts_partial.html', {
-            'machine': machine,
-            'machine_parts': machine_parts,
-            'form': MachinePartForm(machine=machine),
-            'show_form': False,
-        })
+    part_id = request.POST.get('part_id')
+    if not part_id:
+        return HttpResponseBadRequest("part_id is required")
     
-    # Error case
-    machine_parts = machine.machinepart_set.select_related('part', 'part__category').all()
-    response = render(request, 'inventory/partials/_machine_parts_partial.html', {
-        'machine': machine,
-        'machine_parts': machine_parts,
-        'form': form,
-        'show_form': True,
-    })
-    response.status_code = 400
-    return response
+    try:
+        part = Part.objects.get(pk=part_id)
+    except Part.DoesNotExist:
+        return HttpResponseBadRequest("Invalid part_id")
+    
+    is_primary = str(request.POST.get('is_primary', 'false')).lower() in ('true', '1', 'yes', 'on')
+    notes = request.POST.get('notes', '').strip()
+    
+    try:
+        link, created = MachinePart.objects.get_or_create(
+            machine=machine,
+            part=part,
+            defaults={
+                'is_primary': is_primary,
+                'notes': notes
+            }
+        )
+        if not created and (link.is_primary != is_primary or link.notes != notes):
+            link.is_primary = is_primary
+            link.notes = notes
+            link.save(update_fields=['is_primary', 'notes'])
+    except IntegrityError:
+        pass
+    
+    return machine_parts_partial(request, machine_id)
 
 
 @login_required
@@ -1051,94 +1082,7 @@ def machine_part_remove(request, machine_id, link_id):
     link = get_object_or_404(MachinePart, pk=link_id, machine=machine)
     link.delete()
     
-    machine_parts = machine.machinepart_set.select_related('part', 'part__category').all()
-    ctx = {
-        "machine": machine,
-        "machine_parts": machine_parts,
-        "form": MachinePartForm(machine=machine),
-        "show_form": False,
-    }
-    return render(request, "inventory/partials/_machine_parts_partial.html", ctx)
-
-
-# Engine-Machine relationship views
-@login_required
-def engine_machines_list(request, engine_id):
-    """HTMX endpoint to list machines for an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    machine_engines = engine.machineengine_set.select_related('machine').all()
-    
-    context = {
-        'engine': engine,
-        'machine_engines': machine_engines,
-    }
-    
-    return render(request, 'inventory/partials/engine_machines_list.html', context)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def add_engine_machine(request, engine_id):
-    """HTMX endpoint to add a machine to an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    machine_id = request.POST.get('machine')
-    notes = request.POST.get('notes', '')
-    is_primary = request.POST.get('is_primary') == 'on'
-    
-    if not machine_id:
-        return HttpResponse("Machine is required", status=400)
-    
-    try:
-        machine = Machine.objects.get(id=machine_id)
-    except Machine.DoesNotExist:
-        return HttpResponse("Machine not found", status=400)
-    
-    # Check if this combination already exists
-    if MachineEngine.objects.filter(engine=engine, machine=machine).exists():
-        return HttpResponse("This machine is already assigned to this engine", status=400)
-    
-    # Create the relationship
-    MachineEngine.objects.create(
-        engine=engine,
-        machine=machine,
-        notes=notes,
-        is_primary=is_primary
-    )
-    
-    # Return the updated machines list
-    return engine_machines_list(request, engine_id)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def remove_engine_machine(request, engine_id, machine_engine_id):
-    """HTMX endpoint to remove a machine from an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    
-    try:
-        machine_engine = MachineEngine.objects.get(id=machine_engine_id, engine=engine)
-        machine_engine.delete()
-    except MachineEngine.DoesNotExist:
-        return HttpResponse("Machine not found on this engine", status=404)
-    
-    # Return the updated machines list
-    return engine_machines_list(request, engine_id)
-
-
-@login_required
-def engine_add_machine_form(request, engine_id):
-    """HTMX endpoint to render the add machine form."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    machines = Machine.objects.all().order_by('make', 'model')
-    
-    context = {
-        'engine': engine,
-        'machines': machines,
-    }
-    
-    return render(request, 'inventory/partials/engine_add_machine_form.html', context)
+    return machine_parts_partial(request, machine_id)
 
 
 # New stable container Engine-Machine relationship views
@@ -1157,6 +1101,59 @@ def engine_machines_partial(request, engine_id):
 
 
 @login_required
+def machine_search_modal(request, engine_id):
+    """HTMX endpoint to render the machine search modal."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Get machines not already associated with this engine
+    # Show first 50 by default
+    machines = Machine.objects.exclude(
+        machineengine__engine=engine
+    ).order_by('make', 'model', 'year')[:50]
+    
+    context = {
+        'engine': engine,
+        'machines': machines,
+        'query': '',
+    }
+    
+    return render(request, 'inventory/partials/machine_search_modal.html', context)
+
+
+@login_required
+def machine_search_results(request, engine_id):
+    """HTMX endpoint to return filtered machine search results."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get machines not already associated with this engine
+    machines = Machine.objects.exclude(
+        machineengine__engine=engine
+    )
+    
+    # Apply search filter
+    if query:
+        machines = machines.filter(
+            Q(make__icontains=query) |
+            Q(model__icontains=query) |
+            Q(year__icontains=query) |
+            Q(machine_type__icontains=query) |
+            Q(market_type__icontains=query)
+        )
+    
+    # Limit results to prevent performance issues
+    machines = machines.order_by('make', 'model', 'year')[:100]
+    
+    context = {
+        'engine': engine,
+        'machines': machines,
+        'query': query,
+    }
+    
+    return render(request, 'inventory/partials/machine_search_results.html', context)
+
+
+@login_required
 @require_http_methods(["POST"])
 @login_required
 def engine_machine_add(request, engine_id):
@@ -1165,28 +1162,36 @@ def engine_machine_add(request, engine_id):
         return HttpResponseBadRequest()
     
     engine = get_object_or_404(Engine, pk=engine_id)
-    form = EngineMachineForm(request.POST, engine=engine)
     
-    if form.is_valid():
-        form.save()
-        machine_engines = engine.machineengine_set.select_related('machine').all()
-        return render(request, 'inventory/partials/_engine_machines_partial.html', {
-            'engine': engine,
-            'machine_engines': machine_engines,
-            'form': EngineMachineForm(engine=engine),
-            'show_form': False,
-        })
+    machine_id = request.POST.get('machine_id')
+    if not machine_id:
+        return HttpResponseBadRequest("machine_id is required")
     
-    # Error case
-    machine_engines = engine.machineengine_set.select_related('machine').all()
-    response = render(request, 'inventory/partials/_engine_machines_partial.html', {
-        'engine': engine,
-        'machine_engines': machine_engines,
-        'form': form,
-        'show_form': True,
-    })
-    response.status_code = 400
-    return response
+    try:
+        machine = Machine.objects.get(pk=machine_id)
+    except Machine.DoesNotExist:
+        return HttpResponseBadRequest("Invalid machine_id")
+    
+    is_primary = str(request.POST.get('is_primary', 'false')).lower() in ('true', '1', 'yes', 'on')
+    notes = request.POST.get('notes', '').strip()
+    
+    try:
+        link, created = MachineEngine.objects.get_or_create(
+            engine=engine,
+            machine=machine,
+            defaults={
+                'is_primary': is_primary,
+                'notes': notes
+            }
+        )
+        if not created and (link.is_primary != is_primary or link.notes != notes):
+            link.is_primary = is_primary
+            link.notes = notes
+            link.save(update_fields=['is_primary', 'notes'])
+    except IntegrityError:
+        pass
+    
+    return engine_machines_partial(request, engine_id)
 
 
 @login_required
@@ -1209,126 +1214,6 @@ def engine_machine_remove(request, engine_id, link_id):
     return render(request, "inventory/partials/_engine_machines_partial.html", ctx)
 
 
-# ----- Add Machine Form Views -----
-
-@require_http_methods(["GET"])
-@login_required
-def engine_machine_add_form(request, engine_id):
-    engine = get_object_or_404(Engine, pk=engine_id)
-    # machines NOT already linked to this engine
-    linked_ids = MachineEngine.objects.filter(engine=engine).values_list("machine_id", flat=True)
-    machines = Machine.objects.exclude(id__in=linked_ids).order_by("make", "model", "year")[:500]
-    return render(request, "inventory/engines/_engine_machine_add_form.html", {
-        "engine": engine, "machines": machines,
-    })
-
-@require_POST
-@transaction.atomic
-@login_required
-def engine_machine_add(request, engine_id):
-    engine = get_object_or_404(Engine, pk=engine_id)
-    machine_id = request.POST.get("machine_id")
-    is_primary = request.POST.get("is_primary") == "on"
-    notes = (request.POST.get("notes") or "").strip()
-
-    if not machine_id:
-        return HttpResponseBadRequest("machine_id required")
-
-    try:
-        me, created = MachineEngine.objects.get_or_create(
-            engine=engine, machine_id=machine_id,
-            defaults={"is_primary": is_primary, "notes": notes},
-        )
-        if not created:
-            # update existing flags/notes if user re-adds
-            me.is_primary = is_primary
-            me.notes = notes
-            me.save()
-    except IntegrityError:
-        pass  # unique constraint etc.
-
-    # return refreshed list
-    return engine_machines_partial(request, engine_id)
-
-
-# Engine-Part relationship views
-@login_required
-def engine_parts_list(request, engine_id):
-    """HTMX endpoint to list parts for an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    engine_parts = engine.enginepart_set.select_related('part').all()
-    
-    context = {
-        'engine': engine,
-        'engine_parts': engine_parts,
-    }
-    
-    return render(request, 'inventory/partials/engine_parts_list.html', context)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def add_engine_part(request, engine_id):
-    """HTMX endpoint to add a part to an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    part_id = request.POST.get('part')
-    notes = request.POST.get('notes', '')
-    
-    if not part_id:
-        return HttpResponse("Part is required", status=400)
-    
-    try:
-        part = Part.objects.get(id=part_id)
-    except Part.DoesNotExist:
-        return HttpResponse("Part not found", status=400)
-    
-    # Check if this combination already exists
-    if EnginePart.objects.filter(engine=engine, part=part).exists():
-        return HttpResponse("This part is already assigned to this engine", status=400)
-    
-    # Create the relationship
-    EnginePart.objects.create(
-        engine=engine,
-        part=part,
-        notes=notes
-    )
-    
-    # Return the updated parts list
-    return engine_parts_list(request, engine_id)
-
-
-@login_required
-@require_http_methods(["POST"])
-@login_required
-def remove_engine_part(request, engine_id, engine_part_id):
-    """HTMX endpoint to remove a part from an engine."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    
-    try:
-        engine_part = EnginePart.objects.get(id=engine_part_id, engine=engine)
-        engine_part.delete()
-    except EnginePart.DoesNotExist:
-        return HttpResponse("Part not found on this engine", status=404)
-    
-    # Return the updated parts list
-    return engine_parts_list(request, engine_id)
-
-
-@login_required
-def engine_add_part_form(request, engine_id):
-    """HTMX endpoint to render the add part form."""
-    engine = get_object_or_404(Engine, pk=engine_id)
-    parts = Part.objects.all().order_by('part_number')
-    
-    context = {
-        'engine': engine,
-        'parts': parts,
-    }
-    
-    return render(request, 'inventory/partials/engine_add_part_form.html', context)
-
-
 # New stable container Engine-Part relationship views
 @login_required
 def engine_parts_partial(request, engine_id):
@@ -1344,52 +1229,72 @@ def engine_parts_partial(request, engine_id):
     return render(request, 'inventory/partials/_engine_parts_partial.html', context)
 
 
+@login_required
+def part_search_modal_for_engine(request, engine_id):
+    """HTMX endpoint to render the part search modal for engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Get parts not already associated with this engine
+    # Show first 50 by default
+    parts = Part.objects.exclude(
+        enginepart__engine=engine
+    ).select_related('category').order_by('part_number')[:50]
+    
+    context = {
+        'engine': engine,
+        'parts': parts,
+        'query': '',
+    }
+    
+    return render(request, 'inventory/partials/part_search_modal_for_engine.html', context)
+
+
+@login_required
+def part_search_results_for_engine(request, engine_id):
+    """HTMX endpoint to return filtered part search results for engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get parts not already associated with this engine
+    parts = Part.objects.exclude(
+        enginepart__engine=engine
+    ).select_related('category')
+    
+    # Apply search filter
+    if query:
+        parts = parts.filter(
+            Q(part_number__icontains=query) |
+            Q(name__icontains=query) |
+            Q(manufacturer__icontains=query) |
+            Q(type__icontains=query) |
+            Q(manufacturer_type__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+    
+    # Limit results to prevent performance issues
+    parts = parts.order_by('part_number')[:100]
+    
+    context = {
+        'engine': engine,
+        'parts': parts,
+        'query': query,
+    }
+    
+    return render(request, 'inventory/partials/part_search_results_for_engine.html', context)
 
 
 
 @login_required
 @require_http_methods(["POST"])
-@login_required
-def engine_part_remove(request, engine_id, link_id):
-    """HTMX endpoint to remove a part from an engine."""
-    if request.method != "POST":
-        return HttpResponseBadRequest("POST required")
-    
-    engine = get_object_or_404(Engine, pk=engine_id)
-    link = get_object_or_404(EnginePart, pk=link_id, engine=engine)
-    link.delete()
-    
-    engine_parts = engine.enginepart_set.select_related('part', 'part__category').all()
-    ctx = {
-        "engine": engine,
-        "engine_parts": engine_parts,
-    }
-    return render(request, "inventory/partials/_engine_parts_partial.html", ctx)
-
-
-# ----- Add Part Form Views -----
-
-@require_http_methods(["GET"])
-@login_required
-def engine_part_add_form(request, engine_id):
-    engine = get_object_or_404(Engine, pk=engine_id)
-    linked_ids = EnginePart.objects.filter(engine=engine).values_list("part_id", flat=True)
-    parts = Part.objects.exclude(id__in=linked_ids).order_by("name", "part_number")[:500]
-    return render(request, "inventory/engines/_engine_part_add_form.html", {
-        "engine": engine, "parts": parts,
-    })
-
-@login_required
-@require_POST
 @transaction.atomic
-@login_required
 def engine_part_add(request, engine_id):
     engine = get_object_or_404(Engine, pk=engine_id)
+    
     part_id = request.POST.get("part_id")
     notes = (request.POST.get("notes") or "").strip()
 
     if not part_id:
-        return HttpResponseBadRequest("part_id required")
+        return HttpResponseBadRequest("part_id is required")
 
     try:
         ep, created = EnginePart.objects.get_or_create(
@@ -1405,23 +1310,35 @@ def engine_part_add(request, engine_id):
     return engine_parts_partial(request, engine_id)
 
 
+@login_required
+@require_http_methods(["POST"])
+def engine_part_remove(request, engine_id, link_id):
+    """HTMX endpoint to remove a part from an engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    link = get_object_or_404(EnginePart, pk=link_id, engine=engine)
+    link.delete()
+    
+    engine_parts = engine.enginepart_set.select_related('part', 'part__category').all()
+    ctx = {
+        "engine": engine,
+        "engine_parts": engine_parts,
+    }
+    return render(request, "inventory/partials/_engine_parts_partial.html", ctx)
+
+
 # Part-Engine relationship views
 @login_required
 def part_engines_partial(request, part_id):
-    """HTMX endpoint to render the part engines partial (table + form)."""
+    """HTMX endpoint to render the part engines partial."""
     part = get_object_or_404(Part, pk=part_id)
     links = (EnginePart.objects
              .select_related("engine")
              .filter(part=part)
              .order_by("engine__engine_make", "engine__engine_model"))
-    show_form = request.GET.get("show_form") == "1"
-    form = PartEngineLinkForm(part=part)  # unbound with correct queryset
     
     context = {
         'part': part,
         'links': links,
-        'form': form,
-        'show_form': show_form,
     }
     
     return render(request, 'inventory/partials/_part_engines_partial.html', context)
@@ -1433,31 +1350,21 @@ def part_engines_partial(request, part_id):
 def part_engine_add(request, part_id):
     """HTMX endpoint to add an engine to a part."""
     part = get_object_or_404(Part, pk=part_id)
-    form = PartEngineLinkForm(request.POST, part=part)
-    links = (EnginePart.objects
-             .select_related("engine")
-             .filter(part=part)
-             .order_by("engine__engine_make", "engine__engine_model"))
-
-    if form.is_valid():
-        link = form.save(commit=False)
-        link.part = part
-        link.save()
-        # Success → collapse form
-        return render(request, "inventory/partials/_part_engines_partial.html", {
-            "part": part,
-            "links": links,
-            "form": PartEngineLinkForm(part=part),
-            "show_form": False,
-        })
-
-    # On error → keep open with validation messages
-    return render(request, "inventory/partials/_part_engines_partial.html", {
-        "part": part,
-        "links": links,
-        "form": form,
-        "show_form": True,
-    }, status=400)
+    
+    engine_id = request.POST.get('engine_id')
+    if not engine_id:
+        return HttpResponseBadRequest("engine_id is required")
+    
+    try:
+        engine = Engine.objects.get(pk=engine_id)
+        EnginePart.objects.get_or_create(
+            part=part,
+            engine=engine
+        )
+    except Engine.DoesNotExist:
+        return HttpResponseBadRequest("Invalid engine_id")
+    
+    return part_engines_partial(request, part_id)
 
 
 @login_required
@@ -1476,20 +1383,16 @@ def part_engine_remove(request, part_id, link_id):
 # Part-Machine relationship views
 @login_required
 def part_machines_partial(request, part_id):
-    """HTMX endpoint to render the part machines partial (table + form)."""
+    """HTMX endpoint to render the part machines partial."""
     part = get_object_or_404(Part, pk=part_id)
     links = (MachinePart.objects
              .select_related("machine")
              .filter(part=part)
              .order_by("machine__make", "machine__model", "machine__year"))
-    show_form = request.GET.get("show_form") == "1"
-    form = PartMachineLinkForm(part=part)  # unbound with correct queryset
     
     context = {
         'part': part,
         'links': links,
-        'form': form,
-        'show_form': show_form,
     }
     
     return render(request, 'inventory/partials/_part_machines_partial.html', context)
@@ -1501,31 +1404,21 @@ def part_machines_partial(request, part_id):
 def part_machine_add(request, part_id):
     """HTMX endpoint to add a machine to a part."""
     part = get_object_or_404(Part, pk=part_id)
-    form = PartMachineLinkForm(request.POST, part=part)
-    links = (MachinePart.objects
-             .select_related("machine")
-             .filter(part=part)
-             .order_by("machine__make", "machine__model", "machine__year"))
-
-    if form.is_valid():
-        link = form.save(commit=False)
-        link.part = part
-        link.save()
-        # Success → collapse form
-        return render(request, "inventory/partials/_part_machines_partial.html", {
-            "part": part,
-            "links": links,
-            "form": PartMachineLinkForm(part=part),
-            "show_form": False,
-        })
-
-    # On error → keep open with validation messages
-    return render(request, "inventory/partials/_part_machines_partial.html", {
-        "part": part,
-        "links": links,
-        "form": form,
-        "show_form": True,
-    }, status=400)
+    
+    machine_id = request.POST.get('machine_id')
+    if not machine_id:
+        return HttpResponseBadRequest("machine_id is required")
+    
+    try:
+        machine = Machine.objects.get(pk=machine_id)
+        MachinePart.objects.get_or_create(
+            part=part,
+            machine=machine
+        )
+    except Machine.DoesNotExist:
+        return HttpResponseBadRequest("Invalid machine_id")
+    
+    return part_machines_partial(request, part_id)
 
 
 @login_required
@@ -1554,6 +1447,100 @@ def part_kits_partial(request, part_id):
     
     return render(request, 'inventory/partials/_part_kits_partial.html', context)
 
+
+@login_required
+def engine_search_modal_for_part(request, part_id):
+    """Renders the engine search modal for adding engines to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    # Get already linked engines to exclude them from search
+    linked_engine_ids = EnginePart.objects.filter(part=part).values_list('engine_id', flat=True)
+    engines = Engine.objects.exclude(id__in=linked_engine_ids)[:20]
+    
+    context = {
+        'part': part,
+        'engines': engines,
+    }
+    return render(request, 'inventory/partials/engine_search_modal_for_part.html', context)
+
+
+@login_required
+def engine_search_results_for_part(request, part_id):
+    """Handles the search query for engines to add to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get already linked engines to exclude them
+    linked_engine_ids = EnginePart.objects.filter(part=part).values_list('engine_id', flat=True)
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids)
+    
+    if query:
+        from django.db.models import Q
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(identifier__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query) |
+            Q(sg_engine__identifier__icontains=query)
+        ).select_related('sg_engine')
+    
+    engines = engines[:50]  # Limit results
+    
+    context = {
+        'part': part,
+        'engines': engines,
+    }
+    return render(request, 'inventory/partials/engine_search_results_for_part.html', context)
+
+
+@login_required
+def machine_search_modal_for_part(request, part_id):
+    """Renders the machine search modal for adding machines to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    # Get already linked machines to exclude them from search
+    linked_machine_ids = MachinePart.objects.filter(part=part).values_list('machine_id', flat=True)
+    machines = Machine.objects.exclude(id__in=linked_machine_ids)[:20]
+    
+    context = {
+        'part': part,
+        'machines': machines,
+    }
+    return render(request, 'inventory/partials/machine_search_modal_for_part.html', context)
+
+
+@login_required
+def machine_search_results_for_part(request, part_id):
+    """Handles the search query for machines to add to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get already linked machines to exclude them
+    linked_machine_ids = MachinePart.objects.filter(part=part).values_list('machine_id', flat=True)
+    
+    machines = Machine.objects.exclude(id__in=linked_machine_ids)
+    
+    if query:
+        from django.db.models import Q
+        q_filters = (
+            Q(make__icontains=query) |
+            Q(model__icontains=query) |
+            Q(machine_type__icontains=query) |
+            Q(market_type__icontains=query)
+        )
+        # Try to search year as integer if query is numeric
+        if query.isdigit():
+            q_filters |= Q(year=int(query))
+        machines = machines.filter(q_filters)
+    
+    machines = machines[:50]  # Limit results
+    
+    context = {
+        'part': part,
+        'machines': machines,
+    }
+    return render(request, 'inventory/partials/machine_search_results_for_part.html', context)
 
 
 
@@ -3122,6 +3109,9 @@ def part_vendor_add(request, part_id):
         notes=notes
     )
     
+    # Auto-set primary vendor if only one vendor exists
+    part.auto_set_primary_vendor()
+    
     # Re-render the vendors section
     return part_vendors_section(request, part_id)
 
@@ -3169,6 +3159,9 @@ def part_vendor_delete(request, part_id, part_vendor_id):
     
     part_vendor.delete()
     
+    # Auto-set primary vendor if only one vendor exists
+    part.auto_set_primary_vendor()
+    
     # Re-render the vendors section
     return part_vendors_section(request, part_id)
 
@@ -3208,6 +3201,68 @@ def part_vendors_section(request, part_id):
     }
     
     return render(request, 'inventory/partials/_part_vendors_section.html', context)
+
+
+@login_required
+def vendor_search_modal_for_part(request, part_id):
+    """Renders the vendor search modal for adding vendors to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    # Get already linked vendors to exclude them from search
+    linked_vendor_ids = PartVendor.objects.filter(part=part).values_list('vendor_id', flat=True)
+    vendors = Vendor.objects.exclude(id__in=linked_vendor_ids).order_by('name')[:20]
+    
+    context = {
+        'part': part,
+        'vendors': vendors,
+    }
+    return render(request, 'inventory/partials/vendor_search_modal_for_part.html', context)
+
+
+@login_required
+def vendor_search_results_for_part(request, part_id):
+    """Handles the search query for vendors to add to a part."""
+    part = get_object_or_404(Part, pk=part_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get already linked vendors to exclude them
+    linked_vendor_ids = PartVendor.objects.filter(part=part).values_list('vendor_id', flat=True)
+    
+    vendors = Vendor.objects.exclude(id__in=linked_vendor_ids)
+    
+    if query:
+        from django.db.models import Q
+        vendors = vendors.filter(
+            Q(name__icontains=query) |
+            Q(contact_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(phone__icontains=query)
+        )
+    
+    vendors = vendors.order_by('name')[:50]  # Limit results
+    
+    context = {
+        'part': part,
+        'vendors': vendors,
+    }
+    return render(request, 'inventory/partials/vendor_search_results_for_part.html', context)
+
+
+@login_required
+def vendor_details_form_for_part(request, part_id):
+    """Renders the vendor details form modal after selecting a vendor."""
+    part = get_object_or_404(Part, pk=part_id)
+    vendor_id = request.GET.get('vendor_id')
+    
+    if not vendor_id:
+        return HttpResponse("Vendor ID required", status=400)
+    
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    
+    context = {
+        'part': part,
+        'vendor': vendor,
+    }
+    return render(request, 'inventory/partials/vendor_details_form_modal.html', context)
 
 
 # Build List Views
@@ -3771,6 +3826,30 @@ def engine_interchange_add(request, engine_id):
         return HttpResponseBadRequest()
     
     engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Handle direct engine_id submission from modal
+    engine_id_from_modal = request.POST.get('engine_id')
+    if engine_id_from_modal:
+        try:
+            interchange_engine = Engine.objects.get(id=engine_id_from_modal)
+            
+            if interchange_engine != engine:
+                engine.interchanges.add(interchange_engine)
+            
+            # Return updated partial
+            interchanges = engine.interchanges.select_related('sg_engine').all()
+            ctx = {
+                "engine": engine,
+                "interchanges": interchanges,
+                "form": EngineInterchangeForm(engine=engine),
+                "show_form": False,
+            }
+            return render(request, "inventory/partials/_engine_interchanges_partial.html", ctx)
+            
+        except Engine.DoesNotExist:
+            return HttpResponseBadRequest("Engine not found")
+    
+    # Handle form submission (legacy)
     form = EngineInterchangeForm(request.POST, engine=engine)
     
     if form.is_valid():
@@ -3866,6 +3945,30 @@ def engine_compatible_add(request, engine_id):
         return HttpResponseBadRequest()
     
     engine = get_object_or_404(Engine, pk=engine_id)
+    
+    # Handle direct engine_id submission from modal
+    engine_id_from_modal = request.POST.get('engine_id')
+    if engine_id_from_modal:
+        try:
+            compatible_engine = Engine.objects.get(id=engine_id_from_modal)
+            
+            if compatible_engine != engine:
+                engine.compatibles.add(compatible_engine)
+            
+            # Return updated partial
+            compatibles = engine.compatibles.select_related('sg_engine').all()
+            ctx = {
+                "engine": engine,
+                "compatibles": compatibles,
+                "form": EngineCompatibleForm(engine=engine),
+                "show_form": False,
+            }
+            return render(request, "inventory/partials/_engine_compatibles_partial.html", ctx)
+            
+        except Engine.DoesNotExist:
+            return HttpResponseBadRequest("Engine not found")
+    
+    # Handle form submission (legacy)
     form = EngineCompatibleForm(request.POST, engine=engine)
     
     if form.is_valid():
@@ -3972,23 +4075,24 @@ def engine_supercession_add(request, engine_id, direction):
     
     try:
         engine = get_object_or_404(Engine, pk=engine_id)
+        other_engine_id = request.POST.get("engine_id")
         sg_engine_id = request.POST.get("sg_engine_id")
         
-        if not sg_engine_id:
-            return HttpResponseBadRequest("sg_engine_id is required")
-        
-        # First, try to find an existing Engine record for this SG Engine
-        other = Engine.objects.filter(sg_engine_id=sg_engine_id).first()
-        
-        if not other:
-            # Create a new Engine record for this SG Engine
-            sg_engine = SGEngine.objects.get(id=sg_engine_id)
-            other = Engine.objects.create(
-                sg_engine=sg_engine,
-                engine_make=sg_engine.sg_make,
-                engine_model=sg_engine.sg_model,
-                sg_engine_identifier=sg_engine.identifier,
-            )
+        other = None
+        if other_engine_id:
+            other = get_object_or_404(Engine, pk=other_engine_id)
+        elif sg_engine_id:
+            other = Engine.objects.filter(sg_engine_id=sg_engine_id).first()
+            if not other:
+                sg_engine = SGEngine.objects.get(id=sg_engine_id)
+                other = Engine.objects.create(
+                    sg_engine=sg_engine,
+                    engine_make=sg_engine.sg_make,
+                    engine_model=sg_engine.sg_model,
+                    sg_engine_identifier=sg_engine.identifier,
+                )
+        else:
+            return HttpResponseBadRequest("engine_id is required")
 
         if direction == "older":
             # Current engine is newer → supersedes older engine
@@ -4178,43 +4282,72 @@ def build_list_items_partial(request, build_list_id):
 
 
 @login_required
-def build_list_item_add_form(request, build_list_id):
-    """HTMX form to add item."""
+def build_list_total_hours_partial(request, build_list_id):
+    """HTMX partial for total hours display."""
+    from django.db.models import Sum
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
-    form = BuildListItemForm()
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+    
+    context = {
+        'total_hours': total_hours,
+    }
+    
+    return render(request, 'inventory/partials/_build_list_total_hours.html', context)
+
+
+@login_required
+def build_list_item_add_modal(request, build_list_id):
+    """HTMX modal to add item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
     
     context = {
         'build_list': build_list,
-        'form': form,
     }
     
-    return render(request, 'inventory/partials/_build_list_item_add_form.html', context)
+    return render(request, 'inventory/partials/build_list_item_add_modal.html', context)
 
 
 @login_required
 @require_http_methods(["POST"])
 def build_list_item_add(request, build_list_id):
     """POST: Create item."""
+    from django.db.models import Sum
+    from django.template.loader import render_to_string
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
-    form = BuildListItemForm(request.POST)
     
-    if form.is_valid():
-        item = form.save(commit=False)
-        item.build_list = build_list
-        item.save()
+    # Get data from POST
+    name = request.POST.get('name')
+    hour_qty = request.POST.get('hour_qty', 0)
+    description = request.POST.get('description', '')
+    
+    if name:
+        BuildListItem.objects.create(
+            build_list=build_list,
+            name=name,
+            hour_qty=hour_qty,
+            description=description
+        )
         messages.success(request, "Item added.")
-        
-        # Clear the form and refresh the items table
-        response = build_list_items_partial(request, build_list_id)
-        response['HX-Trigger'] = 'clearItemForm'
-        return response
     
-    # Return form with errors
-    context = {
+    # Render the items table
+    items = build_list.items.all()
+    items_html = render_to_string('inventory/partials/_build_list_items.html', {
         'build_list': build_list,
-        'form': form,
-    }
-    return render(request, 'inventory/partials/_build_list_item_add_form.html', context, status=400)
+        'items': items,
+    }, request=request)
+    
+    # Render the total hours (out-of-band swap)
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+    total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
+        'total_hours': total_hours,
+    }, request=request)
+    
+    # Combine both with out-of-band swap for total hours
+    combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+    
+    return HttpResponse(combined_html)
 
 
 @login_required
@@ -4237,6 +4370,9 @@ def build_list_item_edit_form(request, build_list_id, item_id):
 @require_http_methods(["POST"])
 def build_list_item_edit(request, build_list_id, item_id):
     """POST: Update item."""
+    from django.db.models import Sum
+    from django.template.loader import render_to_string
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
     item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
     form = BuildListItemForm(request.POST, instance=item)
@@ -4245,8 +4381,23 @@ def build_list_item_edit(request, build_list_id, item_id):
         form.save()
         messages.success(request, "Item updated.")
         
-        # Clear the form and refresh the items table
-        response = build_list_items_partial(request, build_list_id)
+        # Render the items table
+        items = build_list.items.all()
+        items_html = render_to_string('inventory/partials/_build_list_items.html', {
+            'build_list': build_list,
+            'items': items,
+        }, request=request)
+        
+        # Render the total hours (out-of-band swap)
+        total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+        total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
+            'total_hours': total_hours,
+        }, request=request)
+        
+        # Combine both with out-of-band swap for total hours
+        combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+        
+        response = HttpResponse(combined_html)
         response['HX-Trigger'] = 'clearItemForm'
         return response
     
@@ -4263,13 +4414,31 @@ def build_list_item_edit(request, build_list_id, item_id):
 @require_http_methods(["POST"])
 def build_list_item_delete(request, build_list_id, item_id):
     """POST: Delete item."""
+    from django.db.models import Sum
+    from django.template.loader import render_to_string
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
     item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
     item.delete()
     messages.success(request, "Item deleted.")
     
-    # Re-render items partial
-    return build_list_items_partial(request, build_list_id)
+    # Render the items table
+    items = build_list.items.all()
+    items_html = render_to_string('inventory/partials/_build_list_items.html', {
+        'build_list': build_list,
+        'items': items,
+    }, request=request)
+    
+    # Render the total hours (out-of-band swap)
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+    total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
+        'total_hours': total_hours,
+    }, request=request)
+    
+    # Combine both with out-of-band swap for total hours
+    combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+    
+    return HttpResponse(combined_html)
 
 
 # Engine Assignments from Build List side (HTMX)
@@ -4289,20 +4458,50 @@ def build_list_engines_partial(request, build_list_id):
 
 
 @login_required
-def build_list_engine_add_form(request, build_list_id):
-    """HTMX form to add engine."""
+def engine_search_modal_for_build_list(request, build_list_id):
+    """HTMX modal to search and add engines."""
     build_list = get_object_or_404(BuildList, pk=build_list_id)
     
-    # Get all engines not already assigned
+    # Get engines not already assigned
     assigned_engine_ids = build_list.engines.values_list('id', flat=True)
-    available_engines = Engine.objects.exclude(id__in=assigned_engine_ids).order_by('engine_make', 'engine_model')
+    engines = Engine.objects.exclude(id__in=assigned_engine_ids).select_related('sg_engine').order_by('engine_make', 'engine_model')[:50]
     
     context = {
         'build_list': build_list,
-        'available_engines': available_engines,
+        'engines': engines,
     }
     
-    return render(request, 'inventory/partials/_build_list_engine_add_form.html', context)
+    return render(request, 'inventory/partials/engine_search_modal_for_build_list.html', context)
+
+
+@login_required
+def engine_search_results_for_build_list(request, build_list_id):
+    """HTMX search results for engines."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get engines not already assigned
+    assigned_engine_ids = build_list.engines.values_list('id', flat=True)
+    engines = Engine.objects.exclude(id__in=assigned_engine_ids).select_related('sg_engine')
+    
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(status__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query)
+        )
+    
+    engines = engines.order_by('engine_make', 'engine_model')[:50]
+    
+    context = {
+        'build_list': build_list,
+        'engines': engines,
+    }
+    
+    return render(request, 'inventory/partials/engine_search_results_for_build_list.html', context)
 
 
 @login_required
@@ -4317,10 +4516,8 @@ def build_list_engine_add(request, build_list_id):
         build_list.engines.add(engine)
         messages.success(request, f"Added {engine} to build list.")
     
-    # Re-render engines partial and clear form
-    response = build_list_engines_partial(request, build_list_id)
-    response['HX-Trigger'] = 'clearEngineForm'
-    return response
+    # Re-render engines partial
+    return build_list_engines_partial(request, build_list_id)
 
 
 @login_required
@@ -4447,8 +4644,8 @@ def kits_list(request):
             if item.part.primary_vendor:
                 try:
                     part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
-                    if part_vendor.price:
-                        total_cost += part_vendor.price * item.quantity
+                    if part_vendor.cost:
+                        total_cost += part_vendor.cost * item.quantity
                 except:
                     pass
         kit.total_cost = total_cost
@@ -4478,11 +4675,11 @@ def kit_detail(request, kit_id):
     
     for item in items:
         if item.part.primary_vendor:
-            # Get the price from PartVendor relationship
+            # Get the cost from PartVendor relationship
             try:
                 part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
-                if part_vendor.price:
-                    total_cost += part_vendor.price * item.quantity
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
             except:
                 pass
     
@@ -4558,11 +4755,17 @@ def kit_items_partial(request, kit_id):
     
     # Attach primary vendor price to each item
     for item in items:
+        # Auto-set primary vendor if needed (opportunistic fix)
+        if not item.part.primary_vendor:
+            item.part.auto_set_primary_vendor()
+            # Refresh the part to get the updated primary_vendor
+            item.part.refresh_from_db()
+        
         item.primary_vendor_price = None
         if item.part.primary_vendor:
             try:
                 part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
-                item.primary_vendor_price = part_vendor.price
+                item.primary_vendor_price = part_vendor.cost
             except:
                 pass
     
@@ -4575,98 +4778,317 @@ def kit_items_partial(request, kit_id):
 
 
 @login_required
-def kit_item_add_form(request, kit_id):
-    """HTMX form to add item."""
+def kit_total_cost_partial(request, kit_id):
+    """HTMX partial for total cost display."""
+    from decimal import Decimal
+    
     kit = get_object_or_404(Kit, pk=kit_id)
-    form = KitItemForm()
+    
+    # Calculate total cost from primary vendor prices
+    total_cost = Decimal('0.00')
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    for item in items:
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
+            except:
+                pass
+    
+    context = {
+        'total_cost': total_cost,
+    }
+    
+    return render(request, 'inventory/partials/_kit_total_cost.html', context)
+
+
+@login_required
+def kit_items_popover(request, kit_id):
+    """HTMX partial for kit items popover preview."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    # Attach primary vendor cost to each item
+    for item in items:
+        # Auto-set primary vendor if needed (opportunistic fix)
+        if not item.part.primary_vendor:
+            item.part.auto_set_primary_vendor()
+            # Refresh the part to get the updated primary_vendor
+            item.part.refresh_from_db()
+        
+        item.primary_vendor_cost = None
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                item.primary_vendor_cost = part_vendor.cost
+            except:
+                pass
     
     context = {
         'kit': kit,
-        'form': form,
+        'items': items,
     }
     
-    return render(request, 'inventory/partials/_kit_item_add_form.html', context)
+    return render(request, 'inventory/partials/_kit_items_popover.html', context)
+
+
+@login_required
+def part_search_modal_for_kit(request, kit_id):
+    """HTMX modal to search and add parts."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    
+    # Get parts not already in kit
+    existing_part_ids = kit.items.values_list('part_id', flat=True)
+    parts = Part.objects.exclude(id__in=existing_part_ids).select_related('category', 'primary_vendor').order_by('part_number')[:50]
+    
+    context = {
+        'kit': kit,
+        'parts': parts,
+    }
+    
+    return render(request, 'inventory/partials/part_search_modal_for_kit.html', context)
+
+
+@login_required
+def part_search_results_for_kit(request, kit_id):
+    """HTMX search results for parts."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get parts not already in kit
+    existing_part_ids = kit.items.values_list('part_id', flat=True)
+    parts = Part.objects.exclude(id__in=existing_part_ids).select_related('category', 'primary_vendor')
+    
+    if query:
+        parts = parts.filter(
+            Q(part_number__icontains=query) |
+            Q(name__icontains=query) |
+            Q(category__name__icontains=query)
+        )
+    
+    parts = parts.order_by('part_number')[:50]
+    
+    context = {
+        'kit': kit,
+        'parts': parts,
+    }
+    
+    return render(request, 'inventory/partials/part_search_results_for_kit.html', context)
+
+
+@login_required
+def part_details_form_for_kit(request, kit_id):
+    """HTMX modal for entering part details."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    part_id = request.GET.get('part_id')
+    part = get_object_or_404(Part, pk=part_id)
+    
+    context = {
+        'kit': kit,
+        'part': part,
+    }
+    
+    return render(request, 'inventory/partials/part_details_form_for_kit.html', context)
 
 
 @login_required
 @require_http_methods(["POST"])
 def kit_item_add(request, kit_id):
     """POST: Create item."""
+    from decimal import Decimal
+    from django.template.loader import render_to_string
+    
     kit = get_object_or_404(Kit, pk=kit_id)
-    form = KitItemForm(request.POST)
     
-    if form.is_valid():
-        item = form.save(commit=False)
-        item.kit = kit
-        item.save()
+    # Get data from POST
+    part_id = request.POST.get('part_id')
+    quantity = request.POST.get('quantity', 1)
+    notes = request.POST.get('notes', '')
+    
+    if part_id:
+        part = get_object_or_404(Part, pk=part_id)
+        KitItem.objects.create(
+            kit=kit,
+            part=part,
+            quantity=quantity,
+            notes=notes
+        )
         messages.success(request, "Part added to kit.")
-        
-        # Clear the form and refresh the items table
-        response = kit_items_partial(request, kit_id)
-        response['HX-Trigger'] = 'clearKitItemForm'
-        return response
     
-    # Return form with errors
-    context = {
+    # Render the items table
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    # Attach primary vendor price to each item
+    for item in items:
+        if not item.part.primary_vendor:
+            item.part.auto_set_primary_vendor()
+            item.part.refresh_from_db()
+        
+        item.primary_vendor_price = None
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                item.primary_vendor_price = part_vendor.cost
+            except:
+                pass
+    
+    items_html = render_to_string('inventory/partials/_kit_items.html', {
         'kit': kit,
-        'form': form,
-    }
-    return render(request, 'inventory/partials/_kit_item_add_form.html', context, status=400)
+        'items': items,
+    }, request=request)
+    
+    # Calculate and render total cost (out-of-band swap)
+    total_cost = Decimal('0.00')
+    for item in items:
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
+            except:
+                pass
+    
+    total_cost_html = render_to_string('inventory/partials/_kit_total_cost.html', {
+        'total_cost': total_cost,
+    }, request=request)
+    
+    # Combine both with out-of-band swap for total cost
+    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    
+    return HttpResponse(combined_html)
 
 
 @login_required
-def kit_item_edit_form(request, kit_id, item_id):
-    """HTMX form to edit item."""
+def kit_item_edit_modal(request, kit_id, item_id):
+    """HTMX modal to edit item."""
     kit = get_object_or_404(Kit, pk=kit_id)
     item = get_object_or_404(KitItem, pk=item_id, kit=kit)
-    form = KitItemForm(instance=item)
     
     context = {
         'kit': kit,
         'item': item,
-        'form': form,
     }
     
-    return render(request, 'inventory/partials/_kit_item_edit_form.html', context)
+    return render(request, 'inventory/partials/kit_item_edit_modal.html', context)
 
 
 @login_required
 @require_http_methods(["POST"])
 def kit_item_edit(request, kit_id, item_id):
     """POST: Update item."""
+    from decimal import Decimal
+    from django.template.loader import render_to_string
+    
     kit = get_object_or_404(Kit, pk=kit_id)
     item = get_object_or_404(KitItem, pk=item_id, kit=kit)
-    form = KitItemForm(request.POST, instance=item)
     
-    if form.is_valid():
-        form.save()
-        messages.success(request, "Kit item updated.")
+    # Get data from POST
+    quantity = request.POST.get('quantity', item.quantity)
+    notes = request.POST.get('notes', '')
+    
+    item.quantity = quantity
+    item.notes = notes
+    item.save()
+    messages.success(request, "Kit item updated.")
+    
+    # Render the items table
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    # Attach primary vendor price to each item
+    for item in items:
+        if not item.part.primary_vendor:
+            item.part.auto_set_primary_vendor()
+            item.part.refresh_from_db()
         
-        # Clear the form and refresh the items table
-        response = kit_items_partial(request, kit_id)
-        response['HX-Trigger'] = 'clearKitItemForm'
-        return response
+        item.primary_vendor_price = None
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                item.primary_vendor_price = part_vendor.cost
+            except:
+                pass
     
-    # Return form with errors
-    context = {
+    items_html = render_to_string('inventory/partials/_kit_items.html', {
         'kit': kit,
-        'item': item,
-        'form': form,
-    }
-    return render(request, 'inventory/partials/_kit_item_edit_form.html', context, status=400)
+        'items': items,
+    }, request=request)
+    
+    # Calculate and render total cost (out-of-band swap)
+    total_cost = Decimal('0.00')
+    for item in items:
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
+            except:
+                pass
+    
+    total_cost_html = render_to_string('inventory/partials/_kit_total_cost.html', {
+        'total_cost': total_cost,
+    }, request=request)
+    
+    # Combine both with out-of-band swap for total cost
+    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    
+    return HttpResponse(combined_html)
 
 
 @login_required
 @require_http_methods(["POST"])
 def kit_item_delete(request, kit_id, item_id):
     """POST: Delete item."""
+    from decimal import Decimal
+    from django.template.loader import render_to_string
+    
     kit = get_object_or_404(Kit, pk=kit_id)
     item = get_object_or_404(KitItem, pk=item_id, kit=kit)
     item.delete()
     messages.success(request, "Part removed from kit.")
     
-    # Re-render items partial
-    return kit_items_partial(request, kit_id)
+    # Render the items table
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    # Attach primary vendor price to each item
+    for item in items:
+        if not item.part.primary_vendor:
+            item.part.auto_set_primary_vendor()
+            item.part.refresh_from_db()
+        
+        item.primary_vendor_price = None
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                item.primary_vendor_price = part_vendor.cost
+            except:
+                pass
+    
+    items_html = render_to_string('inventory/partials/_kit_items.html', {
+        'kit': kit,
+        'items': items,
+    }, request=request)
+    
+    # Calculate and render total cost (out-of-band swap)
+    total_cost = Decimal('0.00')
+    for item in items:
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
+            except:
+                pass
+    
+    total_cost_html = render_to_string('inventory/partials/_kit_total_cost.html', {
+        'total_cost': total_cost,
+    }, request=request)
+    
+    # Combine both with out-of-band swap for total cost
+    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    
+    return HttpResponse(combined_html)
 
 
 # Engine Assignments from Kit side (HTMX)
@@ -4686,20 +5108,50 @@ def kit_engines_partial(request, kit_id):
 
 
 @login_required
-def kit_engine_add_form(request, kit_id):
-    """HTMX form to add engine."""
+def engine_search_modal_for_kit(request, kit_id):
+    """HTMX modal to search and add engines."""
     kit = get_object_or_404(Kit, pk=kit_id)
     
-    # Get all engines not already assigned
+    # Get engines not already assigned
     assigned_engine_ids = kit.engines.values_list('id', flat=True)
-    available_engines = Engine.objects.exclude(id__in=assigned_engine_ids).order_by('engine_make', 'engine_model')
+    engines = Engine.objects.exclude(id__in=assigned_engine_ids).select_related('sg_engine').order_by('engine_make', 'engine_model')[:50]
     
     context = {
         'kit': kit,
-        'available_engines': available_engines,
+        'engines': engines,
     }
     
-    return render(request, 'inventory/partials/_kit_engine_add_form.html', context)
+    return render(request, 'inventory/partials/engine_search_modal_for_kit.html', context)
+
+
+@login_required
+def engine_search_results_for_kit(request, kit_id):
+    """HTMX search results for engines."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get engines not already assigned
+    assigned_engine_ids = kit.engines.values_list('id', flat=True)
+    engines = Engine.objects.exclude(id__in=assigned_engine_ids).select_related('sg_engine')
+    
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(status__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query)
+        )
+    
+    engines = engines.order_by('engine_make', 'engine_model')[:50]
+    
+    context = {
+        'kit': kit,
+        'engines': engines,
+    }
+    
+    return render(request, 'inventory/partials/engine_search_results_for_kit.html', context)
 
 
 @login_required
@@ -4714,10 +5166,8 @@ def kit_engine_add(request, kit_id):
         kit.engines.add(engine)
         messages.success(request, f"Added {engine} to kit.")
     
-    # Re-render engines partial and clear form
-    response = kit_engines_partial(request, kit_id)
-    response['HX-Trigger'] = 'clearKitEngineForm'
-    return response
+    # Re-render engines partial
+    return kit_engines_partial(request, kit_id)
 
 
 @login_required
@@ -4795,6 +5245,259 @@ def engine_kit_remove(request, engine_id, kit_id):
     
     # Re-render kits partial
     return engine_kits_partial(request, engine_id)
+
+
+# ---------- Search Modal Views (Engine) ----------
+
+@login_required
+def engine_search_modal_interchange(request, engine_id):
+    """Search modal for adding interchange engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    # Get already linked engines to exclude
+    linked_engine_ids = list(engine.interchanges.values_list('id', flat=True))
+    linked_engine_ids.append(engine.id)  # Exclude self
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids).select_related('sg_engine').order_by('engine_make', 'engine_model')[:50]
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': '',
+    }
+    return render(request, 'inventory/partials/engine_search_modal_interchange.html', context)
+
+
+@login_required
+def engine_search_results_interchange(request, engine_id):
+    """Search results for interchange engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get already linked engines to exclude
+    linked_engine_ids = list(engine.interchanges.values_list('id', flat=True))
+    linked_engine_ids.append(engine.id)  # Exclude self
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids).select_related('sg_engine')
+    
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(identifier__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query) |
+            Q(sg_engine__identifier__icontains=query)
+        )
+    
+    engines = engines.order_by('engine_make', 'engine_model')[:100]
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': query,
+    }
+    return render(request, 'inventory/partials/engine_search_results_interchange.html', context)
+
+
+@login_required
+def engine_search_modal_compatible(request, engine_id):
+    """Search modal for adding compatible engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    # Get already linked engines to exclude
+    linked_engine_ids = list(engine.compatibles.values_list('id', flat=True))
+    linked_engine_ids.append(engine.id)  # Exclude self
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids).select_related('sg_engine').order_by('engine_make', 'engine_model')[:50]
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': '',
+    }
+    return render(request, 'inventory/partials/engine_search_modal_compatible.html', context)
+
+
+@login_required
+def engine_search_results_compatible(request, engine_id):
+    """Search results for compatible engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get already linked engines to exclude
+    linked_engine_ids = list(engine.compatibles.values_list('id', flat=True))
+    linked_engine_ids.append(engine.id)  # Exclude self
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids).select_related('sg_engine')
+    
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(identifier__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query) |
+            Q(sg_engine__identifier__icontains=query)
+        )
+    
+    engines = engines.order_by('engine_make', 'engine_model')[:100]
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': query,
+    }
+    return render(request, 'inventory/partials/engine_search_results_compatible.html', context)
+
+
+@login_required
+def engine_search_modal_supercession(request, engine_id, direction):
+    """Search modal for adding supercession engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    
+    if direction == 'older':
+        linked_engine_ids = list(engine.supersedes.values_list('id', flat=True))
+        template = 'inventory/partials/engine_search_modal_supercession_older.html'
+    else:
+        linked_engine_ids = list(engine.superseded_by.values_list('id', flat=True))
+        template = 'inventory/partials/engine_search_modal_supercession_newer.html'
+    
+    linked_engine_ids.append(engine.id)
+    
+    engines = (Engine.objects
+               .exclude(id__in=linked_engine_ids)
+               .select_related('sg_engine')
+               .order_by('engine_make', 'engine_model')[:50])
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': '',
+    }
+    return render(request, template, context)
+
+
+@login_required
+def engine_search_results_supercession(request, engine_id, direction):
+    """Search results for supercession engines."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    if direction == 'older':
+        linked_engine_ids = list(engine.supersedes.values_list('id', flat=True))
+        template = 'inventory/partials/engine_search_results_supercession_older.html'
+    else:
+        linked_engine_ids = list(engine.superseded_by.values_list('id', flat=True))
+        template = 'inventory/partials/engine_search_results_supercession_newer.html'
+    
+    linked_engine_ids.append(engine.id)
+    
+    engines = Engine.objects.exclude(id__in=linked_engine_ids).select_related('sg_engine')
+    
+    if query:
+        engines = engines.filter(
+            Q(engine_make__icontains=query) |
+            Q(engine_model__icontains=query) |
+            Q(identifier__icontains=query) |
+            Q(serial_number__icontains=query) |
+            Q(sg_engine__sg_make__icontains=query) |
+            Q(sg_engine__sg_model__icontains=query) |
+            Q(sg_engine__identifier__icontains=query)
+        )
+    
+    engines = engines.order_by('engine_make', 'engine_model')[:100]
+    
+    context = {
+        'parent_engine': engine,
+        'engines': engines,
+        'query': query,
+    }
+    return render(request, template, context)
+
+
+@login_required
+def build_list_search_modal(request, engine_id):
+    """Search modal for adding build lists to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    # Get build lists not already assigned
+    assigned_bl_ids = engine.build_lists.values_list('id', flat=True)
+    build_lists = BuildList.objects.exclude(id__in=assigned_bl_ids).order_by('name')[:50]
+    
+    context = {
+        'engine': engine,
+        'build_lists': build_lists,
+        'query': '',
+    }
+    return render(request, 'inventory/partials/build_list_search_modal.html', context)
+
+
+@login_required
+def build_list_search_results(request, engine_id):
+    """Search results for build lists."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get build lists not already assigned
+    assigned_bl_ids = engine.build_lists.values_list('id', flat=True)
+    build_lists = BuildList.objects.exclude(id__in=assigned_bl_ids)
+    
+    if query:
+        build_lists = build_lists.filter(
+            Q(name__icontains=query) |
+            Q(notes__icontains=query)
+        )
+    
+    build_lists = build_lists.order_by('name')[:50]
+    
+    context = {
+        'engine': engine,
+        'build_lists': build_lists,
+        'query': query,
+    }
+    return render(request, 'inventory/partials/build_list_search_results.html', context)
+
+
+@login_required
+def kit_search_modal(request, engine_id):
+    """Search modal for adding kits to engine."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    # Get kits not already assigned
+    assigned_kit_ids = engine.kits.values_list('id', flat=True)
+    kits = Kit.objects.exclude(id__in=assigned_kit_ids).order_by('name')[:50]
+    
+    context = {
+        'engine': engine,
+        'kits': kits,
+        'query': '',
+    }
+    return render(request, 'inventory/partials/kit_search_modal.html', context)
+
+
+@login_required
+def kit_search_results(request, engine_id):
+    """Search results for kits."""
+    engine = get_object_or_404(Engine, pk=engine_id)
+    query = request.GET.get('q', '').strip()
+    
+    # Get kits not already assigned
+    assigned_kit_ids = engine.kits.values_list('id', flat=True)
+    kits = Kit.objects.exclude(id__in=assigned_kit_ids)
+    
+    if query:
+        kits = kits.filter(
+            Q(name__icontains=query) |
+            Q(notes__icontains=query)
+        )
+    
+    kits = kits.order_by('name')[:50]
+    
+    context = {
+        'engine': engine,
+        'kits': kits,
+        'query': query,
+    }
+    return render(request, 'inventory/partials/kit_search_results.html', context)
 
 
 # ---------- Casting Views (Engine-side) ----------
@@ -5206,6 +5909,9 @@ def vendor_part_add(request, vendor_id):
         form.save()
         msg = "Part added to vendor." if created else "Existing vendor-part link updated."
         messages.success(request, msg)
+        
+        # Auto-set primary vendor if only one vendor exists
+        link.part.auto_set_primary_vendor()
     else:
         messages.error(request, "Please fix the errors in the form.")
 
@@ -5244,7 +5950,12 @@ def vendor_part_remove(request, vendor_id, link_id):
     """HTMX endpoint to remove a part from a vendor."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
     link = get_object_or_404(PartVendor, pk=link_id, vendor=vendor)
+    part = link.part  # Save part reference before deleting
     link.delete()
+    
+    # Auto-set primary vendor if only one vendor exists
+    part.auto_set_primary_vendor()
+    
     messages.success(request, "Removed part from vendor.")
     return vendor_parts_partial(request, vendor_id)
 
@@ -5268,3 +5979,157 @@ def part_set_primary_vendor(request, part_id, vendor_id):
         if from_vendor:
             return vendor_parts_partial(request, vendor_id)
     return redirect("inventory:part_detail", part_id=part.id)
+
+
+# Inline Editing API Endpoints
+
+@login_required
+@require_http_methods(["PATCH"])
+def engine_field_update(request, engine_id):
+    """Update a single field of an engine via AJAX."""
+    import json
+    
+    try:
+        engine = Engine.objects.get(pk=engine_id)
+        data = json.loads(request.body)
+        field_name = data.get('field')
+        new_value = data.get('value', '').strip()
+        
+        # Define editable fields
+        editable_fields = [
+            'engine_make', 'engine_model', 'serial_number', 'identifier',
+            'injection_type', 'valve_config', 'fuel_system_type',
+            'cpl_number', 'status', 'price'
+        ]
+        
+        if field_name not in editable_fields:
+            return JsonResponse({'error': 'Field not editable'}, status=400)
+        
+        # Handle empty values
+        if new_value == '':
+            new_value = None
+        
+        # Special handling for price field
+        if field_name == 'price':
+            if new_value is not None:
+                try:
+                    new_value = Decimal(new_value)
+                except (InvalidOperation, ValueError):
+                    return JsonResponse({'error': 'Invalid price format'}, status=400)
+        
+        # Set the field value
+        setattr(engine, field_name, new_value)
+        engine.save(update_fields=[field_name])
+        
+        # Format response value for display
+        display_value = getattr(engine, field_name)
+        if display_value is None or display_value == '':
+            display_value = '—'
+        elif field_name == 'price' and display_value != '—':
+            display_value = f'${display_value}'
+        
+        return JsonResponse({
+            'success': True,
+            'value': str(display_value)
+        })
+        
+    except Engine.DoesNotExist:
+        return JsonResponse({'error': 'Engine not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def machine_field_update(request, machine_id):
+    """Update a single field of a machine via AJAX."""
+    import json
+    
+    try:
+        machine = Machine.objects.get(pk=machine_id)
+        data = json.loads(request.body)
+        field_name = data.get('field')
+        new_value = data.get('value', '').strip()
+        
+        # Define editable fields
+        editable_fields = [
+            'make', 'model', 'year', 'machine_type', 'market_type'
+        ]
+        
+        if field_name not in editable_fields:
+            return JsonResponse({'error': 'Field not editable'}, status=400)
+        
+        # Handle empty values
+        if new_value == '':
+            new_value = None
+        
+        # Special handling for year field (integer)
+        if field_name == 'year':
+            if new_value is not None:
+                try:
+                    new_value = int(new_value)
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid year format'}, status=400)
+        
+        # Set the field value
+        setattr(machine, field_name, new_value)
+        machine.save(update_fields=[field_name])
+        
+        # Format response value for display
+        display_value = getattr(machine, field_name)
+        if display_value is None or display_value == '':
+            display_value = '—'
+        
+        return JsonResponse({
+            'success': True,
+            'value': str(display_value)
+        })
+        
+    except Machine.DoesNotExist:
+        return JsonResponse({'error': 'Machine not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)
+
+
+@login_required
+@require_http_methods(["PATCH"])
+def part_field_update(request, part_id):
+    """Update a single field of a part via AJAX."""
+    import json
+    
+    try:
+        part = Part.objects.get(pk=part_id)
+        data = json.loads(request.body)
+        field_name = data.get('field')
+        new_value = data.get('value', '').strip()
+        
+        # Define editable fields
+        editable_fields = [
+            'part_number', 'name', 'manufacturer', 'unit', 'type'
+        ]
+        
+        if field_name not in editable_fields:
+            return JsonResponse({'error': 'Field not editable'}, status=400)
+        
+        # Handle empty values
+        if new_value == '':
+            new_value = None
+        
+        # Set the field value
+        setattr(part, field_name, new_value)
+        part.save(update_fields=[field_name])
+        
+        # Format response value for display
+        display_value = getattr(part, field_name)
+        if display_value is None or display_value == '':
+            display_value = '—'
+        
+        return JsonResponse({
+            'success': True,
+            'value': str(display_value)
+        })
+        
+    except Part.DoesNotExist:
+        return JsonResponse({'error': 'Part not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=400)

@@ -1,0 +1,35 @@
+<div class="kit-popover-content">
+    <div class="kit-popover-header">
+        <strong>{{ kit.name }}</strong>
+        <span class="kit-popover-count">({{ items|length }} parts)</span>
+    </div>
+    
+    <div class="kit-popover-list">
+        {% if items %}
+            <ul>
+                {% for item in items|slice:":10" %}
+                    <li>
+                        <div class="part-line">
+                            <span class="part-qty">{{ item.quantity }}x</span>
+                            <strong class="part-number">{{ item.part.part_number }}</strong>
+                            <span class="part-name">
+                                {% if item.part.name %}
+                                    - {{ item.part.name|truncatewords:5 }}
+                                {% endif %}
+                            </span>
+                            {% if item.primary_vendor_cost %}
+                                <span class="part-cost">${{ item.primary_vendor_cost|floatformat:2 }}</span>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+                {% if items|length > 10 %}
+                    <li class="more-items">... and {{ items|length|add:"-10" }} more</li>
+                {% endif %}
+            </ul>
+        {% else %}
+            <p class="empty-message">No parts in this kit</p>
+        {% endif %}
+    </div>
+</div>
+

@@ -406,83 +406,41 @@
             </div>
         </div>
         
-        <!-- Injection System -->
+        <!-- Engine Characteristics -->
         <div class="edit-card">
             <div class="edit-card-header">
-                <h2 class="edit-card-title">Injection System</h2>
-                <p class="edit-card-subtitle">Fuel injection configuration</p>
+                <h2 class="edit-card-title">Engine Characteristics</h2>
+                <p class="edit-card-subtitle">Injection, valve, and fuel system configuration</p>
             </div>
             
             <div class="edit-card-body">
                 <div class="form-grid">
                     <div class="form-group">
-                        <label class="form-label">
-                            {{ form.di }}
-                            Direct Injection (DI)
+                        <label for="{{ form.injection_type.id_for_label }}" class="form-label">
+                            Injection Type
                         </label>
-                        {% for error in form.di.errors %}
+                        {{ form.injection_type }}
+                        {% for error in form.injection_type.errors %}
                             <div class="form-error">{{ error }}</div>
                         {% endfor %}
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            {{ form.idi }}
-                            Indirect Injection (IDI)
+                        <label for="{{ form.valve_config.id_for_label }}" class="form-label">
+                            Valve Configuration
                         </label>
-                        {% for error in form.idi.errors %}
+                        {{ form.valve_config }}
+                        {% for error in form.valve_config.errors %}
                             <div class="form-error">{{ error }}</div>
                         {% endfor %}
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">
-                            {{ form.common_rail }}
-                            Common Rail
+                        <label for="{{ form.fuel_system_type.id_for_label }}" class="form-label">
+                            Fuel System Type
                         </label>
-                        {% for error in form.common_rail.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Valve Configuration -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Valve Configuration</h2>
-                <p class="edit-card-subtitle">Valve setup per cylinder</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label">
-                            {{ form.two_valve }}
-                            2 Valve
-                        </label>
-                        {% for error in form.two_valve.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            {{ form.four_valve }}
-                            4 Valve
-                        </label>
-                        {% for error in form.four_valve.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label">
-                            {{ form.five_valve }}
-                            5 Valve
-                        </label>
-                        {% for error in form.five_valve.errors %}
+                        {{ form.fuel_system_type }}
+                        {% for error in form.fuel_system_type.errors %}
                             <div class="form-error">{{ error }}</div>
                         {% endfor %}
                     </div>

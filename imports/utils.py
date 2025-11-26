@@ -225,6 +225,9 @@ def get_expected_fields(section):
             ('engine_model', 'Engine Model'),
             ('sg_make', 'SG Make'),
             ('sg_model', 'SG Model'),
+            ('injection_type', 'Injection Type'),
+            ('valve_config', 'Valve Configuration'),
+            ('fuel_system_type', 'Fuel System Type'),
             ('status', 'Status'),
             ('notes', 'Notes'),
         ],
@@ -244,12 +247,9 @@ def get_engine_field_aliases():
     """Get field aliases for engine import mapping."""
     return {
         'serial_number': ['s/n', 'serial', 'serial number', 'sn'],
-        'di': ['di', 'direct injection'],
-        'idi': ['idi', 'indirect injection'],
-        'common_rail': ['common rail', 'common-rail', 'cr'],
-        'two_valve': ['2v', '2 valve', 'two valve'],
-        'four_valve': ['4v', '4 valve', 'four valve'],
-        'five_valve': ['5v', '5 valve', 'five valve'],
+        'injection_type': ['di/idi', 'di', 'idi', 'injection', 'injection type', 'injection_type'],
+        'valve_config': ['valve', 'valves', 'valve config', 'valve configuration', 'valve_config'],
+        'fuel_system_type': ['common rail/standard', 'fuel system', 'common rail', 'cr', 'fuel_system_type'],
     }
 
 def fuzzy_match_header(header, target_field, aliases):

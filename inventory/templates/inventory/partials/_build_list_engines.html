@@ -1,46 +1,39 @@
 {% load static %}
 
 {% if engines %}
-<div class="table-wrap">
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Engine Make</th>
-                <th>Engine Model</th>
-                <th>Serial Number</th>
-                <th>Status</th>
-                <th style="width: 150px;">Actions</th>
+<table class="related-table">
+    <thead>
+        <tr>
+            <th>Engine Make</th>
+            <th>Engine Model</th>
+            <th>Serial Number</th>
+            <th>Status</th>
+            <th style="width: 80px; text-align: right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for engine in engines %}
+            <tr onclick="window.location='{% url 'inventory:engine_detail' engine.pk %}';">
+                <td><strong>{{ engine.engine_make }}</strong></td>
+                <td>{{ engine.engine_model }}</td>
+                <td>{{ engine.serial_number|default:"—" }}</td>
+                <td>{{ engine.status|default:"—" }}</td>
+                <td style="text-align: right;" onclick="event.stopPropagation();">
+                    <button 
+                        class="btn-icon btn-danger"
+                        hx-post="{% url 'inventory:build_list_engine_remove' build_list.pk engine.pk %}"
+                        hx-target="#engines-table-container"
+                        hx-swap="innerHTML"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        onclick="return confirm('Remove this engine from build list?');"
+                        title="Remove">
+                        ✕
+                    </button>
+                </td>
             </tr>
-        </thead>
-        <tbody>
-            {% for engine in engines %}
-                <tr>
-                    <td><strong>{{ engine.engine_make }}</strong></td>
-                    <td>{{ engine.engine_model }}</td>
-                    <td>{{ engine.serial_number|default:"—" }}</td>
-                    <td>{{ engine.status|default:"—" }}</td>
-                    <td>
-                        <div style="display: flex; gap: 0.5rem;">
-                            <a href="{% url 'inventory:engine_detail' engine.pk %}" 
-                               class="btn btn-sm btn-secondary">
-                                View
-                            </a>
-                            <form method="post" 
-                                  action="{% url 'inventory:build_list_engine_remove' build_list.pk engine.pk %}"
-                                  hx-post="{% url 'inventory:build_list_engine_remove' build_list.pk engine.pk %}"
-                                  hx-target="#engines-table-container"
-                                  hx-swap="innerHTML"
-                                  onsubmit="return confirm('Remove this engine from build list?');">
-                                {% csrf_token %}
-                                <button type="submit" class="btn btn-sm btn-danger">Remove</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
 <div class="empty-state">
     <p>This build list is not assigned to any engines yet.</p>

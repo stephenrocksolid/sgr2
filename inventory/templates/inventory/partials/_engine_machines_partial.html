@@ -2,33 +2,41 @@
     <table class="related-table">
         <thead>
             <tr>
-                <th>Machine</th>
+                <th>Make</th>
+                <th>Model</th>
                 <th>Year</th>
                 <th>Machine Type</th>
                 <th>Market Type</th>
-                <th>Primary Engine</th>
+                <th>Primary</th>
                 <th>Notes</th>
-                <th>Actions</th>
+                <th style="width: 50px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for machine_engine in machine_engines %}
-                <tr class="machine-row" data-machine-id="{{ machine_engine.id }}">
-                    <td>
-                        <strong>{{ machine_engine.machine.make }} {{ machine_engine.machine.model }}</strong>
-                    </td>
+                <tr class="machine-row engine-machine-row"
+                    data-href="{% url 'inventory:machine_detail' machine_engine.machine.pk %}">
+                    <td>{{ machine_engine.machine.make }}</td>
+                    <td>{{ machine_engine.machine.model }}</td>
                     <td>{{ machine_engine.machine.year }}</td>
                     <td>{{ machine_engine.machine.machine_type }}</td>
                     <td>{{ machine_engine.machine.market_type }}</td>
-                    <td>{{ machine_engine.is_primary|yesno:"Yes,No" }}</td>
+                    <td>
+                        {% if machine_engine.is_primary %}
+                            <span class="primary-badge">Primary</span>
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
                     <td>{{ machine_engine.notes|default:"—" }}</td>
                     <td class="text-right">
                         <form hx-post="{% url 'inventory:engine_machine_remove' engine.pk machine_engine.pk %}"
                               hx-target="#engine-machines-section"
                               hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this machine from the engine?">
+                              hx-confirm="Are you sure you want to remove this machine from the engine?"
+                              style="display: inline;">
                             {% csrf_token %}
-                            <button class="btn btn-danger btn-sm" type="submit">Remove</button>
+                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
                         </form>
                     </td>
                 </tr>
@@ -37,7 +45,20 @@
     </table>
 {% else %}
     <div class="empty-message">
-        <p class="text-muted">This engine is not associated with any machines yet.</p>
+        <p>This engine is not associated with any machines yet.</p>
     </div>
 {% endif %}
+
+<script>
+if (!window.__engineMachineRowHandlerAttached) {
+    document.addEventListener('click', function(event) {
+        const row = event.target.closest('.engine-machine-row');
+        if (!row || event.target.closest('button') || event.target.closest('form')) {
+            return;
+        }
+        window.location.href = row.dataset.href;
+    });
+    window.__engineMachineRowHandlerAttached = true;
+}
+</script>
 
