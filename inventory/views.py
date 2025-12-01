@@ -51,8 +51,7 @@ def machines_list(request):
     
     # Get search query and sorting parameters
     qtext = request.GET.get('q', '').strip()
-    sort_field = request.GET.get('sort', 'make')
-    sort_order = request.GET.get('order', 'asc')
+    sort_param = request.GET.get('sort', 'make').strip()
     
     # Base queryset
     machines = Machine.objects.all()
@@ -64,13 +63,22 @@ def machines_list(request):
         machines = apply_generics(machines, generic, MACHINES_GENERIC_FIELDS)
         machines = machines.distinct()
     
-    # Apply sorting
-    if sort_field in ['make', 'model', 'year', 'machine_type', 'market_type', 'created_at']:
-        if sort_order == 'desc':
-            sort_field = f'-{sort_field}'
-        machines = machines.order_by(sort_field)
-    else:
-        machines = machines.order_by('make', 'model')
+    # Multi-column sorting
+    allowed_sort_fields = {
+        'make', '-make', 'model', '-model', 'year', '-year',
+        'machine_type', '-machine_type', 'market_type', '-market_type',
+        'created_at', '-created_at'
+    }
+    sort_fields = []
+    for field in sort_param.split(','):
+        field = field.strip()
+        if field in allowed_sort_fields:
+            sort_fields.append(field)
+    
+    if not sort_fields:
+        sort_fields = ['make', 'model']
+    
+    machines = machines.order_by(*sort_fields)
     
     # Pagination
     paginator = Paginator(machines, 200)
@@ -101,8 +109,7 @@ def machines_list(request):
         'machines': page_obj.object_list,
         'total_count': paginator.count,
         'q': qtext,
-        'current_sort': sort_field,
-        'current_order': sort_order,
+        'sort': sort_param,
     }
     
     return render(request, 'inventory/machines_list.html', context)
@@ -178,8 +185,7 @@ def engines_list(request):
     
     # Get search query and sorting parameters
     qtext = request.GET.get('q', '').strip()
-    sort_field = request.GET.get('sort', 'engine_make')
-    sort_order = request.GET.get('order', 'asc')
+    sort_param = request.GET.get('sort', 'engine_make').strip()
     
     # Base queryset with select_related for performance
     engines = Engine.objects.select_related('sg_engine').all()
@@ -212,17 +218,28 @@ def engines_list(request):
         
         engines = engines.filter(expr).distinct()
     
-    # Apply sorting
-    sortable_fields = [
-        'engine_make', 'engine_model', 'cpl_number', 'ar_number', 'status', 'created_at',
-        'serial_number', 'identifier', 'price', 'injection_type', 'valve_config', 'fuel_system_type',
-        'sg_engine__sg_make', 'sg_engine__sg_model', 'sg_engine__identifier'
-    ]
-    if sort_field in sortable_fields:
-        order_by_field = f'-{sort_field}' if sort_order == 'desc' else sort_field
-        engines = engines.order_by(order_by_field)
-    else:
-        engines = engines.order_by('engine_make', 'engine_model')
+    # Multi-column sorting
+    allowed_sort_fields = {
+        'engine_make', '-engine_make', 'engine_model', '-engine_model',
+        'cpl_number', '-cpl_number', 'ar_number', '-ar_number',
+        'status', '-status', 'created_at', '-created_at',
+        'serial_number', '-serial_number', 'identifier', '-identifier',
+        'price', '-price', 'injection_type', '-injection_type',
+        'valve_config', '-valve_config', 'fuel_system_type', '-fuel_system_type',
+        'sg_engine__sg_make', '-sg_engine__sg_make',
+        'sg_engine__sg_model', '-sg_engine__sg_model',
+        'sg_engine__identifier', '-sg_engine__identifier'
+    }
+    sort_fields = []
+    for field in sort_param.split(','):
+        field = field.strip()
+        if field in allowed_sort_fields:
+            sort_fields.append(field)
+    
+    if not sort_fields:
+        sort_fields = ['engine_make', 'engine_model']
+    
+    engines = engines.order_by(*sort_fields)
     
     # Pagination
     paginator = Paginator(engines, 200)
@@ -256,8 +273,7 @@ def engines_list(request):
         'engines': page_obj.object_list,
         'total_count': paginator.count,
         'q': qtext,
-        'current_sort': sort_field,
-        'current_order': sort_order,
+        'sort': sort_param,
     }
     
     return render(request, 'inventory/engines_list.html', context)
@@ -333,8 +349,7 @@ def parts_list(request):
     
     # Get search query and sorting parameters
     qtext = request.GET.get('q', '').strip()
-    sort_field = request.GET.get('sort', 'part_number')
-    sort_order = request.GET.get('order', 'asc')
+    sort_param = request.GET.get('sort', 'part_number').strip()
     
     # Base queryset with select_related for performance
     parts = Part.objects.select_related('category', 'primary_vendor').prefetch_related('attribute_values__attribute', 'vendor_links__vendor').all()
@@ -346,13 +361,22 @@ def parts_list(request):
         parts = apply_generics(parts, generic, PARTS_GENERIC_FIELDS)
         parts = parts.distinct()
     
-    # Apply sorting
-    if sort_field in ['part_number', 'name', 'manufacturer', 'type', 'created_at']:
-        if sort_order == 'desc':
-            sort_field = f'-{sort_field}'
-        parts = parts.order_by(sort_field)
-    else:
-        parts = parts.order_by('part_number')
+    # Multi-column sorting
+    allowed_sort_fields = {
+        'part_number', '-part_number', 'name', '-name',
+        'manufacturer', '-manufacturer', 'type', '-type',
+        'created_at', '-created_at', 'category__name', '-category__name'
+    }
+    sort_fields = []
+    for field in sort_param.split(','):
+        field = field.strip()
+        if field in allowed_sort_fields:
+            sort_fields.append(field)
+    
+    if not sort_fields:
+        sort_fields = ['part_number']
+    
+    parts = parts.order_by(*sort_fields)
     
     # Pagination
     paginator = Paginator(parts, 200)
@@ -384,8 +408,7 @@ def parts_list(request):
         'parts': page_obj.object_list,
         'total_count': paginator.count,
         'q': qtext,
-        'current_sort': sort_field,
-        'current_order': sort_order,
+        'sort': sort_param,
     }
     
     return render(request, 'inventory/parts_list.html', context)
@@ -4151,8 +4174,7 @@ def build_lists_list(request):
     
     # Get search query and sorting parameters
     search = request.GET.get('search', '').strip()
-    sort_field = request.GET.get('sort', 'name')
-    sort_order = request.GET.get('order', 'asc')
+    sort_param = request.GET.get('sort', 'name').strip()
     
     # Base queryset with annotations
     build_lists = BuildList.objects.annotate(
@@ -4167,14 +4189,21 @@ def build_lists_list(request):
             Q(notes__icontains=search)
         )
     
-    # Apply sorting
-    valid_sort_fields = ['name', 'engines_count', 'total_hours', 'created_at']
-    if sort_field in valid_sort_fields:
-        if sort_order == 'desc':
-            sort_field = f'-{sort_field}'
-        build_lists = build_lists.order_by(sort_field)
-    else:
-        build_lists = build_lists.order_by('name')
+    # Multi-column sorting
+    allowed_sort_fields = {
+        'name', '-name', 'engines_count', '-engines_count',
+        'total_hours', '-total_hours', 'created_at', '-created_at'
+    }
+    sort_fields = []
+    for field in sort_param.split(','):
+        field = field.strip()
+        if field in allowed_sort_fields:
+            sort_fields.append(field)
+    
+    if not sort_fields:
+        sort_fields = ['name']
+    
+    build_lists = build_lists.order_by(*sort_fields)
     
     # Pagination
     paginator = Paginator(build_lists, 200)
@@ -4186,8 +4215,7 @@ def build_lists_list(request):
         'build_lists': page_obj.object_list,
         'total_count': paginator.count,
         'search': search,
-        'current_sort': request.GET.get('sort', 'name'),
-        'current_order': sort_order,
+        'sort': sort_param,
     }
     
     return render(request, 'inventory/build_lists_list.html', context)
@@ -4607,8 +4635,7 @@ def kits_list(request):
     
     # Get search query and sorting parameters
     search = request.GET.get('search', '').strip()
-    sort_field = request.GET.get('sort', 'name')
-    sort_order = request.GET.get('order', 'asc')
+    sort_param = request.GET.get('sort', 'name').strip()
     
     # Base queryset with annotations
     kits = Kit.objects.annotate(
@@ -4623,14 +4650,21 @@ def kits_list(request):
             Q(notes__icontains=search)
         )
     
-    # Apply sorting
-    valid_sort_fields = ['name', 'engines_count', 'parts_count', 'created_at']
-    if sort_field in valid_sort_fields:
-        if sort_order == 'desc':
-            sort_field = f'-{sort_field}'
-        kits = kits.order_by(sort_field)
-    else:
-        kits = kits.order_by('name')
+    # Multi-column sorting
+    allowed_sort_fields = {
+        'name', '-name', 'engines_count', '-engines_count',
+        'parts_count', '-parts_count', 'created_at', '-created_at'
+    }
+    sort_fields = []
+    for field in sort_param.split(','):
+        field = field.strip()
+        if field in allowed_sort_fields:
+            sort_fields.append(field)
+    
+    if not sort_fields:
+        sort_fields = ['name']
+    
+    kits = kits.order_by(*sort_fields)
     
     # Pagination
     paginator = Paginator(kits, 200)
@@ -4655,8 +4689,7 @@ def kits_list(request):
         'kits': page_obj.object_list,
         'total_count': paginator.count,
         'search': search,
-        'current_sort': request.GET.get('sort', 'name'),
-        'current_order': sort_order,
+        'sort': sort_param,
     }
     
     return render(request, 'inventory/kits_list.html', context)

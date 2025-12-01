@@ -224,7 +224,13 @@
     
     .sort-indicator {
         font-size: 0.75rem;
+        color: var(--gray-400);
+        margin-left: 0.25rem;
+    }
+    
+    .sort-indicator.active {
         color: var(--red-600);
+        font-weight: bold;
     }
     
     .pagination {
@@ -447,9 +453,8 @@
             <button class="btn btn-dark">Search</button>
             <button type="button" class="btn btn-light" data-open="adv-search">Advanced</button>
             
-            <!-- Hidden fields to preserve sorting -->
-            <input type="hidden" name="sort" value="{{ current_sort }}">
-            <input type="hidden" name="order" value="{{ current_order }}">
+            <!-- Hidden field to preserve sorting -->
+            <input type="hidden" name="sort" value="{{ sort }}">
         </form>
     </div>
 </div>
@@ -496,58 +501,28 @@
         <thead>
             <tr>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=make&order={% if current_sort == 'make' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Make
-                        {% if current_sort == 'make' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="make">
+                        Make <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=model&order={% if current_sort == 'model' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Model
-                        {% if current_sort == 'model' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="model">
+                        Model <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=year&order={% if current_sort == 'year' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Year
-                        {% if current_sort == 'year' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="year">
+                        Year <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=machine_type&order={% if current_sort == 'machine_type' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Machine Type
-                        {% if current_sort == 'machine_type' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="machine_type">
+                        Machine Type <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=market_type&order={% if current_sort == 'market_type' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Market Type
-                        {% if current_sort == 'market_type' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="market_type">
+                        Market Type <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th style="width: 80px; text-align: center;">Actions</th>
@@ -732,6 +707,92 @@
     // Initialize inline editor for machines
     document.addEventListener('DOMContentLoaded', function() {
         new InlineEditor('machine', '/inventory/machines/0/field-update/');
+    });
+    
+    // Multi-column sorting functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentSort = '{{ sort|escapejs }}';
+        const sortLinks = document.querySelectorAll('.sort-link');
+        
+        // Parse current sort state
+        function parseSortState() {
+            if (!currentSort) return [];
+            return currentSort.split(',').map(s => s.trim()).filter(s => s);
+        }
+        
+        // Update visual indicators
+        function updateSortIndicators() {
+            const sortFields = parseSortState();
+            sortLinks.forEach(link => {
+                const field = link.dataset.field;
+                const indicator = link.querySelector('.sort-indicator');
+                indicator.textContent = '';
+                indicator.className = 'sort-indicator';
+                
+                // Find field in sort list
+                for (let i = 0; i < sortFields.length; i++) {
+                    const sortField = sortFields[i];
+                    const isDesc = sortField.startsWith('-');
+                    const fieldName = isDesc ? sortField.substring(1) : sortField;
+                    
+                    if (fieldName === field) {
+                        const priority = sortFields.length > 1 ? (i + 1) : '';
+                        indicator.textContent = priority + (isDesc ? '↓' : '↑');
+                        indicator.className = 'sort-indicator active';
+                        break;
+                    }
+                }
+            });
+        }
+        
+        // Handle sort link clicks
+        sortLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const field = this.dataset.field;
+                let sortFields = parseSortState();
+                
+                if (e.shiftKey) {
+                    // Shift+click: add/modify in multi-column sort
+                    let found = false;
+                    for (let i = 0; i < sortFields.length; i++) {
+                        const sortField = sortFields[i];
+                        const isDesc = sortField.startsWith('-');
+                        const fieldName = isDesc ? sortField.substring(1) : sortField;
+                        
+                        if (fieldName === field) {
+                            // Toggle direction
+                            sortFields[i] = isDesc ? field : '-' + field;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        // Add new field
+                        sortFields.push(field);
+                    }
+                } else {
+                    // Regular click: replace all sorts with this field
+                    const currentField = sortFields.find(s => s === field || s === '-' + field);
+                    if (currentField) {
+                        // Toggle direction if same field
+                        sortFields = [currentField.startsWith('-') ? field : '-' + field];
+                    } else {
+                        // New field, default ascending
+                        sortFields = [field];
+                    }
+                }
+                
+                // Build URL and navigate
+                const url = new URL(window.location);
+                url.searchParams.delete('page'); // Reset to page 1
+                url.searchParams.set('sort', sortFields.join(','));
+                window.location.href = url.toString();
+            });
+        });
+        
+        // Initialize indicators
+        updateSortIndicators();
     });
 </script>
 <script src="{% static 'inventory/js/inline-editor.js' %}"></script>

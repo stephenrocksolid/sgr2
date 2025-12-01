@@ -207,7 +207,13 @@
     
     .sort-indicator {
         font-size: 0.75rem;
+        color: var(--gray-400);
+        margin-left: 0.25rem;
+    }
+    
+    .sort-indicator.active {
         color: var(--red-600);
+        font-weight: bold;
     }
     
     .action-link {
@@ -482,9 +488,8 @@
             <button class="btn btn-dark">Search</button>
             <button type="button" class="btn btn-light" data-open="adv-search">Advanced</button>
             
-            <!-- Hidden fields to preserve sorting -->
-            <input type="hidden" name="sort" value="{{ current_sort }}">
-            <input type="hidden" name="order" value="{{ current_order }}">
+            <!-- Hidden field to preserve sorting -->
+            <input type="hidden" name="sort" value="{{ sort }}">
         </form>
     </div>
 </div>
@@ -535,109 +540,30 @@
         <thead>
             <tr>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=engine_make&order={% if current_sort == 'engine_make' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Engine Make
-                        {% if current_sort == 'engine_make' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="engine_make">
+                        Engine Make <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=engine_model&order={% if current_sort == 'engine_model' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Engine Model
-                        {% if current_sort == 'engine_model' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="engine_model">
+                        Engine Model <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=identifier&order={% if current_sort == 'identifier' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Identifier
-                        {% if current_sort == 'identifier' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="identifier">
+                        Identifier <span class="sort-indicator"></span>
                     </a>
                 </th>
+                <th>Overhaul Kit #</th>
                 <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__sg_make&order={% if current_sort == 'sg_engine__sg_make' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        SG Make
-                        {% if current_sort == 'sg_engine__sg_make' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__sg_model&order={% if current_sort == 'sg_engine__sg_model' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        SG Model
-                        {% if current_sort == 'sg_engine__sg_model' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=sg_engine__identifier&order={% if current_sort == 'sg_engine__identifier' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        SG Identifier
-                        {% if current_sort == 'sg_engine__identifier' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=serial_number&order={% if current_sort == 'serial_number' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        S/N
-                        {% if current_sort == 'serial_number' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
+                    <a href="#" class="sort-link" data-field="serial_number">
+                        S/N <span class="sort-indicator"></span>
                     </a>
                 </th>
                 <th>Injection Type</th>
                 <th>Valve Config</th>
                 <th>Fuel System</th>
-                <th>Casting #</th>
                 <th>CPL Number</th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=status&order={% if current_sort == 'status' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Status
-                        {% if current_sort == 'status' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
-                <th>
-                    <a href="?{% for key, value in request.GET.items %}{% if key != 'sort' and key != 'order' %}{{ key }}={{ value }}&{% endif %}{% endfor %}sort=price&order={% if current_sort == 'price' and current_order == 'asc' %}desc{% else %}asc{% endif %}" 
-                       class="sort-link">
-                        Price
-                        {% if current_sort == 'price' %}
-                            <span class="sort-indicator">
-                                {% if current_order == 'asc' %}↑{% else %}↓{% endif %}
-                            </span>
-                        {% endif %}
-                    </a>
-                </th>
                 <th style="width: 80px; text-align: center;">Actions</th>
             </tr>
         </thead>
@@ -647,23 +573,12 @@
                     <td class="editable" data-field="engine_make">{{ engine.engine_make }}</td>
                     <td class="editable" data-field="engine_model">{{ engine.engine_model }}</td>
                     <td class="editable" data-field="identifier">{{ engine.identifier|default:"—" }}</td>
-                    <td>{{ engine.sg_engine.sg_make|default:"—" }}</td>
-                    <td>{{ engine.sg_engine.sg_model|default:"—" }}</td>
-                    <td>{{ engine.sg_engine.identifier|default:"—" }}</td>
+                    <td class="editable" data-field="oh_kit_no">{{ engine.oh_kit_no|default:"—" }}</td>
                     <td class="editable" data-field="serial_number">{{ engine.serial_number|default:"—" }}</td>
                     <td class="editable" data-field="injection_type">{{ engine.injection_type|default:"—" }}</td>
                     <td class="editable" data-field="valve_config">{{ engine.valve_config|default:"—" }}</td>
                     <td class="editable" data-field="fuel_system_type">{{ engine.fuel_system_type|default:"—" }}</td>
-                    <td>
-                        {% if engine.castings.exists %}
-                            {{ engine.castings.count }} casting{{ engine.castings.count|pluralize }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
                     <td class="editable" data-field="cpl_number">{{ engine.cpl_number|default:"—" }}</td>
-                    <td class="editable" data-field="status">{{ engine.status|default:"—" }}</td>
-                    <td class="editable" data-field="price" data-type="number">{% if engine.price %}${{ engine.price }}{% else %}—{% endif %}</td>
                     <td style="text-align: center;">
                         <a href="{% url 'inventory:engine_detail' engine.pk %}" class="action-link" title="Open details" onclick="event.stopPropagation();">
                             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -676,7 +591,7 @@
                 </tr>
             {% empty %}
                 <tr>
-                    <td colspan="15" style="text-align: center; padding: 2rem; color: var(--gray-500);">
+                    <td colspan="10" style="text-align: center; padding: 2rem; color: var(--gray-500);">
                         No engines found matching your criteria.
                     </td>
                 </tr>
@@ -839,6 +754,92 @@
     // Initialize inline editor for engines
     document.addEventListener('DOMContentLoaded', function() {
         new InlineEditor('engine', '/inventory/engines/0/field-update/');
+    });
+    
+    // Multi-column sorting functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const currentSort = '{{ sort|escapejs }}';
+        const sortLinks = document.querySelectorAll('.sort-link');
+        
+        // Parse current sort state
+        function parseSortState() {
+            if (!currentSort) return [];
+            return currentSort.split(',').map(s => s.trim()).filter(s => s);
+        }
+        
+        // Update visual indicators
+        function updateSortIndicators() {
+            const sortFields = parseSortState();
+            sortLinks.forEach(link => {
+                const field = link.dataset.field;
+                const indicator = link.querySelector('.sort-indicator');
+                indicator.textContent = '';
+                indicator.className = 'sort-indicator';
+                
+                // Find field in sort list
+                for (let i = 0; i < sortFields.length; i++) {
+                    const sortField = sortFields[i];
+                    const isDesc = sortField.startsWith('-');
+                    const fieldName = isDesc ? sortField.substring(1) : sortField;
+                    
+                    if (fieldName === field) {
+                        const priority = sortFields.length > 1 ? (i + 1) : '';
+                        indicator.textContent = priority + (isDesc ? '↓' : '↑');
+                        indicator.className = 'sort-indicator active';
+                        break;
+                    }
+                }
+            });
+        }
+        
+        // Handle sort link clicks
+        sortLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const field = this.dataset.field;
+                let sortFields = parseSortState();
+                
+                if (e.shiftKey) {
+                    // Shift+click: add/modify in multi-column sort
+                    let found = false;
+                    for (let i = 0; i < sortFields.length; i++) {
+                        const sortField = sortFields[i];
+                        const isDesc = sortField.startsWith('-');
+                        const fieldName = isDesc ? sortField.substring(1) : sortField;
+                        
+                        if (fieldName === field) {
+                            // Toggle direction
+                            sortFields[i] = isDesc ? field : '-' + field;
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        // Add new field
+                        sortFields.push(field);
+                    }
+                } else {
+                    // Regular click: replace all sorts with this field
+                    const currentField = sortFields.find(s => s === field || s === '-' + field);
+                    if (currentField) {
+                        // Toggle direction if same field
+                        sortFields = [currentField.startsWith('-') ? field : '-' + field];
+                    } else {
+                        // New field, default ascending
+                        sortFields = [field];
+                    }
+                }
+                
+                // Build URL and navigate
+                const url = new URL(window.location);
+                url.searchParams.delete('page'); // Reset to page 1
+                url.searchParams.set('sort', sortFields.join(','));
+                window.location.href = url.toString();
+            });
+        });
+        
+        // Initialize indicators
+        updateSortIndicators();
     });
 </script>
 <script src="{% static 'inventory/js/inline-editor.js' %}"></script>
