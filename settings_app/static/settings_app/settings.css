@@ -804,8 +804,9 @@
 }
 
 .btn-primary:hover {
-    background: var(--primary-dark);
-    border-color: var(--primary-dark);
+    background: var(--gray-700);
+    border-color: var(--gray-700);
+    color: white;
 }
 
 .btn-outline {

@@ -1843,6 +1843,13 @@ document.addEventListener('DOMContentLoaded', function() {
             '': ''
         };
         
+        const printStatusLabels = {
+            'quote': 'QUOTE',
+            'wo': 'WORK ORDER',
+            'invoice': 'INVOICE',
+            '': 'WORK ORDER'
+        };
+        
         statusSelect.addEventListener('change', function() {
             const newStatus = this.value;
             const newLabel = statusLabels[newStatus] || newStatus;
@@ -1872,6 +1879,13 @@ document.addEventListener('DOMContentLoaded', function() {
             statusBadge.className = 'job-status-badge';
             if (newStatus) {
                 statusBadge.classList.add('job-status-' + newStatus);
+            }
+            
+            // Update print document status label so Print reflects the new status
+            const printStatusLabel = document.querySelector('.print-doc-type-label');
+            if (printStatusLabel) {
+                printStatusLabel.textContent = printStatusLabels[newStatus] || 'WORK ORDER';
+                printStatusLabel.setAttribute('data-status', newStatus);
             }
         });
     }
