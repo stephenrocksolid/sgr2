@@ -12,3 +12,4 @@ call_command('migrate', 'settings_app', verbosity=2)
 print("Done!")
 
 
+

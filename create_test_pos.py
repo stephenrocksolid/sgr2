@@ -66,3 +66,4 @@ with open('create_pos_log.txt', 'w') as log:
 print("Done! Check create_pos_log.txt for details")
 
 
+

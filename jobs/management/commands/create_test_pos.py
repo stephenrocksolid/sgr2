@@ -67,3 +67,4 @@ class Command(BaseCommand):
         self.stdout.write(f'Total POs now: {PurchaseOrder.objects.count()}')
 
 
+
