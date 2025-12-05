@@ -1,0 +1,252 @@
+{% load static %}
+
+<div class="build-list-create-modal-overlay" id="buildListCreateModal" onclick="if(event.target === this) closeModal('buildListCreateModal')">
+    <div class="build-list-create-modal-content" onclick="event.stopPropagation()">
+        <div class="build-list-create-modal-header">
+            <h3>Create New Build List</h3>
+            <button type="button" class="build-list-create-modal-close" onclick="closeModal('buildListCreateModal')">&times;</button>
+        </div>
+        
+        <form method="post" action="{% url 'inventory:build_list_create_modal' %}"
+              hx-post="{% url 'inventory:build_list_create_modal' %}"
+              hx-target="#buildListCreateModal"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="build-list-create-modal-body">
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+                
+                <div class="form-group">
+                    <label for="{{ form.name.id_for_label }}">
+                        Build List Name <span style="color: #dc2626;">*</span>
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.name.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <span class="help-text">Enter a descriptive name for this build list</span>
+                </div>
+                
+                <div class="form-group">
+                    <label for="{{ form.notes.id_for_label }}">Notes</label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                        <ul class="errorlist">
+                            {% for error in form.notes.errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    <span class="help-text">Add any additional notes or comments about this build list</span>
+                </div>
+            </div>
+            
+            <div class="build-list-create-modal-footer">
+                <button type="button" class="build-list-create-btn build-list-create-btn-secondary" onclick="closeModal('buildListCreateModal')">Cancel</button>
+                <button type="submit" class="build-list-create-btn build-list-create-btn-primary">Create Build List</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.build-list-create-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.build-list-create-modal-content {
+    background: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.build-list-create-modal-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.build-list-create-modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.build-list-create-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.build-list-create-modal-close:hover {
+    color: #333;
+}
+
+.build-list-create-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.build-list-create-modal-body .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.build-list-create-modal-body .form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #374151;
+}
+
+.build-list-create-modal-body .form-group input[type="text"],
+.build-list-create-modal-body .form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.build-list-create-modal-body .form-group input[type="text"]:focus,
+.build-list-create-modal-body .form-group textarea:focus {
+    outline: none;
+    border-color: #dc2626;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.build-list-create-modal-body .form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.build-list-create-modal-body .help-text {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+}
+
+.build-list-create-modal-body .errorlist {
+    list-style: none;
+    padding: 0;
+    margin: 0.5rem 0 0 0;
+}
+
+.build-list-create-modal-body .errorlist li {
+    color: #dc2626;
+    font-size: 0.875rem;
+}
+
+.build-list-create-modal-body .alert {
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.build-list-create-modal-body .alert-danger {
+    background-color: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #991b1b;
+}
+
+.build-list-create-modal-footer {
+    display: flex;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border-top: 1px solid #e0e0e0;
+    justify-content: flex-end;
+}
+
+.build-list-create-btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.build-list-create-btn-primary {
+    background-color: #1e3a4c;
+    color: white;
+}
+
+.build-list-create-btn-primary:hover {
+    background-color: #2d5570;
+}
+
+.build-list-create-btn-secondary {
+    background-color: #e5e7eb;
+    color: #374151;
+}
+
+.build-list-create-btn-secondary:hover {
+    background-color: #d1d5db;
+}
+</style>
+
+<script>
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// Listen for successful form submission
+document.body.addEventListener('buildListCreated', function(event) {
+    closeModal('buildListCreateModal');
+    // Reload the page to show the new build list
+    window.location.reload();
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeModal('buildListCreateModal');
+    }
+});
+</script>
+
+
+
+

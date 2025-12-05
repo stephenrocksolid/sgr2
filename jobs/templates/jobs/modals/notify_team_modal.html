@@ -1,0 +1,430 @@
+{% load static %}
+
+<div class="po-modal-overlay" id="notifyTeamModal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+                Notify Team Members
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('notifyTeamModal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <form method="post" action="{% url 'jobs:job_notify_team' job.pk %}"
+              hx-post="{% url 'jobs:job_notify_team' job.pk %}"
+              hx-swap="none">
+            {% csrf_token %}
+            
+            <div class="po-modal-body">
+                <p class="notify-modal-description">
+                    Select which team members to notify. Employees assigned to this job are pre-selected.
+                </p>
+                
+                <!-- Select/Deselect All -->
+                <div class="notify-select-all">
+                    <label class="notify-select-all-label">
+                        <input type="checkbox" id="selectAllUsers" class="po-checkbox" onchange="toggleAllUsers(this)">
+                        <span>Select All / Deselect All</span>
+                    </label>
+                </div>
+                
+                <div class="po-checkbox-list">
+                    {% for user in users %}
+                    <label class="po-checkbox-item" for="notify_user_{{ user.pk }}">
+                        <input type="checkbox" 
+                               name="user_ids" 
+                               value="{{ user.pk }}" 
+                               id="notify_user_{{ user.pk }}"
+                               class="po-checkbox user-checkbox"
+                               {% if user.pk in assigned_user_ids %}checked{% endif %}>
+                        <div class="po-checkbox-icon">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                        </div>
+                        <div class="po-checkbox-content">
+                            <span class="po-checkbox-label">{{ user.get_full_name|default:user.username }}</span>
+                            {% if user.pk in assigned_user_ids %}
+                            <span class="notify-assigned-badge">Assigned</span>
+                            {% endif %}
+                        </div>
+                    </label>
+                    {% empty %}
+                    <div class="po-search-placeholder">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        <p>No users available</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Message Input -->
+                <div class="notify-message-section">
+                    <label class="notify-message-label">Message</label>
+                    <textarea name="message" class="notify-textarea" rows="4" 
+                              placeholder="Type your message to send to selected team members..." required></textarea>
+                </div>
+            </div>
+            
+            <div class="po-modal-footer">
+                <button type="button" class="po-modal-cancel" onclick="document.getElementById('notifyTeamModal').remove()">Cancel</button>
+                <button type="submit" class="po-modal-submit">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    Send Notification
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 540px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+}
+
+.po-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-modal-cancel {
+    padding: 0.625rem 1.25rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-modal-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-submit:hover {
+    background: var(--primary-dark);
+}
+
+/* Notify Modal Specific Styles */
+.notify-modal-description {
+    margin: 0 0 1rem 0;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+.notify-select-all {
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.notify-select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+}
+
+/* Checkbox List */
+.po-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 1rem;
+}
+
+.po-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-checkbox-item:hover {
+    background: white;
+    border-color: var(--primary);
+}
+
+.po-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.po-checkbox-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.po-checkbox-content {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.po-checkbox-label {
+    font-size: 0.9375rem;
+    color: var(--gray-700);
+    font-weight: 500;
+}
+
+.notify-assigned-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    background: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+/* Message Section */
+.notify-message-section {
+    margin-top: 0.5rem;
+}
+
+.notify-message-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.notify-textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    resize: vertical;
+    min-height: 100px;
+    transition: all 0.15s ease;
+    font-family: inherit;
+}
+
+.notify-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.notify-textarea::placeholder {
+    color: var(--gray-400);
+}
+</style>
+
+<script>
+function toggleAllUsers(checkbox) {
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    userCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+}
+
+// Update select all checkbox state when individual checkboxes change
+document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateSelectAllState);
+});
+
+function updateSelectAllState() {
+    const userCheckboxes = document.querySelectorAll('.user-checkbox');
+    const selectAllCheckbox = document.getElementById('selectAllUsers');
+    const checkedCount = document.querySelectorAll('.user-checkbox:checked').length;
+    
+    if (checkedCount === 0) {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = false;
+    } else if (checkedCount === userCheckboxes.length) {
+        selectAllCheckbox.checked = true;
+        selectAllCheckbox.indeterminate = false;
+    } else {
+        selectAllCheckbox.checked = false;
+        selectAllCheckbox.indeterminate = true;
+    }
+}
+
+// Initialize select all state
+updateSelectAllState();
+
+// Listen for closeModal event from HTMX
+document.body.addEventListener('notificationSent', function() {
+    document.getElementById('notifyTeamModal')?.remove();
+    
+    // Show success toast
+    const notification = document.createElement('div');
+    notification.className = 'success-toast';
+    notification.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Notification sent successfully!';
+    document.body.appendChild(notification);
+    
+    setTimeout(function() {
+        notification.remove();
+    }, 3000);
+});
+</script>

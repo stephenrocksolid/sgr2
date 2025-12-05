@@ -1,0 +1,825 @@
+<!-- Modal for Adding Part to PO -->
+<div class="po-modal-overlay" id="po-item-add-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-lg" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add Item to PO
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('po-item-add-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="po-modal-tabs">
+            <button type="button" class="po-modal-tab po-modal-tab-active" data-tab="search" onclick="switchTab('search')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Search Parts
+            </button>
+            <button type="button" class="po-modal-tab" data-tab="custom" onclick="switchTab('custom')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Custom Entry
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Search Parts Tab -->
+            <div id="tab-search" class="po-tab-content po-tab-content-active">
+                <!-- Search Box -->
+                <div class="po-search-box">
+                    <svg class="po-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                           id="po-part-search"
+                           placeholder="Search parts by name or part number..." 
+                           class="po-search-input"
+                           hx-get="{% url 'jobs:po_item_add_results' po.pk %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#po-part-results"
+                           hx-include="this"
+                           name="q"
+                           autocomplete="off"
+                           autofocus>
+                </div>
+
+                <!-- Results Container -->
+                <div id="po-part-results" class="po-search-results">
+                    <div class="po-search-placeholder">
+                        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <p>Start typing to search parts...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Entry Tab -->
+            <div id="tab-custom" class="po-tab-content">
+                <div class="po-custom-entry-form">
+                    <div class="po-custom-entry-header">
+                        <div class="po-custom-entry-icon">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </div>
+                        <div class="po-custom-entry-info">
+                            <h3>Add Custom Line Item</h3>
+                            <p>Enter item details manually without linking to inventory</p>
+                        </div>
+                    </div>
+                    <form id="custom-item-form" onsubmit="submitCustomItem(event, {{ po.pk }})">
+                        <div class="po-add-part-grid">
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Part Number</label>
+                                <input type="text" name="part_number" placeholder="e.g., ABC-123" class="po-add-part-input">
+                            </div>
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Item Name <span class="po-required">*</span></label>
+                                <input type="text" name="part_name" placeholder="Item description..." class="po-add-part-input" required>
+                            </div>
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Quantity <span class="po-required">*</span></label>
+                                <input type="number" name="quantity" value="1" step="0.01" min="0.01" required class="po-add-part-input">
+                            </div>
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Unit Price <span class="po-required">*</span></label>
+                                <input type="number" name="unit_price" value="0.00" step="0.01" min="0" required class="po-add-part-input">
+                            </div>
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Vendor Part Number</label>
+                                <input type="text" name="vendor_part_number" placeholder="Vendor's part #" class="po-add-part-input">
+                            </div>
+                            <div class="po-add-part-field">
+                                <label class="po-add-part-label">Manufacturer</label>
+                                <input type="text" name="manufacturer" placeholder="Manufacturer name" class="po-add-part-input">
+                            </div>
+                            <div class="po-add-part-field po-add-part-field-full">
+                                <label class="po-add-part-label">Notes</label>
+                                <input type="text" name="notes" placeholder="Line item notes..." class="po-add-part-input">
+                            </div>
+                        </div>
+                        <div class="po-add-part-actions">
+                            <button type="button" class="po-add-part-cancel" onclick="document.getElementById('po-item-add-modal').remove()">Cancel</button>
+                            <button type="submit" class="po-add-part-submit">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Add to PO
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 700px;
+    height: 70vh;
+    max-height: 600px;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-lg {
+    max-width: 900px;
+    height: 75vh;
+    max-height: 700px;
+    min-height: 500px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+/* Tab Navigation */
+.po-modal-tabs {
+    display: flex;
+    padding: 0 1.5rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.875rem 1.25rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: -1px;
+}
+
+.po-modal-tab:hover {
+    color: var(--gray-700);
+    background: var(--gray-100);
+}
+
+.po-modal-tab-active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    background: white;
+}
+
+.po-modal-tab-active:hover {
+    background: white;
+    color: var(--primary);
+}
+
+.po-modal-tab svg {
+    flex-shrink: 0;
+}
+
+/* Tab Content */
+.po-tab-content {
+    display: none;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.po-tab-content-active {
+    display: flex;
+}
+
+.po-modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Search Box */
+.po-search-box {
+    position: relative;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-search-icon {
+    position: absolute;
+    left: 2.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.po-search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.po-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-search-input::placeholder {
+    color: var(--gray-400);
+}
+
+/* Results */
+.po-search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+/* Part Results List */
+.po-part-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.po-part-result-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.po-part-result-item:hover {
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.po-part-result-item:hover .po-part-result-arrow {
+    color: var(--primary);
+    transform: translateX(2px);
+}
+
+.po-part-result-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.po-part-result-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.po-part-result-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    margin-bottom: 0.125rem;
+}
+
+.po-part-result-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.po-part-result-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gray-400);
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+.po-search-results-count {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--gray-200);
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    text-align: center;
+}
+
+/* No Results */
+.po-search-no-results {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-no-results svg {
+    margin-bottom: 1rem;
+    color: var(--gray-300);
+}
+
+.po-no-results-title {
+    margin: 0 0 0.25rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-600);
+}
+
+.po-no-results-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Custom Entry Form */
+.po-custom-entry-form {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.po-custom-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, white 100%);
+    border: 1px solid #a7f3d0;
+    border-radius: 0.5rem;
+}
+
+.po-custom-entry-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: white;
+    border: 1px solid #a7f3d0;
+    border-radius: 0.5rem;
+    color: #059669;
+    flex-shrink: 0;
+}
+
+.po-custom-entry-info h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-custom-entry-info p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+/* Add Part Form Styling */
+.po-add-part-form {
+    padding: 0.5rem;
+}
+
+.po-add-part-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+}
+
+.po-add-part-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.po-add-part-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.po-add-part-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 0.125rem;
+}
+
+.po-add-part-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.po-add-part-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.po-add-part-back:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+    color: var(--gray-700);
+}
+
+.po-add-part-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.po-add-part-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.po-add-part-field-full {
+    grid-column: 1 / -1;
+}
+
+.po-add-part-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-required {
+    color: var(--error);
+}
+
+.po-add-part-input {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    background: white;
+}
+
+.po-add-part-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-add-part-input::placeholder {
+    color: var(--gray-400);
+}
+
+.po-add-part-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-add-part-cancel {
+    padding: 0.625rem 1.25rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-add-part-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-add-part-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-add-part-submit:hover {
+    background: #2f855a;
+}
+
+@media (max-width: 640px) {
+    .po-add-part-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .po-add-part-header {
+        flex-wrap: wrap;
+    }
+    
+    .po-add-part-back {
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+    }
+    
+    .po-modal-tabs {
+        padding: 0 0.75rem;
+    }
+    
+    .po-modal-tab {
+        padding: 0.75rem 0.875rem;
+        font-size: 0.8125rem;
+    }
+    
+    .po-custom-entry-header {
+        flex-direction: column;
+        text-align: center;
+    }
+}
+</style>
+
+<script>
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.po-modal-tab').forEach(tab => {
+        tab.classList.remove('po-modal-tab-active');
+        if (tab.dataset.tab === tabName) {
+            tab.classList.add('po-modal-tab-active');
+        }
+    });
+    
+    // Update tab content
+    document.querySelectorAll('.po-tab-content').forEach(content => {
+        content.classList.remove('po-tab-content-active');
+    });
+    document.getElementById('tab-' + tabName).classList.add('po-tab-content-active');
+    
+    // Focus appropriate input
+    if (tabName === 'search') {
+        document.getElementById('po-part-search').focus();
+    } else if (tabName === 'custom') {
+        document.querySelector('#custom-item-form input[name="part_name"]').focus();
+    }
+}
+
+function submitCustomItem(event, poId) {
+    event.preventDefault();
+    const form = event.target;
+    const formData = new FormData(form);
+    
+    htmx.ajax('POST', `/jobs/pos/${poId}/items/custom/add/`, {
+        target: '#po-items-section',
+        swap: 'innerHTML',
+        values: {
+            part_number: formData.get('part_number'),
+            part_name: formData.get('part_name'),
+            quantity: formData.get('quantity'),
+            unit_price: formData.get('unit_price'),
+            vendor_part_number: formData.get('vendor_part_number'),
+            manufacturer: formData.get('manufacturer'),
+            notes: formData.get('notes')
+        }
+    }).then(() => {
+        document.getElementById('po-item-add-modal').remove();
+    });
+}
+
+function showAddPartForm(poId, partId, partNumber, partName) {
+    const formHtml = `
+        <div class="po-add-part-form">
+            <div class="po-add-part-header">
+                <div class="po-add-part-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                </div>
+                <div class="po-add-part-info">
+                    <div class="po-add-part-number">${partNumber || 'No Part #'}</div>
+                    <div class="po-add-part-name">${partName}</div>
+                </div>
+                <button type="button" class="po-add-part-back" onclick="goBackToSearch()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="19" y1="12" x2="5" y2="12"></line>
+                        <polyline points="12 19 5 12 12 5"></polyline>
+                    </svg>
+                    Back
+                </button>
+            </div>
+            <form id="add-part-form-${partId}">
+                <div class="po-add-part-grid">
+                    <div class="po-add-part-field">
+                        <label class="po-add-part-label">Quantity <span class="po-required">*</span></label>
+                        <input type="number" name="quantity" value="1" step="0.01" min="0.01" required class="po-add-part-input" autofocus>
+                    </div>
+                    <div class="po-add-part-field">
+                        <label class="po-add-part-label">Unit Price <span class="po-required">*</span></label>
+                        <input type="number" name="unit_price" value="0.00" step="0.01" min="0" required class="po-add-part-input">
+                    </div>
+                    <div class="po-add-part-field po-add-part-field-full">
+                        <label class="po-add-part-label">Notes (optional)</label>
+                        <input type="text" name="notes" placeholder="Line item notes..." class="po-add-part-input">
+                    </div>
+                </div>
+                <div class="po-add-part-actions">
+                    <button type="button" class="po-add-part-cancel" onclick="goBackToSearch()">Cancel</button>
+                    <button type="submit" class="po-add-part-submit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Add to PO
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+    
+    document.getElementById('po-part-results').innerHTML = formHtml;
+    
+    document.getElementById(`add-part-form-${partId}`).addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        
+        htmx.ajax('POST', `/jobs/pos/${poId}/items/${partId}/add/`, {
+            target: '#po-items-section',
+            swap: 'innerHTML',
+            values: {
+                quantity: formData.get('quantity'),
+                unit_price: formData.get('unit_price'),
+                notes: formData.get('notes')
+            }
+        }).then(() => {
+            document.getElementById('po-item-add-modal').remove();
+        });
+    });
+}
+
+function goBackToSearch() {
+    document.getElementById('po-part-results').innerHTML = `
+        <div class="po-search-placeholder">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <p>Start typing to search parts...</p>
+        </div>
+    `;
+    document.getElementById('po-part-search').value = '';
+    document.getElementById('po-part-search').focus();
+}
+</script>

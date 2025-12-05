@@ -1,42 +1,52 @@
 {% load static %}
 
 {% if kits %}
-    <table class="related-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Parts Count</th>
-                <th>Notes</th>
-                <th style="width: 50px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for kit in kits %}
-                <tr data-href="{% url 'inventory:kit_detail' kit.pk %}" 
-                    onclick="window.location.href=this.dataset.href;">
-                    <td>
-                        <strong>{{ kit.name }}</strong>
-                    </td>
-                    <td>{{ kit.items.count }}</td>
-                    <td>{{ kit.notes|default:"—"|truncatewords:10 }}</td>
-                    <td onclick="event.stopPropagation();">
-                        <form method="post" 
-                              action="{% url 'inventory:engine_kit_remove' engine.pk kit.pk %}"
-                              hx-post="{% url 'inventory:engine_kit_remove' engine.pk kit.pk %}"
-                              hx-target="#engine-kits-container"
-                              hx-swap="innerHTML"
-                              hx-confirm="Remove this kit from the engine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="engine-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Parts Count</th>
+            <th>Notes</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for kit in kits %}
+        <tr class="engine-clickable-row" data-href="{% url 'inventory:kit_detail' kit.pk %}">
+            <td>
+                <span class="engine-make-text">{{ kit.name }}</span>
+            </td>
+            <td>{{ kit.items.count }}</td>
+            <td>
+                <span class="engine-text-muted">{{ kit.notes|default:"—"|truncatewords:10 }}</span>
+            </td>
+            <td class="engine-actions-cell">
+                <form hx-post="{% url 'inventory:engine_kit_remove' engine.pk kit.pk %}"
+                      hx-target="#engine-kits-container"
+                      hx-swap="innerHTML"
+                      hx-confirm="Remove this kit from the engine?"
+                      style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-danger-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
-    <div class="empty-message">
-        <p>No kits assigned yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+    </svg>
+    <span>No kits assigned to this engine</span>
+</div>
 {% endif %}

@@ -1,5 +1,5 @@
-{% if machine_parts %}
-    <table class="related-table">
+<div id="machine-parts-section">
+    <table class="machine-table">
         <thead>
             <tr>
                 <th>Part Number</th>
@@ -7,62 +7,183 @@
                 <th>Category</th>
                 <th>Primary</th>
                 <th>Notes</th>
-                <th style="width: 50px;">Actions</th>
+                <th style="width: 100px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for machine_part in machine_parts %}
-                <tr class="part-row machine-part-row"
-                    data-href="{% url 'inventory:part_detail' machine_part.part.pk %}">
-                    <td>{{ machine_part.part.part_number }}</td>
-                    <td>{{ machine_part.part.name }}</td>
-                    <td>{{ machine_part.part.category|default:"—" }}</td>
-                    <td>
-                        {% if machine_part.is_primary %}
-                            <span class="primary-badge">Primary</span>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>{{ machine_part.notes|default:"—" }}</td>
-                    <td class="text-right">
-                        <form hx-post="{% url 'inventory:machine_part_remove' machine.pk machine_part.pk %}"
-                              hx-target="#machine-parts-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this part from the machine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr class="machine-clickable-row" data-href="{% url 'inventory:part_edit' machine_part.part.pk %}">
+                <td>
+                    <code class="machine-part-number">{{ machine_part.part.part_number }}</code>
+                </td>
+                <td>
+                    <span class="machine-part-name">{{ machine_part.part.name }}</span>
+                </td>
+                <td>
+                    {% if machine_part.part.category %}
+                        <span class="machine-category-badge">{{ machine_part.part.category }}</span>
+                    {% else %}
+                        <span class="machine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if machine_part.is_primary %}
+                        <span class="machine-primary-badge">Primary</span>
+                    {% else %}
+                        <span class="machine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="machine-text-muted">{{ machine_part.notes|truncatewords:5|default:"—" }}</span>
+                </td>
+                <td class="machine-actions-cell">
+                    <form hx-post="{% url 'inventory:machine_part_remove' machine.pk machine_part.pk %}"
+                          hx-target="#machine-parts-section"
+                          hx-swap="outerHTML"
+                          hx-confirm="Are you sure you want to remove this part from the machine?"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="machine-empty-row">
+                    <div class="machine-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                        </svg>
+                        <span>No parts associated with this machine</span>
+                    </div>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <div class="empty-message">
-        <p>This machine is not associated with any parts yet.</p>
-    </div>
-{% endif %}
-
-<div class="mt-3">
-    <button class="add-button"
-            hx-get="{% url 'inventory:part_search_modal' machine.pk %}"
-            hx-target="#modal-container"
-            hx-swap="innerHTML">
-        Add Part
-    </button>
 </div>
 
-<script>
-if (!window.__machinePartRowHandlerAttached) {
-    document.addEventListener('click', function(event) {
-        const row = event.target.closest('.machine-part-row');
-        if (!row || event.target.closest('button') || event.target.closest('form')) {
-            return;
-        }
-        window.location.href = row.dataset.href;
-    });
-    window.__machinePartRowHandlerAttached = true;
+<style>
+.machine-table {
+    width: 100%;
+    border-collapse: collapse;
 }
-</script>
+
+.machine-table th,
+.machine-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.machine-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.machine-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.machine-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.machine-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.machine-part-number {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.machine-part-name {
+    font-weight: 500;
+    color: var(--gray-900);
+}
+
+.machine-category-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.machine-primary-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.machine-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.machine-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.machine-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.machine-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>
+

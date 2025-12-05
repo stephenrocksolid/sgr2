@@ -1,5 +1,6 @@
-{% if machine_engines %}
-    <table class="related-table">
+<div id="engine-machines-section">
+    {% if machine_engines %}
+    <table class="engine-table">
         <thead>
             <tr>
                 <th>Make</th>
@@ -9,56 +10,174 @@
                 <th>Market Type</th>
                 <th>Primary</th>
                 <th>Notes</th>
-                <th style="width: 50px;">Actions</th>
+                <th style="width: 100px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for machine_engine in machine_engines %}
-                <tr class="machine-row engine-machine-row"
-                    data-href="{% url 'inventory:machine_detail' machine_engine.machine.pk %}">
-                    <td>{{ machine_engine.machine.make }}</td>
-                    <td>{{ machine_engine.machine.model }}</td>
-                    <td>{{ machine_engine.machine.year }}</td>
-                    <td>{{ machine_engine.machine.machine_type }}</td>
-                    <td>{{ machine_engine.machine.market_type }}</td>
-                    <td>
-                        {% if machine_engine.is_primary %}
-                            <span class="primary-badge">Primary</span>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>{{ machine_engine.notes|default:"—" }}</td>
-                    <td class="text-right">
-                        <form hx-post="{% url 'inventory:engine_machine_remove' engine.pk machine_engine.pk %}"
-                              hx-target="#engine-machines-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this machine from the engine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr class="engine-clickable-row" data-href="{% url 'inventory:machine_edit' machine_engine.machine.pk %}">
+                <td>
+                    <span class="engine-make-text">{{ machine_engine.machine.make }}</span>
+                </td>
+                <td>{{ machine_engine.machine.model }}</td>
+                <td>{{ machine_engine.machine.year }}</td>
+                <td>
+                    {% if machine_engine.machine.machine_type %}
+                        <span class="engine-type-badge">{{ machine_engine.machine.machine_type }}</span>
+                    {% else %}
+                        <span class="engine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="engine-text-muted">{{ machine_engine.machine.market_type|default:"—" }}</span>
+                </td>
+                <td>
+                    {% if machine_engine.is_primary %}
+                        <span class="engine-primary-badge">Primary</span>
+                    {% else %}
+                        <span class="engine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="engine-text-muted">{{ machine_engine.notes|truncatewords:5|default:"—" }}</span>
+                </td>
+                <td class="engine-actions-cell">
+                    <form hx-post="{% url 'inventory:engine_machine_remove' engine.pk machine_engine.pk %}"
+                          hx-target="#engine-machines-section"
+                          hx-swap="outerHTML"
+                          hx-confirm="Are you sure you want to remove this machine from the engine?"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <div class="empty-message">
-        <p>This engine is not associated with any machines yet.</p>
+    {% else %}
+    <div class="engine-empty-state-inline">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+            <rect x="9" y="9" width="6" height="6"></rect>
+            <line x1="9" y1="1" x2="9" y2="4"></line>
+            <line x1="15" y1="1" x2="15" y2="4"></line>
+        </svg>
+        <span>No machines associated with this engine</span>
     </div>
-{% endif %}
+    {% endif %}
+</div>
 
-<script>
-if (!window.__engineMachineRowHandlerAttached) {
-    document.addEventListener('click', function(event) {
-        const row = event.target.closest('.engine-machine-row');
-        if (!row || event.target.closest('button') || event.target.closest('form')) {
-            return;
-        }
-        window.location.href = row.dataset.href;
-    });
-    window.__engineMachineRowHandlerAttached = true;
+<style>
+.engine-table {
+    width: 100%;
+    border-collapse: collapse;
 }
-</script>
 
+.engine-table th,
+.engine-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.engine-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.engine-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.engine-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.engine-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.engine-make-text {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.engine-type-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.engine-primary-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.engine-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.engine-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem 1rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.engine-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.engine-actions-cell {
+    text-align: right;
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>

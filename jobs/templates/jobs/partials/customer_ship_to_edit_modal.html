@@ -1,0 +1,318 @@
+<!-- Modal for Ship-To Address Edit -->
+<div class="ship-to-modal-overlay" id="ship-to-edit-modal" onclick="if(event.target === this) this.remove()">
+    <div class="ship-to-modal" onclick="event.stopPropagation()">
+        <div class="ship-to-modal-header">
+            <div class="ship-to-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+                Edit Ship-To Address
+            </div>
+            <button type="button" class="ship-to-modal-close" onclick="document.getElementById('ship-to-edit-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="ship-to-modal-body">
+            <form hx-post="{% url 'jobs:customer_ship_to_update' customer.pk address.pk %}"
+                  hx-target="#ship-to-addresses"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) document.getElementById('ship-to-edit-modal').remove()">
+                {% csrf_token %}
+                
+                <div class="ship-to-form-grid">
+                    <div class="ship-to-form-field ship-to-form-full">
+                        <label class="ship-to-form-label">Address Name <span class="ship-to-required">*</span></label>
+                        <input type="text" name="name" value="{{ form.name.value|default_if_none:'' }}" required class="ship-to-form-input" placeholder="e.g., Warehouse 1, Main Office">
+                        {% if form.name.errors %}<span class="ship-to-field-error">{{ form.name.errors.0 }}</span>{% endif %}
+                        <div class="ship-to-field-hint">A label to identify this address</div>
+                    </div>
+                    <div class="ship-to-form-field ship-to-form-full">
+                        <label class="ship-to-form-label">Street Address</label>
+                        <input type="text" name="address" value="{{ form.address.value|default_if_none:'' }}" class="ship-to-form-input" placeholder="123 Main St">
+                    </div>
+                    <div class="ship-to-form-field">
+                        <label class="ship-to-form-label">City</label>
+                        <input type="text" name="city" value="{{ form.city.value|default_if_none:'' }}" class="ship-to-form-input" placeholder="City">
+                    </div>
+                    <div class="ship-to-form-field ship-to-form-split">
+                        <div>
+                            <label class="ship-to-form-label">State</label>
+                            <input type="text" name="state" value="{{ form.state.value|default_if_none:'' }}" class="ship-to-form-input" placeholder="PA">
+                        </div>
+                        <div>
+                            <label class="ship-to-form-label">ZIP</label>
+                            <input type="text" name="zip" value="{{ form.zip.value|default_if_none:'' }}" class="ship-to-form-input" placeholder="12345">
+                        </div>
+                    </div>
+                    <div class="ship-to-form-field ship-to-form-full">
+                        <label class="ship-to-checkbox-container">
+                            <input type="checkbox" name="is_default" {% if form.is_default.value %}checked{% endif %}>
+                            <span class="ship-to-checkbox-text">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                                Set as default address
+                            </span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="ship-to-form-actions">
+                    <button type="button" class="ship-to-cancel-btn" onclick="document.getElementById('ship-to-edit-modal').remove()">Cancel</button>
+                    <button type="submit" class="ship-to-submit-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.ship-to-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: shipToModalFadeIn 0.2s ease-out;
+}
+
+@keyframes shipToModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ship-to-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 480px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: shipToModalSlideIn 0.2s ease-out;
+}
+
+@keyframes shipToModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ship-to-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.ship-to-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.ship-to-modal-title svg {
+    color: var(--gray-500);
+}
+
+.ship-to-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ship-to-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.ship-to-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Form Styles */
+.ship-to-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.ship-to-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.ship-to-form-full {
+    grid-column: 1 / -1;
+}
+
+.ship-to-form-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+}
+
+.ship-to-form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ship-to-required {
+    color: var(--error);
+}
+
+.ship-to-form-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+}
+
+.ship-to-form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.ship-to-form-input::placeholder {
+    color: var(--gray-400);
+}
+
+.ship-to-field-hint {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.ship-to-field-error {
+    font-size: 0.75rem;
+    color: var(--error);
+}
+
+.ship-to-checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ship-to-checkbox-container:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.ship-to-checkbox-container input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.ship-to-checkbox-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.ship-to-checkbox-text svg {
+    color: var(--gray-400);
+}
+
+.ship-to-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.ship-to-cancel-btn {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ship-to-cancel-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.ship-to-submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.ship-to-submit-btn:hover {
+    background: var(--gray-700);
+}
+
+@media (max-width: 480px) {
+    .ship-to-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .ship-to-form-split {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

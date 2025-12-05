@@ -1,31 +1,44 @@
-{% load static %}
-
-<div class="modal-overlay" onclick="if(event.target === this) this.remove();">
-    <div class="modal-content" onclick="event.stopPropagation();">
-        <div class="modal-header">
-            <h3>Add Engine to Part</h3>
-            <button class="modal-close" onclick="this.closest('.modal-overlay').remove();" title="Close">✕</button>
-        </div>
-        
-        <div class="modal-body">
-            <input type="text" 
-                   name="q"
-                   class="search-input" 
-                   placeholder="Search by make, model, identifier, serial number..."
-                   autofocus
-                   hx-get="{% url 'inventory:engine_search_results_for_part' part.id %}"
-                   hx-trigger="keyup changed delay:300ms, search"
-                   hx-target="#engine-results"
-                   hx-indicator=".search-indicator"
-                   hx-include="[name='q']">
-            
-            <div class="search-indicator htmx-indicator">
-                <div class="spinner-border spinner-border-sm" role="status">
-                    <span class="visually-hidden">Searching...</span>
-                </div>
+<!-- Modal for Adding Engine to Part -->
+<div class="po-modal-overlay" id="engine-search-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-lg" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                Add Engine to Part
             </div>
-            
-            <div id="engine-results" class="search-results">
+            <button type="button" class="po-modal-close" onclick="document.getElementById('engine-search-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Search Box -->
+            <div class="po-search-box">
+                <svg class="po-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" 
+                       id="engine-search"
+                       placeholder="Search engines by make, model, identifier, serial number..." 
+                       class="po-search-input"
+                       hx-get="{% url 'inventory:engine_search_results_for_part' part.id %}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#engine-results"
+                       hx-include="this"
+                       name="q"
+                       autocomplete="off"
+                       autofocus>
+            </div>
+
+            <!-- Results Container -->
+            <div id="engine-results" class="po-search-results">
                 {% include 'inventory/partials/engine_search_results_for_part.html' %}
             </div>
         </div>
@@ -33,160 +46,262 @@
 </div>
 
 <style>
-.modal-overlay {
+.po-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
     background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
 }
 
-.modal-content {
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
     background: white;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     width: 90%;
-    max-width: 800px;
-    max-height: 90vh;
+    max-width: 700px;
+    height: 70vh;
+    max-height: 600px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
 }
 
-.modal-header {
+.po-modal-lg {
+    max-width: 900px;
+    height: 75vh;
+    max-height: 700px;
+    min-height: 500px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Search Box */
+.po-search-box {
+    position: relative;
     padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--gray-200);
 }
 
-.modal-header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--gray-900);
+.po-search-icon {
+    position: absolute;
+    left: 2.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
 }
 
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    color: var(--gray-500);
-    cursor: pointer;
-    padding: 0;
-    width: 2rem;
-    height: 2rem;
+.po-search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.po-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-search-input::placeholder {
+    color: var(--gray-400);
+}
+
+/* Results */
+.po-search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.po-search-placeholder {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 0.25rem;
-    transition: all 0.2s;
-}
-
-.modal-close:hover {
-    background: var(--gray-100);
-    color: var(--gray-900);
-}
-
-.modal-body {
-    padding: 1.5rem;
-    overflow-y: auto;
-}
-
-.search-input {
-    width: 100%;
-    padding: 0.75rem 1rem;
-    border: 2px solid var(--gray-300);
-    border-radius: 0.375rem;
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    transition: border-color 0.2s;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: var(--red-600);
-}
-
-.search-indicator {
+    padding: 3rem 1rem;
     text-align: center;
-    padding: 0.5rem;
-    display: none;
+    color: var(--gray-400);
 }
 
-.search-indicator.htmx-request {
-    display: block;
-}
-
-.search-results {
-    max-height: 400px;
-    overflow-y: auto;
-}
-
-.engine-result-row {
-    padding: 1rem;
-    border: 1px solid var(--gray-200);
-    border-radius: 0.375rem;
+.po-search-placeholder svg {
     margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+/* Result rows */
+.po-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
     cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-}
-
-.engine-result-row:hover {
-    border-color: var(--red-600);
-    background: var(--gray-50);
-}
-
-.engine-result-row:active {
-    transform: scale(0.98);
-}
-
-.result-title {
-    font-weight: 600;
-    font-size: 1rem;
-    color: var(--gray-900);
+    transition: all 0.15s ease;
     margin-bottom: 0.25rem;
 }
 
-.result-details {
-    font-size: 0.875rem;
-    color: var(--gray-600);
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
+.po-result-row:hover {
+    background: var(--gray-50);
 }
 
-.result-badge {
+.po-result-row:last-child {
+    margin-bottom: 0;
+}
+
+.po-result-info {
+    flex: 1;
+}
+
+.po-result-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 0.9375rem;
+    margin-bottom: 0.125rem;
+}
+
+.po-result-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.po-result-badge {
     display: inline-block;
     padding: 0.125rem 0.5rem;
-    background: var(--gray-100);
-    border-radius: 0.25rem;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    border-radius: 9999px;
     font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--gray-700);
+    font-weight: 600;
+    margin-left: 0.5rem;
 }
 
-.empty-state {
+.po-result-action {
+    color: var(--gray-400);
+    transition: all 0.15s ease;
+}
+
+.po-result-row:hover .po-result-action {
+    color: var(--primary);
+    transform: translateX(2px);
+}
+
+/* Empty state */
+.po-empty-state {
     text-align: center;
     padding: 3rem 1rem;
     color: var(--gray-500);
 }
 
-.empty-state-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+.po-empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
     opacity: 0.5;
 }
 
-.empty-state-text {
-    font-size: 1rem;
-    margin: 0;
+/* Scrollbar styling */
+.po-search-results::-webkit-scrollbar {
+    width: 6px;
+}
+
+.po-search-results::-webkit-scrollbar-track {
+    background: var(--gray-100);
+    border-radius: 3px;
+}
+
+.po-search-results::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+
+.po-search-results::-webkit-scrollbar-thumb:hover {
+    background: var(--gray-400);
+}
+
+@media (max-width: 768px) {
+    .po-modal {
+        width: 95%;
+        height: 85vh;
+        max-height: none;
+    }
+    
+    .po-modal-lg {
+        max-width: none;
+        height: 90vh;
+    }
 }
 </style>
-

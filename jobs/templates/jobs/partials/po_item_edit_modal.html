@@ -1,0 +1,314 @@
+<!-- Modal for Editing PO Item -->
+<div class="po-modal-overlay" id="po-item-edit-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Line Item
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('po-item-edit-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Part Info Header -->
+            <div class="po-edit-part-header">
+                <div class="po-edit-part-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                </div>
+                <div class="po-edit-part-info">
+                    <div class="po-edit-part-number">{{ item.part_number|default:"No Part #" }}</div>
+                    <div class="po-edit-part-name">{{ item.part_name|default:"—" }}</div>
+                </div>
+            </div>
+
+            <!-- Edit Form -->
+            <form hx-post="{% url 'jobs:po_item_update' po.pk item.pk %}"
+                  hx-target="#po-items-section"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="document.getElementById('po-item-edit-modal').remove()">
+                {% csrf_token %}
+                
+                <div class="po-edit-form-grid">
+                    <div class="po-edit-form-field">
+                        <label class="po-edit-form-label">Quantity Ordered <span class="po-required">*</span></label>
+                        <input type="number" 
+                               name="quantity" 
+                               value="{{ item.quantity_ordered }}" 
+                               step="0.01" 
+                               min="0.01" 
+                               required 
+                               class="po-edit-form-input">
+                    </div>
+                    <div class="po-edit-form-field">
+                        <label class="po-edit-form-label">Unit Price <span class="po-required">*</span></label>
+                        <div class="po-edit-price-input">
+                            <span class="po-edit-price-symbol">$</span>
+                            <input type="number" 
+                                   name="unit_price" 
+                                   value="{{ item.unit_price }}" 
+                                   step="0.01" 
+                                   min="0" 
+                                   required 
+                                   class="po-edit-form-input po-edit-form-input-price">
+                        </div>
+                    </div>
+                    <div class="po-edit-form-field po-edit-form-field-full">
+                        <label class="po-edit-form-label">Line Notes (optional)</label>
+                        <input type="text" 
+                               name="line_notes" 
+                               value="{{ item.line_notes|default_if_none:'' }}" 
+                               placeholder="Notes for this line item..." 
+                               class="po-edit-form-input">
+                    </div>
+                </div>
+
+                <div class="po-edit-form-info">
+                    <div class="po-edit-info-row">
+                        <span class="po-edit-info-label">Qty Received:</span>
+                        <span class="po-edit-info-value">{{ item.quantity_received|default:"0" }}</span>
+                    </div>
+                    <div class="po-edit-info-row">
+                        <span class="po-edit-info-label">Qty Remaining:</span>
+                        <span class="po-edit-info-value {% if item.quantity_remaining > 0 %}po-edit-info-warning{% endif %}">{{ item.quantity_remaining }}</span>
+                    </div>
+                </div>
+
+                <div class="po-edit-form-actions">
+                    <button type="button" class="po-edit-cancel-btn" onclick="document.getElementById('po-item-edit-modal').remove()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="po-edit-save-btn">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-sm {
+    max-width: 480px;
+    height: auto;
+    max-height: 90vh;
+    min-height: auto;
+}
+
+/* Part Header */
+.po-edit-part-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+}
+
+.po-edit-part-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.po-edit-part-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.po-edit-part-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-bottom: 0.125rem;
+}
+
+.po-edit-part-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Form Grid */
+.po-edit-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.po-edit-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.po-edit-form-field-full {
+    grid-column: 1 / -1;
+}
+
+.po-edit-form-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-required {
+    color: var(--error);
+}
+
+.po-edit-form-input {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    background: white;
+}
+
+.po-edit-form-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-edit-form-input::placeholder {
+    color: var(--gray-400);
+}
+
+/* Price Input */
+.po-edit-price-input {
+    position: relative;
+    display: flex;
+}
+
+.po-edit-price-symbol {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    pointer-events: none;
+}
+
+.po-edit-form-input-price {
+    padding-left: 1.5rem;
+}
+
+/* Info Section */
+.po-edit-form-info {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+    padding: 0.75rem 1rem;
+    background: var(--gray-50);
+    border-radius: 0.375rem;
+}
+
+.po-edit-info-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.po-edit-info-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-500);
+}
+
+.po-edit-info-value {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.po-edit-info-warning {
+    color: var(--warning);
+}
+
+/* Form Actions */
+.po-edit-form-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-edit-cancel-btn {
+    padding: 0.625rem 1.25rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-edit-cancel-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-edit-save-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-edit-save-btn:hover {
+    background: var(--primary-dark, #3d4a5c);
+}
+
+@media (max-width: 480px) {
+    .po-edit-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .po-edit-form-info {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+

@@ -1,507 +1,703 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}Kits - SGR Part Manager{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Override main container padding for this page */
-    .main-content-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0.5rem !important;
+/* Page Layout */
+.kit-list-page {
+    max-width: calc(100% - 2rem);
+    margin: 0 auto;
+    padding: 0 1rem;
+    margin-top: -1.25rem;
+}
+
+/* Header */
+.kit-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.kit-list-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.kit-list-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.kit-list-title svg {
+    color: var(--gray-500);
+    width: 26px;
+    height: 26px;
+}
+
+.kit-list-count {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.btn-create svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Filter Bar */
+.kit-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.kit-search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.kit-search-icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+}
+
+.kit-search-form {
+    width: 100%;
+}
+
+.kit-search-input {
+    width: 100%;
+    padding: 0.375rem 2rem 0.375rem 2rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.kit-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.kit-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: var(--gray-300);
+    border-radius: 50%;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.kit-search-clear:hover {
+    background: var(--gray-400);
+    color: var(--gray-800);
+}
+
+.kit-search-hint {
+    display: flex;
+    align-items: center;
+}
+
+.kit-search-hint .hint-text {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.kit-search-hint code {
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 3px;
+    font-size: 0.7rem;
+    color: var(--gray-700);
+}
+
+/* Table Card */
+.kit-table-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    overflow: auto;
+    height: calc(100vh - 195px);
+}
+
+.kit-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.kit-table thead {
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.kit-table th {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-500);
+    border-bottom: 2px solid var(--gray-200);
+    background: var(--gray-50);
+    white-space: nowrap;
+}
+
+.kit-table th:first-child { padding-left: 1rem; }
+.kit-table th:last-child { padding-right: 1rem; }
+
+.kit-sort-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.15s ease;
+    cursor: pointer;
+}
+
+.kit-sort-link:hover,
+.kit-sort-link.active {
+    color: var(--gray-900);
+}
+
+.sort-indicator {
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    min-width: 1rem;
+}
+
+.sort-indicator.active {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* Table Rows */
+.kit-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.kit-row:hover {
+    background: #f8fafc;
+}
+
+.kit-row:hover td {
+    background: #f8fafc;
+}
+
+.kit-table td {
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+    font-size: 0.8125rem;
+}
+
+.kit-table td:first-child { padding-left: 1rem; }
+.kit-table td:last-child { padding-right: 1rem; }
+
+.kit-row:last-child td {
+    border-bottom: none;
+}
+
+/* Name Cell */
+.kit-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+/* Notes Cell */
+.kit-notes {
+    color: var(--gray-600);
+    font-size: 0.8rem;
+}
+
+/* Parts Badge */
+.kit-parts-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    background: #e0e7ff;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #4338ca;
+}
+
+/* Cost Cell */
+.kit-cost {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Engines Badge */
+.kit-engines-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    background: #fef3c7;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #b45309;
+}
+
+/* Created Date */
+.kit-created-date {
+    color: var(--gray-600);
+    font-size: 0.8rem;
+}
+
+.kit-no-data {
+    color: var(--gray-300);
+    font-weight: 400;
+}
+
+/* Preview Button */
+.kit-preview-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--gray-200);
+    background: white;
+    border-radius: 6px;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.kit-preview-trigger:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.kit-preview-trigger:active {
+    transform: scale(0.95);
+}
+
+/* Popover Styles */
+.kit-popover {
+    position: absolute;
+    z-index: 1000;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    min-width: 340px;
+    max-width: 420px;
+    margin-top: 0.5rem;
+    right: 0;
+}
+
+.kit-popover-content {
+    padding: 0;
+}
+
+.kit-popover-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+    border-radius: 0.5rem 0.5rem 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.kit-popover-header strong {
+    color: var(--gray-900);
+    font-size: 0.875rem;
+}
+
+.kit-popover-count {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    background: var(--gray-200);
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+}
+
+.kit-popover-list {
+    padding: 0.75rem 1rem;
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+.kit-popover-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.kit-popover-list li {
+    padding: 0;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--gray-100);
+}
+
+.kit-popover-list li:last-child {
+    border-bottom: none;
+}
+
+.kit-popover-list .part-line {
+    display: grid;
+    grid-template-columns: 45px 110px 140px auto;
+    gap: 0.5rem;
+    align-items: center;
+    padding: 0.375rem 0;
+}
+
+.kit-popover-list .part-qty {
+    color: var(--gray-600);
+    font-weight: 600;
+}
+
+.kit-popover-list .part-number {
+    color: var(--gray-900);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kit-popover-list .part-name {
+    color: var(--gray-700);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.kit-popover-list .part-cost {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: right;
+}
+
+.kit-popover-list .more-items {
+    color: var(--gray-500);
+    font-style: italic;
+    text-align: left;
+    padding: 0.5rem 0;
+}
+
+.kit-popover-list .empty-message {
+    color: var(--gray-500);
+    font-style: italic;
+    text-align: left;
+    padding: 1rem 0;
+    margin: 0;
+}
+
+/* Empty State */
+.kit-empty-state {
+    padding: 3rem 2rem !important;
+    text-align: center;
+}
+
+.kit-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.kit-empty-content svg {
+    color: var(--gray-300);
+    width: 40px;
+    height: 40px;
+}
+
+.kit-empty-content h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.kit-empty-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+/* Pagination */
+.kit-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.kit-pagination-info {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.kit-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.kit-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    color: var(--gray-600);
+    background: white;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.kit-page-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.kit-page-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.kit-page-current {
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .kit-th-created, .kit-cell-created {
+        display: none;
     }
-    
-    /* Compact Header Layout */
-    .compact-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        gap: 1rem;
-    }
-    
-    .page-title {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        white-space: nowrap;
-        display: flex;
-        align-items: baseline;
-        gap: 1rem;
-    }
-    
-    .title-count {
-        font-size: 0.875rem;
-        font-weight: 400;
-        color: var(--gray-600);
-    }
-    
-    .search-section {
-        flex: 0 1 50%;
-        min-width: 0;
-    }
-    
-    .search-form {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    .search-input {
-        flex: 1;
-        padding: 0.375rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 0.875rem;
-        min-width: 0;
-    }
-    
-    /* Button styles */
-    .btn-dark {
-        background-color: var(--gray-800);
-        color: white;
-        border-color: var(--gray-800);
-    }
-    
-    .btn-dark:hover {
-        background-color: var(--gray-900);
-        border-color: var(--gray-900);
-    }
-    
-    .btn-light {
-        background-color: white;
-        color: var(--gray-700);
-        border-color: var(--gray-300);
-    }
-    
-    .btn-light:hover {
-        background-color: var(--gray-50);
-        border-color: var(--gray-400);
-    }
-    
-    .filters-section {
-        background: var(--gray-50);
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-radius: var(--border-radius);
-        border: 1px solid var(--gray-200);
-    }
-    
-    .filter-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .filter-group {
-        display: flex;
+}
+
+@media (max-width: 768px) {
+    .kit-list-header {
         flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
     }
     
-    .filter-group label {
-        font-weight: 600;
-        margin-bottom: 0.125rem;
-        color: var(--gray-700);
-        font-size: 0.875rem;
-    }
-    
-    .filter-group input,
-    .filter-group select {
-        padding: 0.375rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 0.875rem;
-    }
-    
-    .filter-actions {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    .results-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .results-info {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-    }
-    
-    .export-section {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    /* Table Container - maximize height */
-    .table-wrap {
-        max-height: calc(100vh - 120px);
-        overflow-y: auto;
-        position: relative;
-        margin-bottom: 0;
-    }
-    
-    .table.sticky {
-        width: 100%;
-        margin-bottom: 0;
-        border-spacing: 0;
-    }
-    
-    .table.sticky thead {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* Compact table spacing */
-    .table.sticky th,
-    .table.sticky td {
-        padding: 0.375rem 0.5rem;
-        line-height: 1.3;
-    }
-    
-    .table.sticky th {
-        font-size: 0.875rem;
-    }
-    
-    .table.sticky td {
-        font-size: 0.875rem;
-    }
-    
-    .table.sticky tbody tr:last-child td {
-        padding-bottom: 0.375rem;
-    }
-    
-    .clickable-row {
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .clickable-row:hover {
-        background-color: var(--gray-50);
-    }
-    
-    .sort-link {
-        color: var(--gray-900);
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-weight: 600;
-    }
-    
-    .sort-link:hover {
-        color: var(--red-600);
-    }
-    
-    .sort-indicator {
-        font-size: 0.75rem;
-        color: var(--gray-400);
-        margin-left: 0.25rem;
-    }
-    
-    .sort-indicator.active {
-        color: var(--red-600);
-        font-weight: bold;
-    }
-    
-    .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 0.25rem;
-        margin-top: 0;
-        margin-bottom: 0;
-        flex-wrap: wrap;
-    }
-    
-    .pagination a,
-    .pagination .current {
-        padding: 0.25rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        text-decoration: none;
-        color: var(--gray-700);
-        background: white;
-        font-size: 0.875rem;
-    }
-    
-    .pagination a:hover {
-        background: var(--gray-50);
-        color: var(--red-600);
-    }
-    
-    .pagination .current {
-        background: var(--red-600) !important;
-        color: white !important;
-        border-color: var(--red-600) !important;
-    }
-    
-    /* Flex utilities */
-    .flex {
-        display: flex;
-    }
-    
-    .gap-2 {
-        gap: 0.5rem;
-    }
-    
-    .items-center {
-        align-items: center;
-    }
-    
-    .w-full {
-        width: 100%;
-    }
-    
-    @media (max-width: 768px) {
-        .compact-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 1rem;
-        }
-        
-        .page-title {
-            text-align: center;
-            flex-direction: column;
-            gap: 0.25rem;
-            align-items: center;
-        }
-        
-        .title-count {
-            font-size: 0.75rem;
-        }
-        
-        .search-section {
-            flex: 1;
-            width: 100%;
-        }
-        
-        .search-form {
-            flex-wrap: wrap;
-        }
-        
-        .filter-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .results-header {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .export-section {
-            justify-content: center;
-        }
-    }
-    
-    /* Kit Popover Styles */
-    .kit-preview-trigger {
-        background: none;
-        border: none;
-        cursor: pointer;
-        font-size: 1.1rem;
-        padding: 0.25rem;
-        color: var(--gray-600);
-        transition: color 0.2s, transform 0.1s;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    
-    .kit-preview-trigger:hover {
-        color: var(--red-600);
-        transform: scale(1.1);
-    }
-    
-    .kit-preview-trigger:active {
-        transform: scale(0.95);
-    }
-    
-    .kit-popover {
-        position: absolute;
-        z-index: 1000;
-        background: white;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        min-width: 300px;
-        max-width: 400px;
-        margin-top: 0.5rem;
-        right: 0;
-        margin-right: 40px;
-    }
-    
-    .kit-popover-content {
-        padding: 0;
-    }
-    
-    .kit-popover-header {
-        padding: 0.75rem 1rem;
-        border-bottom: 1px solid var(--gray-200);
-        background: var(--gray-50);
-        display: flex;
-        align-items: center;
+    .kit-list-header-left {
         justify-content: space-between;
     }
     
-    .kit-popover-header strong {
-        color: var(--gray-900);
-        font-size: 0.95rem;
+    .kit-list-header-right {
+        display: flex;
+        justify-content: flex-end;
     }
     
-    .kit-popover-count {
-        color: var(--gray-600);
-        font-size: 0.85rem;
-    }
-    
-    .kit-popover-list {
-        padding: 0.75rem 1rem;
-        max-height: 300px;
-        overflow-y: auto;
-    }
-    
-    .kit-popover-list ul {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .kit-popover-list li {
-        padding: 0;
-        font-size: 0.875rem;
-        border-bottom: 1px solid var(--gray-100);
-    }
-    
-    .kit-popover-list li:last-child {
-        border-bottom: none;
-    }
-    
-    .kit-popover-list .part-line {
-        display: grid;
-        grid-template-columns: 45px 110px 140px auto;
+    .kit-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
         gap: 0.5rem;
-        align-items: center;
-        padding: 0.375rem 0;
     }
     
-    .kit-popover-list .part-qty {
-        color: var(--gray-600);
-        font-weight: 600;
+    .kit-search-wrapper {
+        max-width: none;
     }
     
-    .kit-popover-list .part-number {
-        color: var(--gray-900);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .kit-search-hint {
+        display: none;
     }
     
-    .kit-popover-list .part-name {
-        color: var(--gray-800);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+    .kit-th-engines, .kit-cell-engines {
+        display: none;
     }
     
-    .kit-popover-list .part-cost {
-        color: var(--gray-600);
-        font-size: 0.8rem;
-        font-weight: 600;
-        white-space: nowrap;
-        flex-shrink: 0;
+    .kit-th-notes, .kit-cell-notes {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .kit-pagination {
+        flex-direction: column;
+        gap: 0.5rem;
     }
     
-    .kit-popover-list .more-items {
-        color: var(--gray-500);
-        font-style: italic;
-        text-align: left;
-        padding: 0.5rem 0;
+    .kit-th-cost, .kit-cell-cost {
+        display: none;
     }
-    
-    .kit-popover-list .empty-message {
-        color: var(--gray-500);
-        font-style: italic;
-        text-align: left;
-        padding: 1rem 0;
-        margin: 0;
-    }
-    
-    /* Position table cells for popover anchoring */
-    .table tbody td {
-        position: relative;
-    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Compact Header with Title and Search on Same Line -->
-<div class="compact-header">
-    <h2 class="page-title">
-        Kits
-        <span class="title-count">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} kits</span>
-    </h2>
-    
-    <div class="search-section">
-        <form method="get" class="search-form">
-            <input id="search" name="search" value="{{ search }}" class="search-input" placeholder='Search kits…  name:kit'>
-            <button class="btn btn-dark">Search</button>
-            
-            <!-- Hidden field to preserve sorting -->
-            <input type="hidden" name="sort" value="{{ sort }}">
-        </form>
+<div class="kit-list-page">
+    <!-- Page Header -->
+    <div class="kit-list-header">
+        <div class="kit-list-header-left">
+            <h1 class="kit-list-title">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+                Kits
+            </h1>
+            <span class="kit-list-count">{{ total_count }} total</span>
+        </div>
+        <div class="kit-list-header-right">
+            <a href="{% url 'inventory:kit_create' %}" class="btn btn-primary btn-create">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Kit
+            </a>
+        </div>
     </div>
-</div>
 
-<!-- Kits Table -->
-<div class="table-wrap">
-    <table class="table sticky">
-        <thead>
-            <tr>
-                <th>
-                    <a href="#" class="sort-link" data-field="name">
-                        Kit Name <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>Kit Notes</th>
-                <th>
-                    <a href="#" class="sort-link" data-field="parts_count">
-                        Qty of Parts in Kit <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>Total Cost</th>
-                <th>
-                    <a href="#" class="sort-link" data-field="engines_count">
-                        Qty of Engines Used On <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sort-link" data-field="created_at">
-                        Created <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th style="width: 40px;"></th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for kit in kits %}
-                <tr class="clickable-row" data-href="{% url 'inventory:kit_detail' kit.pk %}">
-                    <td><strong>{{ kit.name }}</strong></td>
-                    <td>{{ kit.notes|default:"—"|truncatewords:20 }}</td>
-                    <td>{{ kit.parts_count }}</td>
-                    <td>${{ kit.total_cost|floatformat:2 }}</td>
-                    <td>{{ kit.engines_count }}</td>
-                    <td>{{ kit.created_at|date:"M j, Y" }}</td>
-                    <td style="text-align: center; padding: 0.5rem;">
+    <!-- Search & Filter Bar -->
+    <div class="kit-filter-bar">
+        <div class="kit-search-wrapper">
+            <svg class="kit-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form method="get" class="kit-search-form" id="searchForm">
+                <input type="text" name="search" value="{{ search }}" class="kit-search-input" placeholder="Search by kit name or notes...">
+                <input type="hidden" name="sort" value="{{ sort }}">
+            </form>
+            {% if search %}
+            <button type="button" class="kit-search-clear" onclick="clearSearch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+        <div class="kit-search-hint">
+            <span class="hint-text">Tip: Use <code>name:value</code> syntax for advanced search</span>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="kit-table-card">
+        <table class="kit-table">
+            <thead>
+                <tr>
+                    <th class="kit-th-name">
+                        <a href="#" class="kit-sort-link" data-field="name">
+                            Kit Name <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="kit-th-notes">Notes</th>
+                    <th class="kit-th-parts">
+                        <a href="#" class="kit-sort-link" data-field="parts_count">
+                            Parts <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="kit-th-cost">Total Cost</th>
+                    <th class="kit-th-engines">
+                        <a href="#" class="kit-sort-link" data-field="engines_count">
+                            Engines <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="kit-th-created">
+                        <a href="#" class="kit-sort-link" data-field="created_at">
+                            Created <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="kit-th-preview" style="width: 50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kit in kits %}
+                <tr class="kit-row" onclick="window.location='{% url 'inventory:kit_detail' kit.pk %}'">
+                    <td class="kit-cell-name">
+                        <span class="kit-name">{{ kit.name }}</span>
+                    </td>
+                    <td class="kit-cell-notes">
+                        <span class="kit-notes">{{ kit.notes|default:"—"|truncatewords:12 }}</span>
+                    </td>
+                    <td class="kit-cell-parts">
+                        {% if kit.parts_count %}
+                        <span class="kit-parts-badge">{{ kit.parts_count }} part{{ kit.parts_count|pluralize }}</span>
+                        {% else %}
+                        <span class="kit-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="kit-cell-cost">
+                        <span class="kit-cost">${{ kit.total_cost|floatformat:2 }}</span>
+                    </td>
+                    <td class="kit-cell-engines">
+                        {% if kit.engines_count %}
+                        <span class="kit-engines-badge">{{ kit.engines_count }} engine{{ kit.engines_count|pluralize }}</span>
+                        {% else %}
+                        <span class="kit-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="kit-cell-created">
+                        <span class="kit-created-date">{{ kit.created_at|date:"M j, Y" }}</span>
+                    </td>
+                    <td class="kit-cell-preview" style="position: relative;">
                         <button 
                             class="kit-preview-trigger"
                             data-kit-id="{{ kit.pk }}"
@@ -511,202 +707,243 @@
                             hx-trigger="click"
                             onclick="event.stopPropagation(); toggleKitPopover({{ kit.pk }})"
                             title="Preview kit parts">
-                            📋
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
                         </button>
                         <div id="kit-popover-{{ kit.pk }}" class="kit-popover" style="display: none;"></div>
                     </td>
                 </tr>
-            {% empty %}
+                {% empty %}
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 2rem; color: var(--gray-500);">
-                        No kits found matching your criteria.
+                    <td colspan="7" class="kit-empty-state">
+                        <div class="kit-empty-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                            <h3>No kits found</h3>
+                            <p>{% if search %}Try a different search term{% else %}Create your first kit to get started{% endif %}</p>
+                        </div>
                     </td>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Pagination -->
-{% if page_obj.has_other_pages %}
-    <div class="pagination">
-        {% if page_obj.has_previous %}
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">First</a>
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
-        {% endif %}
-        
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <span class="current">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-        
-        {% if page_obj.has_next %}
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">Last</a>
-        {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-{% endif %}
 
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="kit-pagination">
+        <div class="kit-pagination-info">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }}
+        </div>
+        <div class="kit-pagination-controls">
+            {% if page_obj.has_previous %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page=1" class="kit-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="kit-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+            
+            <span class="kit-page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.next_page_number }}" class="kit-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.paginator.num_pages }}" class="kit-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // Kit Popover Management - Global scope
-    let currentOpenPopover = null;
+// Kit Popover Management
+let currentOpenPopover = null;
+
+function toggleKitPopover(kitId) {
+    const popover = document.getElementById(`kit-popover-${kitId}`);
     
-    function toggleKitPopover(kitId) {
-        const popover = document.getElementById(`kit-popover-${kitId}`);
-        
-        // Close any currently open popover
-        if (currentOpenPopover && currentOpenPopover !== popover) {
-            currentOpenPopover.style.display = 'none';
-        }
-        
-        // Toggle the clicked popover
-        if (popover.style.display === 'none' || popover.style.display === '') {
-            popover.style.display = 'block';
-            currentOpenPopover = popover;
-            
-            // Position popover (adjust if off-screen)
-            positionKitPopover(popover);
-        } else {
-            popover.style.display = 'none';
-            currentOpenPopover = null;
-        }
+    // Close any currently open popover
+    if (currentOpenPopover && currentOpenPopover !== popover) {
+        currentOpenPopover.style.display = 'none';
     }
     
-    function positionKitPopover(popover) {
-        const rect = popover.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
+    // Toggle the clicked popover
+    if (popover.style.display === 'none' || popover.style.display === '') {
+        popover.style.display = 'block';
+        currentOpenPopover = popover;
         
-        // If popover goes off bottom of screen, position it upward
-        if (rect.bottom > viewportHeight) {
-            popover.style.marginTop = '-' + (popover.offsetHeight + 30) + 'px';
-        }
+        // Position popover (adjust if off-screen)
+        positionKitPopover(popover);
+    } else {
+        popover.style.display = 'none';
+        currentOpenPopover = null;
+    }
+}
+
+function positionKitPopover(popover) {
+    const rect = popover.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    
+    // If popover goes off bottom of screen, position it upward
+    if (rect.bottom > viewportHeight) {
+        popover.style.marginTop = '-' + (popover.offsetHeight + 40) + 'px';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Submit search on enter
+    const searchInput = document.querySelector('.kit-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
     }
     
-    document.addEventListener('DOMContentLoaded', function() {
-        // Clickable table rows
-        document.querySelectorAll('.clickable-row[data-href]').forEach(row => {
-            row.addEventListener('click', function() {
-                window.location.href = this.dataset.href;
-            });
-        });
-        
-        // Close popover when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.kit-preview-trigger') && !e.target.closest('.kit-popover')) {
-                if (currentOpenPopover) {
-                    currentOpenPopover.style.display = 'none';
-                    currentOpenPopover = null;
-                }
-            }
-        });
-        
-        // Close popover on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && currentOpenPopover) {
-                currentOpenPopover.style.display = 'none';
-                currentOpenPopover = null;
-            }
-        });
-        
-        // Close popover when scrolling
-        document.querySelector('.table-wrap')?.addEventListener('scroll', function() {
+    // Close popover when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.kit-preview-trigger') && !e.target.closest('.kit-popover')) {
             if (currentOpenPopover) {
                 currentOpenPopover.style.display = 'none';
                 currentOpenPopover = null;
             }
-        });
+        }
     });
     
-    // Multi-column sorting functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        const currentSort = '{{ sort|escapejs }}';
-        const sortLinks = document.querySelectorAll('.sort-link');
-        
-        // Parse current sort state
-        function parseSortState() {
-            if (!currentSort) return [];
-            return currentSort.split(',').map(s => s.trim()).filter(s => s);
+    // Close popover on Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && currentOpenPopover) {
+            currentOpenPopover.style.display = 'none';
+            currentOpenPopover = null;
         }
-        
-        // Update visual indicators
-        function updateSortIndicators() {
-            const sortFields = parseSortState();
-            sortLinks.forEach(link => {
-                const field = link.dataset.field;
-                const indicator = link.querySelector('.sort-indicator');
-                indicator.textContent = '';
-                indicator.className = 'sort-indicator';
+    });
+    
+    // Close popover when scrolling the table
+    document.querySelector('.kit-table-card')?.addEventListener('scroll', function() {
+        if (currentOpenPopover) {
+            currentOpenPopover.style.display = 'none';
+            currentOpenPopover = null;
+        }
+    });
+});
+
+// Clear search
+function clearSearch() {
+    const form = document.getElementById('searchForm');
+    const searchInput = form.querySelector('input[name="search"]');
+    searchInput.value = '';
+    form.submit();
+}
+
+// Multi-column sorting
+(function() {
+    const currentSort = '{{ sort|escapejs }}';
+    const sortLinks = document.querySelectorAll('.kit-sort-link[data-field]');
+    
+    // Parse current sort state
+    function parseSortState() {
+        if (!currentSort) return [];
+        return currentSort.split(',').map(s => s.trim()).filter(s => s);
+    }
+    
+    // Update visual indicators
+    function updateSortIndicators() {
+        const sortFields = parseSortState();
+        sortLinks.forEach(link => {
+            const field = link.dataset.field;
+            const indicator = link.querySelector('.sort-indicator');
+            indicator.textContent = '';
+            indicator.className = 'sort-indicator';
+            link.classList.remove('active');
+            
+            for (let i = 0; i < sortFields.length; i++) {
+                const sortField = sortFields[i];
+                const isDesc = sortField.startsWith('-');
+                const fieldName = isDesc ? sortField.substring(1) : sortField;
                 
-                // Find field in sort list
+                if (fieldName === field) {
+                    const priority = sortFields.length > 1 ? (i + 1) : '';
+                    indicator.textContent = priority + (isDesc ? '↓' : '↑');
+                    indicator.className = 'sort-indicator active';
+                    link.classList.add('active');
+                    break;
+                }
+            }
+        });
+    }
+    
+    // Handle sort link clicks
+    sortLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const field = this.dataset.field;
+            let sortFields = parseSortState();
+            
+            if (e.shiftKey) {
+                // Shift+click: add/modify in multi-column sort
+                let found = false;
                 for (let i = 0; i < sortFields.length; i++) {
                     const sortField = sortFields[i];
                     const isDesc = sortField.startsWith('-');
                     const fieldName = isDesc ? sortField.substring(1) : sortField;
                     
                     if (fieldName === field) {
-                        const priority = sortFields.length > 1 ? (i + 1) : '';
-                        indicator.textContent = priority + (isDesc ? '↓' : '↑');
-                        indicator.className = 'sort-indicator active';
+                        // Toggle direction
+                        sortFields[i] = isDesc ? field : '-' + field;
+                        found = true;
                         break;
                     }
                 }
-            });
-        }
-        
-        // Handle sort link clicks
-        sortLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const field = this.dataset.field;
-                let sortFields = parseSortState();
-                
-                if (e.shiftKey) {
-                    // Shift+click: add/modify in multi-column sort
-                    let found = false;
-                    for (let i = 0; i < sortFields.length; i++) {
-                        const sortField = sortFields[i];
-                        const isDesc = sortField.startsWith('-');
-                        const fieldName = isDesc ? sortField.substring(1) : sortField;
-                        
-                        if (fieldName === field) {
-                            // Toggle direction
-                            sortFields[i] = isDesc ? field : '-' + field;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        // Add new field
-                        sortFields.push(field);
-                    }
-                } else {
-                    // Regular click: replace all sorts with this field
-                    const currentField = sortFields.find(s => s === field || s === '-' + field);
-                    if (currentField) {
-                        // Toggle direction if same field
-                        sortFields = [currentField.startsWith('-') ? field : '-' + field];
-                    } else {
-                        // New field, default ascending
-                        sortFields = [field];
-                    }
+                if (!found) {
+                    // Add new field
+                    sortFields.push(field);
                 }
-                
-                // Build URL and navigate
-                const url = new URL(window.location);
-                url.searchParams.delete('page'); // Reset to page 1
-                url.searchParams.set('sort', sortFields.join(','));
-                window.location.href = url.toString();
-            });
+            } else {
+                // Regular click: replace all sorts with this field
+                const currentField = sortFields.find(s => s === field || s === '-' + field);
+                if (currentField) {
+                    sortFields = [currentField.startsWith('-') ? field : '-' + field];
+                } else {
+                    sortFields = [field];
+                }
+            }
+            
+            // Build URL and navigate
+            const url = new URL(window.location);
+            url.searchParams.delete('page');
+            url.searchParams.set('sort', sortFields.join(','));
+            window.location.href = url.toString();
         });
-        
-        // Initialize indicators
-        updateSortIndicators();
     });
+    
+    // Initialize indicators
+    updateSortIndicators();
+})();
 </script>
 {% endblock %}

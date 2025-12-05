@@ -1,0 +1,365 @@
+<!-- Modal for Customer Creation -->
+<div class="po-modal-overlay" id="customer-create-modal" onclick="if(event.target === this) { document.getElementById('customer-search-modal')?.remove(); this.remove(); }">
+    <div class="po-modal po-modal-md" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="8.5" cy="7" r="4"></circle>
+                    <line x1="20" y1="8" x2="20" y2="14"></line>
+                    <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
+                Create New Customer
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('customer-create-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <form hx-post="{% url 'jobs:customer_create' ticket.pk %}"
+                  hx-target="#customer-section"
+                  hx-swap="outerHTML"
+                  hx-on::after-request="if(event.detail.successful) { document.getElementById('customer-search-modal')?.remove(); document.getElementById('customer-create-modal')?.remove(); }">
+                {% csrf_token %}
+                
+                <!-- Basic Information -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Basic Information
+                    </div>
+                    <div class="po-create-vendor-grid">
+                        <div class="po-create-vendor-field po-create-vendor-field-full">
+                            <label class="po-create-vendor-label">Customer Name <span class="po-required">*</span></label>
+                            {{ form.name }}
+                            {% if form.name.errors %}<div class="po-field-error">{{ form.name.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Email</label>
+                            {{ form.email }}
+                            {% if form.email.errors %}<div class="po-field-error">{{ form.email.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Phone</label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}<div class="po-field-error">{{ form.phone.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bill To Address -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                        Bill To Address
+                    </div>
+                    <div class="po-create-vendor-grid">
+                        <div class="po-create-vendor-field po-create-vendor-field-full">
+                            <label class="po-create-vendor-label">Name</label>
+                            {{ form.bill_to_name }}
+                            {% if form.bill_to_name.errors %}<div class="po-field-error">{{ form.bill_to_name.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field po-create-vendor-field-full">
+                            <label class="po-create-vendor-label">Address</label>
+                            {{ form.bill_to_address }}
+                            {% if form.bill_to_address.errors %}<div class="po-field-error">{{ form.bill_to_address.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">City</label>
+                            {{ form.bill_to_city }}
+                            {% if form.bill_to_city.errors %}<div class="po-field-error">{{ form.bill_to_city.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field po-create-vendor-field-half">
+                            <label class="po-create-vendor-label">State</label>
+                            {{ form.bill_to_state }}
+                            {% if form.bill_to_state.errors %}<div class="po-field-error">{{ form.bill_to_state.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field po-create-vendor-field-half">
+                            <label class="po-create-vendor-label">ZIP</label>
+                            {{ form.bill_to_zip }}
+                            {% if form.bill_to_zip.errors %}<div class="po-field-error">{{ form.bill_to_zip.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Pricing & Terms -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Default Pricing & Terms
+                    </div>
+                    <div class="po-create-vendor-grid">
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Default Price Setting</label>
+                            {{ form.default_price_setting }}
+                            {% if form.default_price_setting.errors %}<div class="po-field-error">{{ form.default_price_setting.errors }}</div>{% endif %}
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Default Terms</label>
+                            {{ form.default_terms }}
+                            {% if form.default_terms.errors %}<div class="po-field-error">{{ form.default_terms.errors }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="po-create-vendor-actions">
+                    <button type="button" class="po-create-vendor-cancel" onclick="document.getElementById('customer-create-modal').remove()">Cancel</button>
+                    <button type="submit" class="po-create-vendor-submit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Create Customer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+#customer-create-modal {
+    z-index: 10001;
+}
+
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-md {
+    max-width: 580px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Form Section */
+.po-form-section {
+    margin-bottom: 1.5rem;
+}
+
+.po-form-section:last-of-type {
+    margin-bottom: 0;
+}
+
+.po-form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-form-section-title svg {
+    color: var(--gray-400);
+}
+
+/* Form Grid */
+.po-create-vendor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.po-create-vendor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.po-create-vendor-field-full {
+    grid-column: 1 / -1;
+}
+
+.po-create-vendor-field-half {
+    grid-column: span 1;
+}
+
+.po-create-vendor-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-required {
+    color: var(--error);
+}
+
+.po-create-vendor-field input,
+.po-create-vendor-field select,
+.po-create-vendor-field textarea {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.po-create-vendor-field input:focus,
+.po-create-vendor-field select:focus,
+.po-create-vendor-field textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-create-vendor-field input::placeholder {
+    color: var(--gray-400);
+}
+
+.po-field-error {
+    color: var(--error);
+    font-size: 0.75rem;
+}
+
+/* Actions */
+.po-create-vendor-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-create-vendor-cancel {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-create-vendor-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-create-vendor-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-create-vendor-submit:hover {
+    background: #2f855a;
+}
+
+@media (max-width: 480px) {
+    .po-create-vendor-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .po-create-vendor-field-half {
+        grid-column: 1;
+    }
+}
+</style>

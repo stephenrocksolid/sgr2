@@ -1,0 +1,719 @@
+<!-- Modal for Create/Edit Selection Option -->
+<div id="selection-option-modal" class="so-modal-backdrop">
+    <div class="so-modal">
+        <div class="so-modal-header">
+            <div class="so-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    {% if is_create %}
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    {% else %}
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                    {% endif %}
+                </svg>
+                {{ title }}
+            </div>
+            <button type="button" class="so-modal-close" onclick="document.getElementById('selection-option-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <form method="post" id="selection-option-form"
+              hx-post="{% if is_create %}{% url 'jobs:selection_option_create' %}{% else %}{% url 'jobs:selection_option_update' option.pk %}{% endif %}"
+              hx-target="#selection-option-modal"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="so-modal-body">
+                {% if form.non_field_errors %}
+                <div class="so-alert so-alert-error">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="15" y1="9" x2="9" y2="15"></line>
+                        <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    {{ form.non_field_errors }}
+                </div>
+                {% endif %}
+
+                <div class="so-form-section">
+                    <div class="so-form-group">
+                        <label class="so-label" for="{{ form.name.id_for_label }}">
+                            Name <span class="so-required">*</span>
+                        </label>
+                        {{ form.name }}
+                        {% if form.name.errors %}
+                        <div class="so-field-error">{{ form.name.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="so-form-group">
+                        <label class="so-label" for="{{ form.group.id_for_label }}">
+                            Group <span class="so-required">*</span>
+                        </label>
+                        {{ form.group }}
+                        {% if form.group.errors %}
+                        <div class="so-field-error">{{ form.group.errors }}</div>
+                        {% endif %}
+                        <p class="so-field-help">Select which category this option belongs to.</p>
+                    </div>
+                </div>
+
+                <div class="so-form-divider">
+                    <span>Optional Associations</span>
+                </div>
+
+                <div class="so-form-section">
+                    <!-- Part Selection -->
+                    <div class="so-form-group">
+                        <label class="so-label">Part</label>
+                        <input type="hidden" name="part" id="id_part" value="{{ form.part.value|default:'' }}">
+                        <div id="so-part-selected" class="so-selected-item {% if not form.part.value %}so-empty{% endif %}">
+                            {% if form.part.value %}
+                            <div class="so-selected-info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                                </svg>
+                                <span id="so-part-name">{{ form.instance.part.part_number }} - {{ form.instance.part.name|truncatechars:40 }}</span>
+                            </div>
+                            <button type="button" class="so-clear-btn" onclick="clearPartSelection()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                            {% else %}
+                            <span class="so-empty-text">No part selected</span>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="so-search-btn" 
+                                hx-get="{% url 'jobs:so_part_search_modal' %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Search Parts
+                        </button>
+                        {% if form.part.errors %}
+                        <div class="so-field-error">{{ form.part.errors }}</div>
+                        {% endif %}
+                        <p class="so-field-help">Link to a specific part (for Parts Selection).</p>
+                    </div>
+
+                    <!-- Kit Selection -->
+                    <div class="so-form-group">
+                        <label class="so-label">Kit</label>
+                        <input type="hidden" name="kit" id="id_kit" value="{{ form.kit.value|default:'' }}">
+                        <div id="so-kit-selected" class="so-selected-item {% if not form.kit.value %}so-empty{% endif %}">
+                            {% if form.kit.value %}
+                            <div class="so-selected-info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                </svg>
+                                <span id="so-kit-name">{{ form.instance.kit.name }}</span>
+                            </div>
+                            <button type="button" class="so-clear-btn" onclick="clearKitSelection()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                            {% else %}
+                            <span class="so-empty-text">No kit selected</span>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="so-search-btn"
+                                hx-get="{% url 'jobs:so_kit_search_modal' %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Search Kits
+                        </button>
+                        {% if form.kit.errors %}
+                        <div class="so-field-error">{{ form.kit.errors }}</div>
+                        {% endif %}
+                        <p class="so-field-help">Link to a specific kit (for Item Selection).</p>
+                    </div>
+
+                    <!-- Build List Selection -->
+                    <div class="so-form-group">
+                        <label class="so-label">Build List</label>
+                        <input type="hidden" name="build_list" id="id_build_list" value="{{ form.build_list.value|default:'' }}">
+                        <div id="so-buildlist-selected" class="so-selected-item {% if not form.build_list.value %}so-empty{% endif %}">
+                            {% if form.build_list.value %}
+                            <div class="so-selected-info">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                                </svg>
+                                <span id="so-buildlist-name">{{ form.instance.build_list.name }}</span>
+                            </div>
+                            <button type="button" class="so-clear-btn" onclick="clearBuildListSelection()">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                                </svg>
+                            </button>
+                            {% else %}
+                            <span class="so-empty-text">No build list selected</span>
+                            {% endif %}
+                        </div>
+                        <button type="button" class="so-search-btn"
+                                hx-get="{% url 'jobs:so_buildlist_search_modal' %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            Search Build Lists
+                        </button>
+                        {% if form.build_list.errors %}
+                        <div class="so-field-error">{{ form.build_list.errors }}</div>
+                        {% endif %}
+                        <p class="so-field-help">Link to a specific build list (for Build Lists).</p>
+                    </div>
+                </div>
+
+                <div class="so-form-divider">
+                    <span>Settings</span>
+                </div>
+
+                <div class="so-form-section">
+                    <div class="so-form-row">
+                        <div class="so-form-group">
+                            <label class="so-label" for="{{ form.sort_order.id_for_label }}">Sort Order</label>
+                            {{ form.sort_order }}
+                            {% if form.sort_order.errors %}
+                            <div class="so-field-error">{{ form.sort_order.errors }}</div>
+                            {% endif %}
+                            <p class="so-field-help">Lower numbers appear first.</p>
+                        </div>
+
+                        <div class="so-form-group so-checkbox-group">
+                            <label class="so-checkbox-label">
+                                {{ form.is_active }}
+                                <span class="so-checkbox-text">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                                        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                                    </svg>
+                                    Active
+                                </span>
+                            </label>
+                            {% if form.is_active.errors %}
+                            <div class="so-field-error">{{ form.is_active.errors }}</div>
+                            {% endif %}
+                            <p class="so-field-help">Inactive options won't appear on job tickets.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="so-modal-footer">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('selection-option-modal').remove()">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {% if is_create %}Create Option{% else %}Save Changes{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// Part selection functions
+function selectPart(id, partNumber, description) {
+    document.getElementById('id_part').value = id;
+    const container = document.getElementById('so-part-selected');
+    container.classList.remove('so-empty');
+    container.innerHTML = `
+        <div class="so-selected-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+            </svg>
+            <span id="so-part-name">${partNumber} - ${description}</span>
+        </div>
+        <button type="button" class="so-clear-btn" onclick="clearPartSelection()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    `;
+    // Close the search modal
+    const searchModal = document.getElementById('so-part-search-modal');
+    if (searchModal) searchModal.remove();
+}
+
+function clearPartSelection() {
+    document.getElementById('id_part').value = '';
+    const container = document.getElementById('so-part-selected');
+    container.classList.add('so-empty');
+    container.innerHTML = '<span class="so-empty-text">No part selected</span>';
+}
+
+// Kit selection functions
+function selectKit(id, name) {
+    document.getElementById('id_kit').value = id;
+    const container = document.getElementById('so-kit-selected');
+    container.classList.remove('so-empty');
+    container.innerHTML = `
+        <div class="so-selected-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+            </svg>
+            <span id="so-kit-name">${name}</span>
+        </div>
+        <button type="button" class="so-clear-btn" onclick="clearKitSelection()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    `;
+    // Close the search modal
+    const searchModal = document.getElementById('so-kit-search-modal');
+    if (searchModal) searchModal.remove();
+}
+
+function clearKitSelection() {
+    document.getElementById('id_kit').value = '';
+    const container = document.getElementById('so-kit-selected');
+    container.classList.add('so-empty');
+    container.innerHTML = '<span class="so-empty-text">No kit selected</span>';
+}
+
+// Build List selection functions
+function selectBuildList(id, name) {
+    document.getElementById('id_build_list').value = id;
+    const container = document.getElementById('so-buildlist-selected');
+    container.classList.remove('so-empty');
+    container.innerHTML = `
+        <div class="so-selected-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <line x1="16" y1="13" x2="8" y2="13"></line>
+                <line x1="16" y1="17" x2="8" y2="17"></line>
+            </svg>
+            <span id="so-buildlist-name">${name}</span>
+        </div>
+        <button type="button" class="so-clear-btn" onclick="clearBuildListSelection()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </button>
+    `;
+    // Close the search modal
+    const searchModal = document.getElementById('so-buildlist-search-modal');
+    if (searchModal) searchModal.remove();
+}
+
+function clearBuildListSelection() {
+    document.getElementById('id_build_list').value = '';
+    const container = document.getElementById('so-buildlist-selected');
+    container.classList.add('so-empty');
+    container.innerHTML = '<span class="so-empty-text">No build list selected</span>';
+}
+</script>
+
+<style>
+/* Modal Backdrop */
+.so-modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+}
+
+/* Modal Container */
+.so-modal {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 560px;
+    width: 100%;
+    max-height: calc(100vh - 2rem);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Form needs to be flex to allow body to scroll */
+.so-modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* Modal Header */
+.so-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.so-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+}
+
+.so-modal-title svg {
+    color: var(--gray-500);
+}
+
+.so-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    color: var(--gray-500);
+    transition: all 0.15s ease;
+}
+
+.so-modal-close:hover {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+/* Modal Body */
+.so-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+/* Modal Footer */
+.so-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+}
+
+.so-modal-footer .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Alert Styles */
+.so-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.875rem;
+}
+
+.so-alert-error {
+    background-color: #fef2f2;
+    color: #991b1b;
+    border: 1px solid #fecaca;
+}
+
+.so-alert-error svg {
+    color: #dc2626;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+}
+
+/* Form Sections */
+.so-form-section {
+    margin-bottom: 0.5rem;
+}
+
+.so-form-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.25rem 0;
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.so-form-divider::before,
+.so-form-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--gray-200);
+}
+
+/* Form Groups */
+.so-form-group {
+    margin-bottom: 1rem;
+}
+
+.so-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.so-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+/* Labels */
+.so-label {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.375rem;
+}
+
+.so-required {
+    color: #dc2626;
+}
+
+/* Form Inputs - Override Django's default rendering */
+.so-modal input[type="text"],
+.so-modal input[type="number"],
+.so-modal select {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+}
+
+.so-modal input[type="text"]:focus,
+.so-modal input[type="number"]:focus,
+.so-modal select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.so-modal input[type="text"]::placeholder {
+    color: var(--gray-400);
+}
+
+/* Selected Item Display */
+.so-selected-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.625rem 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    min-height: 42px;
+}
+
+.so-selected-item.so-empty {
+    background: white;
+    border-style: dashed;
+}
+
+.so-selected-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    font-weight: 500;
+}
+
+.so-selected-info svg {
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.so-empty-text {
+    color: var(--gray-400);
+    font-size: 0.875rem;
+}
+
+.so-clear-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: all 0.15s ease;
+}
+
+.so-clear-btn:hover {
+    background: var(--gray-200);
+    color: var(--gray-600);
+}
+
+/* Search Button */
+.so-search-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.so-search-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+    color: var(--gray-700);
+}
+
+.so-search-btn svg {
+    color: var(--gray-500);
+}
+
+/* Checkbox Styling */
+.so-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.so-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.625rem 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.so-checkbox-label:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.so-checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+}
+
+.so-checkbox-text {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.so-checkbox-text svg {
+    color: var(--gray-400);
+}
+
+/* Field Help Text */
+.so-field-help {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: 0.375rem;
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+/* Field Error */
+.so-field-error {
+    font-size: 0.75rem;
+    color: #dc2626;
+    margin-top: 0.375rem;
+}
+
+/* Button Styles */
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .so-modal {
+        max-height: calc(100vh - 1rem);
+        margin: 0.5rem;
+    }
+    
+    .so-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .so-modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .so-modal-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>

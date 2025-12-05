@@ -1,0 +1,344 @@
+<div id="po-items-table">
+    {% if items %}
+    <table class="po-items-table">
+        <thead>
+            <tr>
+                <th class="th-part">Part #</th>
+                <th class="th-name">Part Name</th>
+                <th class="th-qty">Ordered</th>
+                <th class="th-qty">Received</th>
+                <th class="th-qty">Remaining</th>
+                <th class="th-price">Unit Price</th>
+                <th class="th-price">Line Total</th>
+                <th class="th-status">Status</th>
+                <th class="th-actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr class="po-item-row {% if item.quantity_remaining == 0 %}po-item-complete{% endif %}">
+                <td class="td-part">
+                    <span class="po-part-number">{{ item.part_number|default:"—" }}</span>
+                </td>
+                <td class="td-name">
+                    <span class="po-part-name">{{ item.part_name|default:"—" }}</span>
+                    {% if not item.part %}
+                    <span class="po-custom-badge" title="Custom entry (not linked to inventory)">Custom</span>
+                    {% endif %}
+                    {% if item.line_notes %}
+                    <span class="po-part-notes" title="{{ item.line_notes }}">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                    </span>
+                    {% endif %}
+                </td>
+                <td class="td-qty">{{ item.quantity_ordered }}</td>
+                <td class="td-qty td-received">{{ item.quantity_received|default:"0" }}</td>
+                <td class="td-qty td-remaining {% if item.quantity_remaining > 0 %}has-remaining{% endif %}">
+                    {{ item.quantity_remaining }}
+                </td>
+                <td class="td-price">${{ item.unit_price|floatformat:2|default:"0.00" }}</td>
+                <td class="td-price td-total">${{ item.line_total|floatformat:2|default:"0.00" }}</td>
+                <td class="td-status">
+                    <span class="po-item-status po-item-status-{{ item.status }}">{{ item.get_status_display }}</span>
+                </td>
+                <td class="td-actions">
+                    <div class="po-item-actions">
+                        {% if item.quantity_remaining > 0 %}
+                        <button type="button" class="po-action-btn po-action-receive"
+                                hx-get="{% url 'jobs:po_item_receive_modal' po.pk item.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                title="Receive Items">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                            Receive
+                        </button>
+                        {% endif %}
+                        <button type="button" class="po-action-btn po-action-edit"
+                                hx-get="{% url 'jobs:po_item_edit_modal' po.pk item.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                title="Edit Item">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
+                        <button type="button" class="po-action-btn po-action-history"
+                                hx-get="{% url 'jobs:po_item_receive_history' po.pk item.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend"
+                                title="View History">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                        </button>
+                        <button type="button" class="po-action-btn po-action-remove"
+                                hx-post="{% url 'jobs:po_item_remove' po.pk item.pk %}"
+                                hx-target="#po-items-section"
+                                hx-swap="innerHTML"
+                                hx-confirm="Remove this item from PO?"
+                                title="Remove">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr class="po-items-footer">
+                <td colspan="6" class="po-items-count">
+                    {{ items|length }} item{{ items|length|pluralize }}
+                </td>
+                <td class="td-price td-grand-total">
+                    ${{ total_amount|floatformat:2|default:"0.00" }}
+                </td>
+                <td colspan="2"></td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <div class="po-items-empty">
+        <div class="po-items-empty-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+        </div>
+        <p class="po-items-empty-title">No items added yet</p>
+        <p class="po-items-empty-subtitle">Click "Add Item" to start adding parts to this purchase order</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.po-items-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8125rem;
+}
+
+.po-items-table thead {
+    background: var(--gray-50);
+    border-bottom: 2px solid var(--gray-200);
+}
+
+.po-items-table th {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--gray-600);
+    white-space: nowrap;
+}
+
+.po-items-table td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+}
+
+.po-item-row:hover {
+    background: var(--gray-50);
+}
+
+.po-item-row.po-item-complete {
+    background: #f0fdf4;
+}
+
+/* Column widths */
+.th-part { width: 120px; }
+.th-name { width: auto; }
+.th-qty { width: 80px; text-align: center; }
+.th-price { width: 100px; text-align: right; }
+.th-status { width: 120px; }
+.th-actions { width: 180px; }
+
+.td-qty { text-align: center; font-weight: 500; }
+.td-price { text-align: right; font-family: 'Monaco', 'Menlo', monospace; }
+.td-total { font-weight: 600; }
+.td-received { color: var(--success); }
+.td-remaining.has-remaining { color: var(--warning); font-weight: 600; }
+
+/* Part Info */
+.po-part-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.75rem;
+    color: var(--gray-700);
+}
+
+.po-part-name {
+    color: var(--gray-900);
+}
+
+.po-custom-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.375rem;
+    margin-left: 0.375rem;
+    background: #fef3c7;
+    color: #92400e;
+    border-radius: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    vertical-align: middle;
+}
+
+.po-part-notes {
+    display: inline-flex;
+    margin-left: 0.375rem;
+    color: var(--gray-400);
+    cursor: help;
+}
+
+/* Status Badge */
+.po-item-status {
+    display: inline-flex;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-item-status-ordered { background: #dbeafe; color: #1e40af; }
+.po-item-status-partially_received { background: #fef3c7; color: #92400e; }
+.po-item-status-received { background: #d1fae5; color: #065f46; }
+.po-item-status-backordered { background: #fee2e2; color: #991b1b; }
+.po-item-status-cancelled { background: var(--gray-200); color: var(--gray-600); }
+
+/* Action Buttons */
+.po-item-actions {
+    display: flex;
+    gap: 0.375rem;
+    justify-content: flex-end;
+}
+
+.po-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    background: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-action-btn:hover {
+    background: var(--gray-50);
+}
+
+.po-action-receive {
+    background: #d1fae5;
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+
+.po-action-receive:hover {
+    background: #a7f3d0;
+}
+
+.po-action-edit {
+    color: var(--primary);
+    border-color: var(--gray-300);
+}
+
+.po-action-edit:hover {
+    background: #e2e8f0;
+    border-color: var(--primary);
+}
+
+.po-action-history {
+    color: var(--gray-600);
+}
+
+.po-action-remove {
+    color: var(--error);
+    border-color: transparent;
+    background: transparent;
+    padding: 0.25rem;
+}
+
+.po-action-remove:hover {
+    background: #fee2e2;
+}
+
+/* Footer */
+.po-items-footer {
+    background: var(--gray-50);
+}
+
+.po-items-footer td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: none;
+    font-size: 0.8125rem;
+}
+
+.po-items-count {
+    color: var(--gray-500);
+}
+
+.td-grand-total {
+    font-weight: 700;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+}
+
+/* Empty State */
+.po-items-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 2rem;
+    text-align: center;
+}
+
+.po-items-empty-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 72px;
+    background: var(--gray-100);
+    border-radius: 50%;
+    color: var(--gray-400);
+    margin-bottom: 1rem;
+}
+
+.po-items-empty-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-700);
+    margin: 0 0 0.25rem;
+}
+
+.po-items-empty-subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+</style>
+
+

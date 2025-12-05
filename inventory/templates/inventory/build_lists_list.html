@@ -1,498 +1,998 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
 {% block title %}Build Lists - SGR Part Manager{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Override main container padding for this page */
-    .main-content-container {
-        padding-top: 1rem !important;
-        padding-bottom: 0.5rem !important;
-    }
-    
-    /* Compact Header Layout */
-    .compact-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        gap: 1rem;
-    }
-    
-    .page-title {
-        margin: 0;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        white-space: nowrap;
-        display: flex;
-        align-items: baseline;
-        gap: 1rem;
-    }
-    
-    .title-count {
-        font-size: 0.875rem;
-        font-weight: 400;
-        color: var(--gray-600);
-    }
-    
-    .search-section {
-        flex: 0 1 50%;
-        min-width: 0;
-    }
-    
-    .search-form {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    .search-input {
-        flex: 1;
-        padding: 0.375rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 0.875rem;
-        min-width: 0;
-    }
-    
-    /* Button styles */
-    .btn-dark {
-        background-color: var(--gray-800);
-        color: white;
-        border-color: var(--gray-800);
-    }
-    
-    .btn-dark:hover {
-        background-color: var(--gray-900);
-        border-color: var(--gray-900);
-    }
-    
-    .btn-light {
-        background-color: white;
-        color: var(--gray-700);
-        border-color: var(--gray-300);
-    }
-    
-    .btn-light:hover {
-        background-color: var(--gray-50);
-        border-color: var(--gray-400);
-    }
-    
-    .filters-section {
-        background: var(--gray-50);
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        border-radius: var(--border-radius);
-        border: 1px solid var(--gray-200);
-    }
-    
-    .filter-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .filter-group {
-        display: flex;
+/* Page Layout */
+.build-list-page {
+    max-width: calc(100% - 2rem);
+    margin: 0 auto;
+    padding: 0 1rem;
+    margin-top: -1.25rem;
+}
+
+/* Header */
+.build-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.build-list-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.build-list-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.build-list-title svg {
+    color: var(--gray-500);
+    width: 26px;
+    height: 26px;
+}
+
+.build-list-count {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.btn-create svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Filter Bar */
+.build-list-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.build-list-search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 400px;
+}
+
+.build-list-search-icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+}
+
+.build-list-search-form {
+    width: 100%;
+}
+
+.build-list-search-input {
+    width: 100%;
+    padding: 0.375rem 2rem 0.375rem 2rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.build-list-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.build-list-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: var(--gray-300);
+    border-radius: 50%;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.build-list-search-clear:hover {
+    background: var(--gray-400);
+    color: var(--gray-800);
+}
+
+/* Table Card */
+.build-list-table-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    overflow: auto;
+    height: calc(100vh - 195px);
+}
+
+.build-list-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.build-list-table thead {
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.build-list-table th {
+    padding: 0.4rem 0.75rem;
+    text-align: left;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-500);
+    border-bottom: 2px solid var(--gray-200);
+    background: var(--gray-50);
+    white-space: nowrap;
+}
+
+.build-list-table th:first-child { padding-left: 1rem; }
+.build-list-table th:last-child { padding-right: 1rem; }
+
+.build-list-sort-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.15s ease;
+    cursor: pointer;
+}
+
+.build-list-sort-link:hover,
+.build-list-sort-link.active {
+    color: var(--gray-900);
+}
+
+.sort-indicator {
+    font-size: 0.7rem;
+    color: var(--gray-400);
+    min-width: 1rem;
+}
+
+.sort-indicator.active {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* Table Rows */
+.build-list-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.build-list-row:hover {
+    background: #f8fafc;
+}
+
+.build-list-row:hover td {
+    background: #f8fafc;
+}
+
+.build-list-table td {
+    padding: 0.35rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+    font-size: 0.8125rem;
+}
+
+.build-list-table td:first-child { padding-left: 1rem; }
+.build-list-table td:last-child { padding-right: 1rem; }
+
+.build-list-row:last-child td {
+    border-bottom: none;
+}
+
+/* Name Cell */
+.build-list-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+/* Notes Cell */
+.build-list-notes {
+    font-weight: 400;
+    color: var(--gray-600);
+    font-size: 0.8rem;
+}
+
+/* Hours Badge */
+.build-list-hours-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    background: #e0e7ff;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4338ca;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Engines Badge */
+.build-list-engines-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    background: #d1fae5;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #065f46;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Date */
+.build-list-date {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    background: #f1f5f9;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-600);
+}
+
+.build-list-no-data {
+    color: var(--gray-300);
+    font-weight: 400;
+}
+
+/* Empty State */
+.build-list-empty-state {
+    padding: 3rem 2rem !important;
+    text-align: center;
+}
+
+.build-list-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.build-list-empty-content svg {
+    color: var(--gray-300);
+    width: 40px;
+    height: 40px;
+}
+
+.build-list-empty-content h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.build-list-empty-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+/* Pagination */
+.build-list-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.build-list-pagination-info {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.build-list-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.build-list-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    color: var(--gray-600);
+    background: white;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.build-list-page-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.build-list-page-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.build-list-page-current {
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Modal Styles */
+.build-list-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.build-list-modal-content {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    max-width: 550px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.build-list-modal-header {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--gray-200);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.build-list-modal-header h3 {
+    margin: 0;
+    color: var(--gray-900);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.build-list-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    padding: 0;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.build-list-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.build-list-modal-body {
+    padding: 1rem;
+}
+
+.build-list-modal-help {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin: 0 0 0.75rem 0;
+    padding: 0.5rem 0.75rem;
+    background: var(--gray-50);
+    border-radius: 4px;
+}
+
+.build-list-modal-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--gray-200);
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+/* Search Conditions */
+.search-condition {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    background: var(--gray-50);
+    border-radius: 0.375rem;
+}
+
+.search-condition select,
+.search-condition input {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+.field-select {
+    min-width: 100px;
+}
+
+.operator-select {
+    min-width: 90px;
+}
+
+.value-input {
+    flex: 1;
+    min-width: 120px;
+}
+
+.btn-icon {
+    padding: 0.375rem;
+    color: var(--gray-500);
+}
+
+.btn-icon:hover {
+    color: var(--error);
+    background: #fee2e2;
+}
+
+/* Button Variants */
+.btn-sm {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .build-list-header {
         flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
     }
     
-    .filter-group label {
-        font-weight: 600;
-        margin-bottom: 0.125rem;
-        color: var(--gray-700);
-        font-size: 0.875rem;
-    }
-    
-    .filter-group input,
-    .filter-group select {
-        padding: 0.375rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 0.875rem;
-    }
-    
-    .filter-actions {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
-    }
-    
-    .results-header {
-        display: flex;
+    .build-list-header-left {
         justify-content: space-between;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        flex-wrap: wrap;
+    }
+    
+    .build-list-header-right {
+        display: flex;
+        justify-content: flex-end;
+    }
+    
+    .build-list-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
         gap: 0.5rem;
     }
     
-    .results-info {
-        color: var(--gray-600);
-        font-size: 0.875rem;
+    .build-list-search-wrapper {
+        max-width: none;
     }
     
-    .export-section {
-        display: flex;
-        gap: 0.5rem;
-        align-items: center;
+    .build-list-th-notes, .build-list-cell-notes {
+        display: none;
     }
     
-    /* Table Container - maximize height */
-    .table-wrap {
-        max-height: calc(100vh - 120px);
-        overflow-y: auto;
-        position: relative;
-        margin-bottom: 0;
+    .search-condition {
+        flex-direction: column;
+        align-items: stretch;
     }
     
-    .table.sticky {
-        width: 100%;
-        margin-bottom: 0;
-        border-spacing: 0;
-    }
-    
-    .table.sticky thead {
-        position: sticky;
-        top: 0;
-        background: white;
-        z-index: 10;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    
-    /* Compact table spacing */
-    .table.sticky th,
-    .table.sticky td {
-        padding: 0.375rem 0.5rem;
-        line-height: 1.3;
-    }
-    
-    .table.sticky th {
-        font-size: 0.875rem;
-    }
-    
-    .table.sticky td {
-        font-size: 0.875rem;
-    }
-    
-    .table.sticky tbody tr:last-child td {
-        padding-bottom: 0.375rem;
-    }
-    
-    .clickable-row {
-        cursor: pointer;
-        transition: background-color 0.2s;
-    }
-    
-    .clickable-row:hover {
-        background-color: var(--gray-50);
-    }
-    
-    .sort-link {
-        color: var(--gray-900);
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        font-weight: 600;
-    }
-    
-    .sort-link:hover {
-        color: var(--red-600);
-    }
-    
-    .sort-indicator {
-        font-size: 0.75rem;
-        color: var(--gray-400);
-        margin-left: 0.25rem;
-    }
-    
-    .sort-indicator.active {
-        color: var(--red-600);
-        font-weight: bold;
-    }
-    
-    .pagination {
-        display: flex;
-        justify-content: center;
-        gap: 0.25rem;
-        margin-top: 0;
-        margin-bottom: 0;
-        flex-wrap: wrap;
-    }
-    
-    .pagination a,
-    .pagination .current {
-        padding: 0.25rem 0.5rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        text-decoration: none;
-        color: var(--gray-700);
-        background: white;
-        font-size: 0.875rem;
-    }
-    
-    .pagination a:hover {
-        background: var(--gray-50);
-        color: var(--red-600);
-    }
-    
-    .pagination .current {
-        background: var(--red-600) !important;
-        color: white !important;
-        border-color: var(--red-600) !important;
-    }
-    
-    /* Flex utilities */
-    .flex {
-        display: flex;
-    }
-    
-    .gap-2 {
-        gap: 0.5rem;
-    }
-    
-    .items-center {
-        align-items: center;
-    }
-    
-    .w-full {
+    .search-condition select,
+    .search-condition input {
         width: 100%;
     }
-    
-    @media (max-width: 768px) {
-        .compact-header {
-            flex-direction: column;
-            align-items: stretch;
-            gap: 1rem;
-        }
-        
-        .page-title {
-            text-align: center;
-            flex-direction: column;
-            gap: 0.25rem;
-            align-items: center;
-        }
-        
-        .title-count {
-            font-size: 0.75rem;
-        }
-        
-        .search-section {
-            flex: 1;
-            width: 100%;
-        }
-        
-        .search-form {
-            flex-wrap: wrap;
-        }
-        
-        .filter-grid {
-            grid-template-columns: 1fr;
-        }
-        
-        .results-header {
-            flex-direction: column;
-            align-items: stretch;
-        }
-        
-        .export-section {
-            justify-content: center;
-        }
+}
+
+@media (max-width: 640px) {
+    .build-list-pagination {
+        flex-direction: column;
+        gap: 0.5rem;
     }
+    
+    .build-list-th-hours, .build-list-cell-hours {
+        display: none;
+    }
+    
+    .build-list-th-created, .build-list-cell-created {
+        display: none;
+    }
+}
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Compact Header with Title and Search on Same Line -->
-<div class="compact-header">
-    <h2 class="page-title">
-        Build Lists
-        <span class="title-count">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} build lists</span>
-    </h2>
-    
-    <div class="search-section">
-        <form method="get" class="search-form">
-            <input id="search" name="search" value="{{ search }}" class="search-input" placeholder='Search build lists…  name:project'>
-            <button class="btn btn-dark">Search</button>
-            
-            <!-- Hidden field to preserve sorting -->
-            <input type="hidden" name="sort" value="{{ sort }}">
-        </form>
+<div class="build-list-page">
+    <!-- Page Header -->
+    <div class="build-list-header">
+        <div class="build-list-header-left">
+            <h1 class="build-list-title">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Build Lists
+            </h1>
+            <span class="build-list-count">{{ total_count }} total</span>
+        </div>
+        <div class="build-list-header-right">
+            <a href="{% url 'inventory:build_list_create' %}" class="btn btn-primary btn-create">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Build List
+            </a>
+        </div>
     </div>
-</div>
 
-<!-- Build Lists Table -->
-<div class="table-wrap">
-    <table class="table sticky">
-        <thead>
-            <tr>
-                <th>
-                    <a href="#" class="sort-link" data-field="name">
-                        Build List Name <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>Build List Notes</th>
-                <th>
-                    <a href="#" class="sort-link" data-field="total_hours">
-                        Total Hours <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sort-link" data-field="engines_count">
-                        Qty of Engines Used On <span class="sort-indicator"></span>
-                    </a>
-                </th>
-                <th>
-                    <a href="#" class="sort-link" data-field="created_at">
-                        Created <span class="sort-indicator"></span>
-                    </a>
-                </th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for build_list in build_lists %}
-                <tr class="clickable-row" data-href="{% url 'inventory:build_list_detail' build_list.pk %}">
-                    <td><strong>{{ build_list.name }}</strong></td>
-                    <td>{{ build_list.notes|default:"—"|truncatewords:20 }}</td>
-                    <td>{{ build_list.total_hours|default:"0" }}</td>
-                    <td>{{ build_list.engines_count }}</td>
-                    <td>{{ build_list.created_at|date:"M j, Y" }}</td>
-                </tr>
-            {% empty %}
+    <!-- Search & Filter Bar -->
+    <div class="build-list-filter-bar">
+        <div class="build-list-search-wrapper">
+            <svg class="build-list-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form method="get" class="build-list-search-form" id="searchForm">
+                <input type="text" name="search" value="{{ search }}" class="build-list-search-input" placeholder="Search by name, notes...">
+                <input type="hidden" name="sort" value="{{ sort }}">
+            </form>
+            {% if search %}
+            <button type="button" class="build-list-search-clear" onclick="clearSearch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline" data-open="adv-search">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="21" x2="4" y2="14"></line>
+                <line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line>
+                <line x1="20" y1="12" x2="20" y2="3"></line>
+                <line x1="1" y1="14" x2="7" y2="14"></line>
+                <line x1="9" y1="8" x2="15" y2="8"></line>
+                <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            Advanced
+        </button>
+    </div>
+
+    <!-- Advanced Search Modal -->
+    <div id="adv-search" class="build-list-modal" style="display: none;">
+        <div class="build-list-modal-content">
+            <div class="build-list-modal-header">
+                <h3>Advanced Search</h3>
+                <button type="button" class="build-list-modal-close" data-close="adv-search">&times;</button>
+            </div>
+            <div class="build-list-modal-body">
+                <p class="build-list-modal-help">Use field:value syntax. Example: name:"project alpha" notes:engine</p>
+                <div id="search-conditions">
+                    <div class="search-condition">
+                        <select class="field-select">
+                            <option value="name">Name</option>
+                            <option value="notes">Notes</option>
+                        </select>
+                        <select class="operator-select">
+                            <option value="contains">contains</option>
+                            <option value="is">is exactly</option>
+                        </select>
+                        <input type="text" class="value-input" placeholder="Enter value...">
+                        <button type="button" class="btn btn-sm btn-icon remove-condition">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-sm btn-outline" id="add-condition">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Condition
+                </button>
+            </div>
+            <div class="build-list-modal-footer">
+                <button type="button" class="btn btn-outline" data-close="adv-search">Cancel</button>
+                <button type="button" class="btn btn-primary" id="apply-advanced-search">Apply Search</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="build-list-table-card">
+        <table class="build-list-table">
+            <thead>
                 <tr>
-                    <td colspan="5" style="text-align: center; padding: 2rem; color: var(--gray-500);">
-                        No build lists found matching your criteria.
+                    <th class="build-list-th-name">
+                        <a href="#" class="build-list-sort-link" data-field="name">
+                            Build List Name <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="build-list-th-notes">
+                        Notes
+                    </th>
+                    <th class="build-list-th-hours">
+                        <a href="#" class="build-list-sort-link" data-field="total_hours">
+                            Total Hours <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="build-list-th-engines">
+                        <a href="#" class="build-list-sort-link" data-field="engines_count">
+                            Engines <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                    <th class="build-list-th-created">
+                        <a href="#" class="build-list-sort-link" data-field="created_at">
+                            Created <span class="sort-indicator"></span>
+                        </a>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for build_list in build_lists %}
+                <tr class="build-list-row" onclick="window.location='{% url 'inventory:build_list_edit' build_list.pk %}'">
+                    <td class="build-list-cell-name">
+                        <span class="build-list-name">{{ build_list.name|default:"—" }}</span>
+                    </td>
+                    <td class="build-list-cell-notes">
+                        <span class="build-list-notes">{{ build_list.notes|default:"—"|truncatewords:12 }}</span>
+                    </td>
+                    <td class="build-list-cell-hours">
+                        {% if build_list.total_hours %}
+                        <span class="build-list-hours-badge">{{ build_list.total_hours }}</span>
+                        {% else %}
+                        <span class="build-list-no-data">0</span>
+                        {% endif %}
+                    </td>
+                    <td class="build-list-cell-engines">
+                        {% if build_list.engines_count %}
+                        <span class="build-list-engines-badge">{{ build_list.engines_count }}</span>
+                        {% else %}
+                        <span class="build-list-no-data">0</span>
+                        {% endif %}
+                    </td>
+                    <td class="build-list-cell-created">
+                        <span class="build-list-date">{{ build_list.created_at|date:"M j, Y" }}</span>
                     </td>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-
-<!-- Pagination -->
-{% if page_obj.has_other_pages %}
-    <div class="pagination">
-        {% if page_obj.has_previous %}
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">First</a>
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
-        {% endif %}
-        
-        {% for num in page_obj.paginator.page_range %}
-            {% if page_obj.number == num %}
-                <span class="current">{{ num }}</span>
-            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
-            {% endif %}
-        {% endfor %}
-        
-        {% if page_obj.has_next %}
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
-            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">Last</a>
-        {% endif %}
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="build-list-empty-state">
+                        <div class="build-list-empty-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            <h3>No build lists found</h3>
+                            <p>{% if search %}Try a different search term{% else %}Create your first build list to get started{% endif %}</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-{% endif %}
 
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="build-list-pagination">
+        <div class="build-list-pagination-info">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }}
+        </div>
+        <div class="build-list-pagination-controls">
+            {% if page_obj.has_previous %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page=1" class="build-list-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="build-list-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+            
+            <span class="build-list-page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.next_page_number }}" class="build-list-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}&page={{ page_obj.paginator.num_pages }}" class="build-list-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Clickable table rows
-        document.querySelectorAll('.clickable-row[data-href]').forEach(row => {
-            row.addEventListener('click', function() {
-                window.location.href = this.dataset.href;
-            });
+document.addEventListener('DOMContentLoaded', function() {
+    // Submit search on enter
+    const searchInput = document.querySelector('.build-list-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+    }
+    
+    // Modal functionality
+    const modal = document.getElementById('adv-search');
+    const openBtns = document.querySelectorAll('[data-open="adv-search"]');
+    const closeBtns = document.querySelectorAll('[data-close="adv-search"]');
+    
+    function openModal() {
+        modal.style.display = 'flex';
+    }
+    
+    function closeModal() {
+        modal.style.display = 'none';
+    }
+    
+    openBtns.forEach(btn => btn.addEventListener('click', openModal));
+    closeBtns.forEach(btn => btn.addEventListener('click', closeModal));
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    // Add condition functionality
+    const addConditionBtn = document.getElementById('add-condition');
+    const conditionsContainer = document.getElementById('search-conditions');
+    
+    function createConditionElement() {
+        const conditionDiv = document.createElement('div');
+        conditionDiv.className = 'search-condition';
+        conditionDiv.innerHTML = `
+            <select class="field-select">
+                <option value="name">Name</option>
+                <option value="notes">Notes</option>
+            </select>
+            <select class="operator-select">
+                <option value="contains">contains</option>
+                <option value="is">is exactly</option>
+            </select>
+            <input type="text" class="value-input" placeholder="Enter value...">
+            <button type="button" class="btn btn-sm btn-icon remove-condition">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        `;
+        
+        const removeBtn = conditionDiv.querySelector('.remove-condition');
+        removeBtn.addEventListener('click', function() {
+            conditionDiv.remove();
+        });
+        
+        return conditionDiv;
+    }
+    
+    if (addConditionBtn) {
+        addConditionBtn.addEventListener('click', function() {
+            const newCondition = createConditionElement();
+            conditionsContainer.appendChild(newCondition);
+        });
+    }
+    
+    // Remove condition functionality for existing conditions
+    document.querySelectorAll('.remove-condition').forEach(btn => {
+        btn.addEventListener('click', function() {
+            this.closest('.search-condition').remove();
         });
     });
     
-    // Multi-column sorting functionality
-    document.addEventListener('DOMContentLoaded', function() {
-        const currentSort = '{{ sort|escapejs }}';
-        const sortLinks = document.querySelectorAll('.sort-link');
-        
-        // Parse current sort state
-        function parseSortState() {
-            if (!currentSort) return [];
-            return currentSort.split(',').map(s => s.trim()).filter(s => s);
-        }
-        
-        // Update visual indicators
-        function updateSortIndicators() {
-            const sortFields = parseSortState();
-            sortLinks.forEach(link => {
-                const field = link.dataset.field;
-                const indicator = link.querySelector('.sort-indicator');
-                indicator.textContent = '';
-                indicator.className = 'sort-indicator';
+    // Apply advanced search
+    const applyBtn = document.getElementById('apply-advanced-search');
+    
+    if (applyBtn) {
+        applyBtn.addEventListener('click', function() {
+            const conditions = document.querySelectorAll('.search-condition');
+            const queryParts = [];
+            
+            conditions.forEach(condition => {
+                const field = condition.querySelector('.field-select').value;
+                const operator = condition.querySelector('.operator-select').value;
+                const value = condition.querySelector('.value-input').value.trim();
                 
-                // Find field in sort list
+                if (value) {
+                    let queryPart = `${field}:`;
+                    if (operator === 'is' || value.includes(' ')) {
+                        queryPart += `"${value}"`;
+                    } else {
+                        queryPart += value;
+                    }
+                    queryParts.push(queryPart);
+                }
+            });
+            
+            const query = queryParts.join(' ');
+            searchInput.value = query;
+            searchInput.form.submit();
+            closeModal();
+        });
+    }
+});
+
+// Clear search
+function clearSearch() {
+    const form = document.getElementById('searchForm');
+    const searchInput = form.querySelector('input[name="search"]');
+    searchInput.value = '';
+    form.submit();
+}
+
+// Multi-column sorting
+(function() {
+    const currentSort = '{{ sort|escapejs }}';
+    const sortLinks = document.querySelectorAll('.build-list-sort-link[data-field]');
+    
+    // Parse current sort state
+    function parseSortState() {
+        if (!currentSort) return [];
+        return currentSort.split(',').map(s => s.trim()).filter(s => s);
+    }
+    
+    // Update visual indicators
+    function updateSortIndicators() {
+        const sortFields = parseSortState();
+        sortLinks.forEach(link => {
+            const field = link.dataset.field;
+            const indicator = link.querySelector('.sort-indicator');
+            indicator.textContent = '';
+            indicator.className = 'sort-indicator';
+            link.classList.remove('active');
+            
+            for (let i = 0; i < sortFields.length; i++) {
+                const sortField = sortFields[i];
+                const isDesc = sortField.startsWith('-');
+                const fieldName = isDesc ? sortField.substring(1) : sortField;
+                
+                if (fieldName === field) {
+                    const priority = sortFields.length > 1 ? (i + 1) : '';
+                    indicator.textContent = priority + (isDesc ? '↓' : '↑');
+                    indicator.className = 'sort-indicator active';
+                    link.classList.add('active');
+                    break;
+                }
+            }
+        });
+    }
+    
+    // Handle sort link clicks
+    sortLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const field = this.dataset.field;
+            let sortFields = parseSortState();
+            
+            if (e.shiftKey) {
+                // Shift+click: add/modify in multi-column sort
+                let found = false;
                 for (let i = 0; i < sortFields.length; i++) {
                     const sortField = sortFields[i];
                     const isDesc = sortField.startsWith('-');
                     const fieldName = isDesc ? sortField.substring(1) : sortField;
                     
                     if (fieldName === field) {
-                        const priority = sortFields.length > 1 ? (i + 1) : '';
-                        indicator.textContent = priority + (isDesc ? '↓' : '↑');
-                        indicator.className = 'sort-indicator active';
+                        // Toggle direction
+                        sortFields[i] = isDesc ? field : '-' + field;
+                        found = true;
                         break;
                     }
                 }
-            });
-        }
-        
-        // Handle sort link clicks
-        sortLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const field = this.dataset.field;
-                let sortFields = parseSortState();
-                
-                if (e.shiftKey) {
-                    // Shift+click: add/modify in multi-column sort
-                    let found = false;
-                    for (let i = 0; i < sortFields.length; i++) {
-                        const sortField = sortFields[i];
-                        const isDesc = sortField.startsWith('-');
-                        const fieldName = isDesc ? sortField.substring(1) : sortField;
-                        
-                        if (fieldName === field) {
-                            // Toggle direction
-                            sortFields[i] = isDesc ? field : '-' + field;
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        // Add new field
-                        sortFields.push(field);
-                    }
-                } else {
-                    // Regular click: replace all sorts with this field
-                    const currentField = sortFields.find(s => s === field || s === '-' + field);
-                    if (currentField) {
-                        // Toggle direction if same field
-                        sortFields = [currentField.startsWith('-') ? field : '-' + field];
-                    } else {
-                        // New field, default ascending
-                        sortFields = [field];
-                    }
+                if (!found) {
+                    // Add new field
+                    sortFields.push(field);
                 }
-                
-                // Build URL and navigate
-                const url = new URL(window.location);
-                url.searchParams.delete('page'); // Reset to page 1
-                url.searchParams.set('sort', sortFields.join(','));
-                window.location.href = url.toString();
-            });
+            } else {
+                // Regular click: replace all sorts with this field
+                const currentField = sortFields.find(s => s === field || s === '-' + field);
+                if (currentField) {
+                    sortFields = [currentField.startsWith('-') ? field : '-' + field];
+                } else {
+                    sortFields = [field];
+                }
+            }
+            
+            // Build URL and navigate
+            const url = new URL(window.location);
+            url.searchParams.delete('page');
+            url.searchParams.set('sort', sortFields.join(','));
+            window.location.href = url.toString();
         });
-        
-        // Initialize indicators
-        updateSortIndicators();
     });
+    
+    // Initialize indicators
+    updateSortIndicators();
+})();
 </script>
 {% endblock %}

@@ -1,0 +1,54 @@
+{% if active_entry %}
+<div class="tt-active-entry">
+    <div class="tt-active-entry-header">
+        <span class="tt-active-entry-badge">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            Active
+        </span>
+    </div>
+    <div class="tt-active-entry-content">
+        <div class="tt-active-entry-item">
+            <span class="tt-active-entry-label">Started</span>
+            <span class="tt-active-entry-value">{{ active_entry.start_time|date:"M d, Y g:i A" }}</span>
+        </div>
+        <div class="tt-active-entry-item">
+            <span class="tt-active-entry-label">Job</span>
+            <span class="tt-active-entry-value">{{ active_entry.job.job_number }} - {{ active_entry.job.customer.name|default:"No Customer" }}</span>
+        </div>
+        {% if active_entry.job_build_list %}
+        <div class="tt-active-entry-item">
+            <span class="tt-active-entry-label">Build List</span>
+            <span class="tt-active-entry-value">{{ active_entry.job_build_list.name }}</span>
+        </div>
+        {% endif %}
+        {% if active_entry.job_build_list_item %}
+        <div class="tt-active-entry-item">
+            <span class="tt-active-entry-label">Build List Item</span>
+            <span class="tt-active-entry-value">{{ active_entry.job_build_list_item.name }}</span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="tt-active-entry-actions">
+        <button type="button" class="btn btn-danger"
+                hx-post="{% url 'jobs:time_tracking_end' active_entry.pk %}"
+                hx-target="#active-entry-container"
+                hx-swap="innerHTML">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="6" width="12" height="12"></rect>
+            </svg>
+            End Time
+        </button>
+    </div>
+</div>
+{% else %}
+<div class="tt-empty-state">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+    </svg>
+    <span>No active time entry</span>
+</div>
+{% endif %}

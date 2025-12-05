@@ -1,0 +1,142 @@
+import os
+import sys
+import traceback
+
+# Write to file immediately to verify script is running
+with open('script_started.txt', 'w') as f:
+    f.write('Script started\n')
+
+try:
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'sgr_manager.settings')
+    import django
+    django.setup()
+    
+    from jobs.models import JobSelectionOption
+except Exception as e:
+    with open('script_error.txt', 'w') as f:
+        f.write(f'Error during setup: {e}\n')
+        f.write(traceback.format_exc())
+    sys.exit(1)
+
+# Parts Selection options
+parts_names = [
+    "Standard Piston Set", "Performance Piston Kit", "Economy Pistons",
+    "Racing Pistons", "Forged Pistons", "Cast Pistons", "Hypereutectic Pistons",
+    "Dome Top Pistons", "Flat Top Pistons", "Dish Pistons",
+    "Standard Ring Set", "Moly Ring Set", "Chrome Ring Set",
+    "File Fit Rings", "Gapless Rings", "Standard Bearings",
+    "Performance Bearings", "Coated Bearings", "Clevite Bearings",
+    "King Bearings", "ACL Bearings", "Mahle Bearings",
+    "Federal Mogul Bearings", "OEM Bearings", "Premium Bearings"
+]
+
+# Block Build Lists options
+block_names = [
+    "Standard Block Rebuild", "Performance Block Build", "Racing Block Prep",
+    "Economy Block Service", "Complete Block Overhaul", "Block Machining Only",
+    "Deck Surface", "Line Bore", "Bore & Hone",
+    "Sleeve Install", "Block Clean & Inspect", "Main Cap Install",
+    "Freeze Plug Install", "Oil Gallery Service", "Cam Bearing Install",
+    "Block Assembly", "Short Block Assembly", "Basic Block Prep",
+    "Street Performance Block", "Competition Block Build", "Diesel Block Service",
+    "Marine Block Prep", "Industrial Block Build", "Agricultural Engine Block",
+    "Vintage Block Restoration"
+]
+
+# Head Build Lists options
+head_names = [
+    "Standard Head Rebuild", "Performance Head Work", "Racing Head Prep",
+    "Economy Head Service", "Valve Job Standard", "Valve Job Performance",
+    "3-Angle Valve Job", "5-Angle Valve Job", "Competition Valve Job",
+    "Head Resurface", "Head Crack Repair", "Seat Replacement",
+    "Guide Replacement", "Bronze Guide Install", "Valve Seal Install",
+    "Spring Install", "Retainer Install", "Head Assembly",
+    "Port & Polish", "CNC Porting", "Hand Porting",
+    "Combustion Chamber Work", "Head Flow Testing", "Diesel Head Service",
+    "Aluminum Head Repair"
+]
+
+# Item Selection options
+item_names = [
+    "Timing Chain Kit", "Timing Belt Kit", "Water Pump Kit",
+    "Oil Pump Kit", "Gasket Set - Full", "Gasket Set - Upper",
+    "Gasket Set - Lower", "Head Gasket Set", "Intake Gasket Set",
+    "Exhaust Gasket Set", "Valve Cover Gasket", "Oil Pan Gasket",
+    "Rear Main Seal", "Front Cover Seal", "Cam Seal",
+    "Harmonic Balancer", "Flexplate", "Flywheel",
+    "Clutch Kit", "Starter", "Alternator",
+    "Fuel Pump", "Oil Filter", "Air Filter",
+    "Complete Engine Kit"
+]
+
+created_count = 0
+
+# Create Parts Selection options
+for i, name in enumerate(parts_names):
+    obj, created = JobSelectionOption.objects.get_or_create(
+        name=name,
+        group='parts_selection',
+        defaults={
+            'sort_order': i + 1,
+            'is_active': True
+        }
+    )
+    if created:
+        created_count += 1
+        print(f'  Created: {name} (parts_selection)')
+
+# Create Block Build Lists options
+for i, name in enumerate(block_names):
+    obj, created = JobSelectionOption.objects.get_or_create(
+        name=name,
+        group='block_build_lists',
+        defaults={
+            'sort_order': i + 1,
+            'is_active': True
+        }
+    )
+    if created:
+        created_count += 1
+        print(f'  Created: {name} (block_build_lists)')
+
+# Create Head Build Lists options
+for i, name in enumerate(head_names):
+    obj, created = JobSelectionOption.objects.get_or_create(
+        name=name,
+        group='head_build_lists',
+        defaults={
+            'sort_order': i + 1,
+            'is_active': True
+        }
+    )
+    if created:
+        created_count += 1
+        print(f'  Created: {name} (head_build_lists)')
+
+# Create Item Selection options
+for i, name in enumerate(item_names):
+    obj, created = JobSelectionOption.objects.get_or_create(
+        name=name,
+        group='item_selection',
+        defaults={
+            'sort_order': i + 1,
+            'is_active': True
+        }
+    )
+    if created:
+        created_count += 1
+        print(f'  Created: {name} (item_selection)')
+
+# Write results to a file for verification
+with open('test_options_results.txt', 'w') as f:
+    f.write(f'Created {created_count} test selection options\n')
+    f.write(f'\nCurrent counts:\n')
+    f.write(f'  Parts Selection: {JobSelectionOption.objects.filter(group="parts_selection").count()}\n')
+    f.write(f'  Block Build Lists: {JobSelectionOption.objects.filter(group="block_build_lists").count()}\n')
+    f.write(f'  Head Build Lists: {JobSelectionOption.objects.filter(group="head_build_lists").count()}\n')
+    f.write(f'  Item Selection: {JobSelectionOption.objects.filter(group="item_selection").count()}\n')
+    f.write(f'  Total: {JobSelectionOption.objects.count()}\n')
+
+print('Done - check test_options_results.txt')
+
+

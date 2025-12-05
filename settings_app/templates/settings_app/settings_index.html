@@ -1,0 +1,291 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Settings - Spring Garden Repair{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'settings_app/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <!-- Page Header -->
+    <div class="settings-header">
+        <div class="settings-header-left">
+            <h1 class="settings-title">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                </svg>
+                Settings
+            </h1>
+            <span class="settings-subtitle">Manage users, roles, and system configuration</span>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="settings-tabs-bar">
+        <div class="settings-tabs">
+            <button class="settings-tab {% if active_tab == 'users' %}active{% endif %}" data-tab="users">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Users
+            </button>
+            <button class="settings-tab {% if active_tab == 'roles' %}active{% endif %}" data-tab="roles">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                Roles
+            </button>
+            <button class="settings-tab {% if active_tab == 'part_categories' %}active{% endif %}" data-tab="part_categories">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
+                Part Categories
+            </button>
+            <button class="settings-tab {% if active_tab == 'job_options' %}active{% endif %}" data-tab="job_options">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                </svg>
+                Job Options
+            </button>
+            <button class="settings-tab {% if active_tab == 'config' %}active{% endif %}" data-tab="config">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+                System Config
+            </button>
+        </div>
+    </div>
+
+    <!-- Users Tab -->
+    <div id="users-tab" class="settings-tab-content {% if active_tab == 'users' %}active{% endif %}">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    User Management
+                </div>
+                <div class="settings-card-actions">
+                    <button class="btn btn-primary btn-sm"
+                            hx-get="{% url 'settings_app:user_create' %}"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add User
+                    </button>
+                </div>
+            </div>
+            <div class="settings-card-filter">
+                <div class="settings-search-wrapper">
+                    <svg class="settings-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                           id="user-search" 
+                           name="search"
+                           placeholder="Search users..." 
+                           class="settings-search-input"
+                           hx-get="{% url 'settings_app:users_list_data' %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#users-table-container"
+                           hx-include="this">
+                </div>
+            </div>
+            <div class="settings-card-body p-0">
+                <div id="users-table-container" 
+                     hx-get="{% url 'settings_app:users_list_data' %}" 
+                     hx-trigger="load, userUpdated from:body">
+                    <div class="settings-loading">
+                        <div class="settings-spinner"></div>
+                        <span>Loading users...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Roles Tab -->
+    <div id="roles-tab" class="settings-tab-content {% if active_tab == 'roles' %}active{% endif %}">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Roles & Permissions
+                </div>
+                <div class="settings-card-actions">
+                    <button class="btn btn-primary btn-sm"
+                            hx-get="{% url 'settings_app:role_create' %}"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Role
+                    </button>
+                </div>
+            </div>
+            <div class="settings-card-filter">
+                <div class="settings-search-wrapper">
+                    <svg class="settings-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" 
+                           id="role-search" 
+                           name="search"
+                           placeholder="Search roles..." 
+                           class="settings-search-input"
+                           hx-get="{% url 'settings_app:roles_list_data' %}"
+                           hx-trigger="keyup changed delay:300ms"
+                           hx-target="#roles-table-container"
+                           hx-include="this">
+                </div>
+            </div>
+            <div class="settings-card-body p-0">
+                <div id="roles-table-container" 
+                     hx-get="{% url 'settings_app:roles_list_data' %}" 
+                     hx-trigger="load, roleUpdated from:body">
+                    <div class="settings-loading">
+                        <div class="settings-spinner"></div>
+                        <span>Loading roles...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Part Categories Tab -->
+    <div id="part_categories-tab" class="settings-tab-content {% if active_tab == 'part_categories' %}active{% endif %}">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                        <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                    </svg>
+                    Part Categories
+                </div>
+                <div class="settings-card-actions">
+                    <button class="btn btn-primary btn-sm"
+                            hx-get="{% url 'settings_app:part_category_create_modal' %}" 
+                            hx-target="body" 
+                            hx-swap="beforeend">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Category
+                    </button>
+                </div>
+            </div>
+            <div class="settings-card-body p-0">
+                <div id="categories-table-container" 
+                     hx-get="{% url 'settings_app:part_categories_list' %}" 
+                     hx-trigger="load, categoryUpdated from:body">
+                    <div class="settings-loading">
+                        <div class="settings-spinner"></div>
+                        <span>Loading categories...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Job Selection Options Tab -->
+    <div id="job_options-tab" class="settings-tab-content {% if active_tab == 'job_options' %}active{% endif %}">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="8" y1="6" x2="21" y2="6"></line>
+                        <line x1="8" y1="12" x2="21" y2="12"></line>
+                        <line x1="8" y1="18" x2="21" y2="18"></line>
+                        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                    </svg>
+                    Job Selection Options
+                </div>
+                <div class="settings-card-actions">
+                    <button class="btn btn-primary btn-sm"
+                            hx-get="{% url 'settings_app:selection_option_create_modal' %}" 
+                            hx-target="body" 
+                            hx-swap="beforeend">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Option
+                    </button>
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div id="selection-options-container" 
+                     hx-get="{% url 'settings_app:selection_options_list' %}" 
+                     hx-trigger="load, optionUpdated from:body">
+                    <div class="settings-loading">
+                        <div class="settings-spinner"></div>
+                        <span>Loading options...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Configuration Tab -->
+    <div id="config-tab" class="settings-tab-content {% if active_tab == 'config' %}active{% endif %}">
+        <div class="settings-card">
+            <div class="settings-card-header">
+                <div class="settings-card-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                        <line x1="9" y1="21" x2="9" y2="9"></line>
+                    </svg>
+                    System Configuration
+                </div>
+            </div>
+            <div class="settings-card-body">
+                <div id="config-form-container"
+                     hx-get="{% url 'settings_app:system_config_edit' %}"
+                     hx-trigger="load">
+                    <div class="settings-loading">
+                        <div class="settings-spinner"></div>
+                        <span>Loading configuration...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSRF Token for JavaScript -->
+{% csrf_token %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'settings_app/settings.js' %}"></script>
+{% endblock %}

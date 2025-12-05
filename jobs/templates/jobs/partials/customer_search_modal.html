@@ -1,0 +1,248 @@
+<!-- Modal for Customer Selection -->
+<div class="po-modal-overlay" id="customer-search-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Select Customer
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('customer-search-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Search Box with Create Button -->
+            <div class="po-search-box">
+                <div class="po-search-row">
+                    <div class="po-search-input-wrapper">
+                        <svg class="po-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        <input type="text" 
+                               id="customer-search"
+                               placeholder="Search customers..." 
+                               class="po-search-input"
+                               hx-get="{% url 'jobs:customer_search_results' ticket.pk %}"
+                               hx-trigger="keyup changed delay:300ms"
+                               hx-target="#customer-results"
+                               hx-include="this"
+                               name="q"
+                               autocomplete="off"
+                               autofocus>
+                    </div>
+                    <button type="button" class="po-create-vendor-btn"
+                            hx-get="{% url 'jobs:customer_create_modal' ticket.pk %}"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        New Customer
+                    </button>
+                </div>
+            </div>
+
+            <!-- Results Container -->
+            <div id="customer-results" class="po-search-results">
+                <div class="po-search-placeholder">
+                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <p>Start typing to search customers...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 700px;
+    height: 70vh;
+    max-height: 600px;
+    min-height: 400px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.po-search-box {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-search-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.po-search-input-wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+}
+
+.po-search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.po-search-input {
+    width: 100%;
+    padding: 0.625rem 1rem 0.625rem 2.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.po-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-search-input::placeholder {
+    color: var(--gray-400);
+}
+
+.po-create-vendor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 1rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.po-create-vendor-btn:hover {
+    background: #2f855a;
+}
+
+.po-search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+</style>

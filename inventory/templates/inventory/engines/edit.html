@@ -1,551 +1,1140 @@
 {% extends "base.html" %}
-{% block title %}Edit Engine — {{ engine.engine_make }} {{ engine.engine_model }}{% endblock %}
+{% load static %}
 
-{% block extra_css %}
-<style>
-    .edit-header {
-        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
-        color: white;
-        padding: 2rem;
-        margin: -1rem -1rem 2rem -1rem;
-        border-radius: var(--border-radius);
-    }
-    
-    .edit-title {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .edit-subtitle {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin-bottom: 1rem;
-    }
-    
-    .breadcrumb {
-        font-size: 0.875rem;
-        opacity: 0.8;
-    }
-    
-    .breadcrumb a {
-        color: white;
-        text-decoration: none;
-    }
-    
-    .breadcrumb a:hover {
-        text-decoration: underline;
-    }
-    
-    .edit-container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    
-    .edit-card {
-        background: white;
-        border: 1px solid var(--gray-200);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-        margin-bottom: 2rem;
-    }
-    
-    .edit-card-header {
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--gray-200);
-        background: var(--gray-50);
-    }
-    
-    .edit-card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        margin-bottom: 0.5rem;
-    }
-    
-    .edit-card-subtitle {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-    }
-    
-    .edit-card-body {
-        padding: 1.5rem;
-    }
-    
-    .form-section {
-        margin-bottom: 2rem;
-    }
-    
-    .form-section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--gray-800);
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid var(--red-600);
-    }
-    
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-    
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-group.full-width {
-        grid-column: 1 / -1;
-    }
-    
-    .form-help {
-        font-size: 0.875rem;
-        color: var(--gray-600);
-        margin-top: 0.25rem;
-        font-style: italic;
-    }
-    
-    .form-check-input {
-        margin-right: 0.5rem;
-    }
-    
-    .form-label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        color: var(--gray-700);
-        font-size: 0.875rem;
-    }
-    
-    .form-control {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 1rem;
-        transition: border-color 0.2s ease;
-    }
-    
-    .form-control:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
-    }
-    
-    .form-error {
-        color: var(--error);
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-        background-color: #fed7d7;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--border-radius);
-        border: 1px solid #feb2b2;
-    }
-    
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--gray-200);
-    }
-    
-    @media (max-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-        
-        .edit-header {
-            margin: -1rem -1rem 1rem -1rem;
-            padding: 1.5rem;
-        }
-        
-        .edit-title {
-            font-size: 1.5rem;
-        }
-        
-        .form-actions {
-            flex-direction: column;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}{% if is_new %}New Engine{% else %}Engine — {{ engine.engine_make }} {{ engine.engine_model }}{% endif %} — Spring Garden Repair{% endblock %}
 
 {% block content %}
-<div class="edit-header">
-    <div class="breadcrumb">
-        <a href="{% url 'imports:index' %}">Home</a> → 
-        <a href="{% url 'inventory:engines_list' %}">Engines</a> → 
-        <a href="{% url 'inventory:engine_detail' engine.pk %}">{{ engine.engine_make }} {{ engine.engine_model }}</a> → 
-        Edit
+<div class="engine-page">
+    <!-- Sticky Header -->
+    <div class="engine-header">
+        <div class="engine-header-left">
+            <div class="engine-id-display">
+                <span class="engine-label">Engine</span>
+                <h1 class="engine-title">{% if is_new %}New Engine{% else %}{{ engine.engine_make }} {{ engine.engine_model }}{% endif %}</h1>
+            </div>
+            {% if not is_new %}
+            {% if engine.sg_engine %}
+            <span class="engine-sg-badge">{{ engine.sg_engine.sg_make }} {{ engine.sg_engine.sg_model }}</span>
+            {% endif %}
+            {% if engine.status %}
+            <span class="engine-status-badge">{{ engine.status }}</span>
+            {% endif %}
+            {% endif %}
+        </div>
+        <div class="engine-header-actions">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('engine-form').requestSubmit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                {% if is_new %}Create Engine{% else %}Save Changes{% endif %}
+            </button>
+            <a href="{% url 'inventory:engines_list' %}" class="btn btn-outline">Cancel</a>
+            {% if not is_new %}
+            <button type="button" class="btn btn-danger-outline" 
+                    onclick="if(confirm('Are you sure you want to delete this Engine? This action cannot be undone.')) document.getElementById('delete-form').submit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Delete
+            </button>
+            {% endif %}
+        </div>
     </div>
-    
-    <h1 class="edit-title">Edit Engine</h1>
-    <p class="edit-subtitle">{{ engine.engine_make }} {{ engine.engine_model }} (ID {{ engine.id }})</p>
-</div>
 
-<div class="edit-container">
-    <form method="post" action="{% url 'inventory:engine_update' engine.pk %}">
+    <form method="post" id="engine-form" {% if not is_new %}action="{% url 'inventory:engine_update' engine.pk %}"{% endif %}>
         {% csrf_token %}
         
-        <!-- Basic Information -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Basic Information</h2>
-                <p class="edit-card-subtitle">Core engine details</p>
+        <div class="engine-layout">
+            <!-- Main Content Column -->
+            <div class="engine-main">
+                <!-- Engine Information Card (Compact) -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                            Basic Information
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <!-- Row 1: Engine Make, Engine Model -->
+                        <div class="engine-info-grid engine-info-grid-2col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Engine Make</label>
+                                <input type="text" name="engine_make" value="{{ form.engine_make.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Engine Make">
+                                {% for error in form.engine_make.errors %}<span class="engine-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Engine Model</label>
+                                <input type="text" name="engine_model" value="{{ form.engine_model.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Engine Model">
+                                {% for error in form.engine_model.errors %}<span class="engine-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                        </div>
+                        <!-- Row 2: Status, Price -->
+                        <div class="engine-info-grid engine-info-grid-2col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Status</label>
+                                <select name="status" class="engine-input-sm">
+                                    <option value="">---------</option>
+                                    <option value="Active" {% if form.status.value == "Active" %}selected{% endif %}>Active</option>
+                                    <option value="Inactive" {% if form.status.value == "Inactive" %}selected{% endif %}>Inactive</option>
+                                </select>
+                                {% for error in form.status.errors %}<span class="engine-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Price</label>
+                                <input type="number" name="price" value="{{ form.price.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Price" step="0.01" min="0">
+                                {% for error in form.price.errors %}<span class="engine-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Specifications Card -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Specifications
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <div class="engine-info-grid engine-info-grid-4col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">CPL Number</label>
+                                <input type="text" name="cpl_number" value="{{ form.cpl_number.value|default_if_none:'' }}" class="engine-input-sm" placeholder="CPL Number">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">AR Number</label>
+                                <input type="text" name="ar_number" value="{{ form.ar_number.value|default_if_none:'' }}" class="engine-input-sm" placeholder="AR Number">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Build List</label>
+                                <input type="text" name="build_list" value="{{ form.build_list.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Build List">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Engine Code</label>
+                                <input type="text" name="engine_code" value="{{ form.engine_code.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Engine Code">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Serial Number</label>
+                                <input type="text" name="serial_number" value="{{ form.serial_number.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Serial Number">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Cylinders</label>
+                                <input type="number" name="cylinder" value="{{ form.cylinder.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Cylinders" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Valves/Cyl</label>
+                                <input type="number" name="valves_per_cyl" value="{{ form.valves_per_cyl.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Valves" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Bore/Stroke</label>
+                                <input type="text" name="bore_stroke" value="{{ form.bore_stroke.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Bore/Stroke">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Compression Ratio</label>
+                                <input type="number" name="compression_ratio" value="{{ form.compression_ratio.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Ratio" step="0.01" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Firing Order</label>
+                                <input type="text" name="firing_order" value="{{ form.firing_order.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Firing Order">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Components Card -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                            </svg>
+                            Components
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <div class="engine-info-grid engine-info-grid-4col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Crankshaft No</label>
+                                <input type="text" name="crankshaft_no" value="{{ form.crankshaft_no.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Crankshaft No">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Piston No</label>
+                                <input type="text" name="piston_no" value="{{ form.piston_no.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Piston No">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Piston Marked No</label>
+                                <input type="text" name="piston_marked_no" value="{{ form.piston_marked_no.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Marked No">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">OH Kit No</label>
+                                <input type="text" name="oh_kit_no" value="{{ form.oh_kit_no.value|default_if_none:'' }}" class="engine-input-sm" placeholder="OH Kit No">
+                            </div>
+                        </div>
+                        <div class="engine-info-grid engine-info-grid-1col" style="margin-top: 0.75rem;">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Piston Notes</label>
+                                <textarea name="piston_notes" class="engine-input-sm" rows="2" placeholder="Piston notes">{{ form.piston_notes.value|default_if_none:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Engine Characteristics Card -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                                <polyline points="2 17 12 22 22 17"></polyline>
+                                <polyline points="2 12 12 17 22 12"></polyline>
+                            </svg>
+                            Characteristics
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <div class="engine-info-grid engine-info-grid-3col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Injection Type</label>
+                                <input type="text" name="injection_type" value="{{ form.injection_type.value|default_if_none:'' }}" class="engine-input-sm" placeholder="e.g., DI, IDI">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Valve Config</label>
+                                <input type="text" name="valve_config" value="{{ form.valve_config.value|default_if_none:'' }}" class="engine-input-sm" placeholder="e.g., 2V, 4V">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Fuel System Type</label>
+                                <input type="text" name="fuel_system_type" value="{{ form.fuel_system_type.value|default_if_none:'' }}" class="engine-input-sm" placeholder="e.g., Common Rail">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Overview Card -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="16" x2="12" y2="12"></line>
+                                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                            </svg>
+                            Overview
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <div class="engine-info-grid engine-info-grid-3col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Interference</label>
+                                <input type="text" name="interference" value="{{ form.interference.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Interference">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Camshaft</label>
+                                <input type="text" name="camshaft" value="{{ form.camshaft.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Camshaft">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Valve Adjustment</label>
+                                <input type="text" name="valve_adjustment" value="{{ form.valve_adjustment.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Valve Adjustment">
+                            </div>
+                        </div>
+                        <div class="engine-info-grid engine-info-grid-1col" style="margin-top: 0.75rem;">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Overview Comments</label>
+                                <textarea name="overview_comments" class="engine-input-sm" rows="2" placeholder="Overview comments">{{ form.overview_comments.value|default_if_none:'' }}</textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Journals Card -->
+                <div class="engine-card engine-card-compact">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="4" y1="9" x2="20" y2="9"></line>
+                                <line x1="4" y1="15" x2="20" y2="15"></line>
+                                <line x1="10" y1="3" x2="8" y2="21"></line>
+                                <line x1="16" y1="3" x2="14" y2="21"></line>
+                            </svg>
+                            Journals
+                        </div>
+                    </div>
+                    <div class="engine-card-body engine-card-body-compact">
+                        <div class="engine-info-grid engine-info-grid-4col">
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Rod Journal Dia</label>
+                                <input type="number" name="rod_journal_diameter" value="{{ form.rod_journal_diameter.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Diameter" step="0.001" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Main Journal Dia Pos1</label>
+                                <input type="number" name="main_journal_diameter_pos1" value="{{ form.main_journal_diameter_pos1.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Pos1" step="0.001" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Main Journal Dia 1</label>
+                                <input type="number" name="main_journal_diameter_1" value="{{ form.main_journal_diameter_1.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Dia 1" step="0.001" min="0">
+                            </div>
+                            <div class="engine-info-field">
+                                <label class="engine-label-sm">Big End Housing Bore</label>
+                                <input type="number" name="big_end_housing_bore" value="{{ form.big_end_housing_bore.value|default_if_none:'' }}" class="engine-input-sm" placeholder="Bore" step="0.001" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not is_new %}
+                <!-- Castings Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            </svg>
+                            Castings
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:engine_casting_add_form' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Casting
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="casting-table-container"
+                             hx-get="{% url 'inventory:engine_castings_partial' engine.pk %}"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading castings...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Machines Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                                <rect x="9" y="9" width="6" height="6"></rect>
+                                <line x1="9" y1="1" x2="9" y2="4"></line>
+                                <line x1="15" y1="1" x2="15" y2="4"></line>
+                            </svg>
+                            Related Machines
+                            {% if machine_count %}<span class="engine-badge-count">{{ machine_count }}</span>{% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:machine_search_modal' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Machine
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-machines-section"
+                             hx-get="{% url 'inventory:engine_machines_partial' engine.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading machines...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Parts Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                            </svg>
+                            Related Parts
+                            {% if part_count %}<span class="engine-badge-count">{{ part_count }}</span>{% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:part_search_modal_for_engine' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Part
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-parts-section"
+                             hx-get="{% url 'inventory:engine_parts_partial' engine.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading parts...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interchanges Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="17 1 21 5 17 9"></polyline>
+                                <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                                <polyline points="7 23 3 19 7 15"></polyline>
+                                <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                            </svg>
+                            Interchanges
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:engine_search_modal_interchange' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Interchange
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-interchanges-section"
+                             hx-get="{% url 'inventory:engine_interchanges_partial' engine.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading interchanges...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Compatibles Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="8.5" cy="7" r="4"></circle>
+                                <line x1="20" y1="8" x2="20" y2="14"></line>
+                                <line x1="23" y1="11" x2="17" y2="11"></line>
+                            </svg>
+                            Compatibles
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:engine_search_modal_compatible' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Compatible
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-compatibles-section"
+                             hx-get="{% url 'inventory:engine_compatibles_partial' engine.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading compatibles...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Supercessions Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 20V10"></path>
+                                <path d="M18 20V4"></path>
+                                <path d="M6 20v-4"></path>
+                            </svg>
+                            Supercessions
+                        </div>
+                        <div class="engine-header-btn-group">
+                            <button type="button" class="btn btn-sm btn-outline"
+                                    hx-get="{% url 'inventory:engine_search_modal_supercession' engine.pk 'older' %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                + Older
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline"
+                                    hx-get="{% url 'inventory:engine_search_modal_supercession' engine.pk 'newer' %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                + Newer
+                            </button>
+                        </div>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-supercessions-section"
+                             hx-get="{% url 'inventory:engine_supercessions_partial' engine.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading supercessions...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Build Lists Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="8" y1="6" x2="21" y2="6"></line>
+                                <line x1="8" y1="12" x2="21" y2="12"></line>
+                                <line x1="8" y1="18" x2="21" y2="18"></line>
+                                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                            </svg>
+                            Build Lists
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:build_list_search_modal' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Build List
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-build-lists-container"
+                             hx-get="{% url 'inventory:engine_build_lists_partial' engine.pk %}"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading build lists...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kits Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                            Kits
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:kit_search_modal' engine.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Kit
+                        </button>
+                    </div>
+                    <div class="engine-card-body p-0">
+                        <div id="engine-kits-container"
+                             hx-get="{% url 'inventory:engine_kits_partial' engine.pk %}"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                            <div class="engine-loading">
+                                <span class="spinner"></span>
+                                Loading kits...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.engine_make.id_for_label }}">Engine Make</label>
-                        {{ form.engine_make }}
-                        {% for error in form.engine_make.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+
+            {% if not is_new %}
+            <!-- Sidebar Column -->
+            <div class="engine-sidebar">
+                <!-- Record Information Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Record Information
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.engine_model.id_for_label }}">Engine Model</label>
-                        {{ form.engine_model }}
-                        {% for error in form.engine_model.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                    <div class="engine-card-body">
+                        <div class="engine-form-group">
+                            <label class="engine-label-sm">ID</label>
+                            <div class="engine-value">{{ engine.pk }}</div>
+                        </div>
+                        <div class="engine-form-group">
+                            <label class="engine-label-sm">Created</label>
+                            <div class="engine-value">{{ engine.created_at|date:"M j, Y g:i A" }}</div>
+                        </div>
+                        <div class="engine-form-group">
+                            <label class="engine-label-sm">Updated</label>
+                            <div class="engine-value">{{ engine.updated_at|date:"M j, Y g:i A" }}</div>
+                        </div>
+                        <div class="engine-form-group">
+                            <label class="engine-label-sm">Created By</label>
+                            <div class="engine-value {% if not engine.created_by %}empty{% endif %}">
+                                {{ engine.created_by|default:"System" }}
+                            </div>
+                        </div>
+                        <div class="engine-form-group">
+                            <label class="engine-label-sm">Updated By</label>
+                            <div class="engine-value {% if not engine.updated_by %}empty{% endif %}">
+                                {{ engine.updated_by|default:"System" }}
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.status.id_for_label }}">Status</label>
-                        {{ form.status }}
-                        {% for error in form.status.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                </div>
+
+                <!-- Quick Stats Card -->
+                <div class="engine-card">
+                    <div class="engine-card-header">
+                        <div class="engine-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10"></line>
+                                <line x1="18" y1="20" x2="18" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="16"></line>
+                            </svg>
+                            Quick Stats
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.price.id_for_label }}">Price</label>
-                        {{ form.price }}
-                        {% for error in form.price.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                    <div class="engine-card-body">
+                        <div class="engine-stats-grid">
+                            <div class="engine-stat">
+                                <span class="engine-stat-value">{{ machine_count }}</span>
+                                <span class="engine-stat-label">Machines</span>
+                            </div>
+                            <div class="engine-stat">
+                                <span class="engine-stat-value">{{ part_count }}</span>
+                                <span class="engine-stat-label">Parts</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        
-        <!-- Spring Garden Engine Information -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Spring Garden Engine Information</h2>
-                <p class="edit-card-subtitle">SG Engine association and notes</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.sg_engine.id_for_label }}">SG Engine</label>
-                        {{ form.sg_engine }}
-                        {% for error in form.sg_engine.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.sg_engine_notes.id_for_label }}">SG Engine Notes</label>
-                        {{ form.sg_engine_notes }}
-                        {% for error in form.sg_engine_notes.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Specifications -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Specifications</h2>
-                <p class="edit-card-subtitle">Engine specifications and codes</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.cpl_number.id_for_label }}">CPL Number</label>
-                        {{ form.cpl_number }}
-                        {% for error in form.cpl_number.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.ar_number.id_for_label }}">AR Number</label>
-                        {{ form.ar_number }}
-                        {% for error in form.ar_number.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.build_list.id_for_label }}">Build List</label>
-                        {{ form.build_list }}
-                        {% for error in form.build_list.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.engine_code.id_for_label }}">Engine Code</label>
-                        {{ form.engine_code }}
-                        {% for error in form.engine_code.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.serial_number.id_for_label }}">Serial Number</label>
-                        {{ form.serial_number }}
-                        {% for error in form.serial_number.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.cylinder.id_for_label }}">Cylinders</label>
-                        {{ form.cylinder }}
-                        {% for error in form.cylinder.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.valves_per_cyl.id_for_label }}">Valves per Cylinder</label>
-                        {{ form.valves_per_cyl }}
-                        {% for error in form.valves_per_cyl.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.bore_stroke.id_for_label }}">Bore/Stroke</label>
-                        {{ form.bore_stroke }}
-                        {% for error in form.bore_stroke.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.compression_ratio.id_for_label }}">Compression Ratio</label>
-                        {{ form.compression_ratio }}
-                        {% for error in form.compression_ratio.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.firing_order.id_for_label }}">Firing Order</label>
-                        {{ form.firing_order }}
-                        {% for error in form.firing_order.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Components -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Components</h2>
-                <p class="edit-card-subtitle">Engine component information</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.crankshaft_no.id_for_label }}">Crankshaft Number</label>
-                        {{ form.crankshaft_no }}
-                        {% for error in form.crankshaft_no.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.piston_no.id_for_label }}">Piston Number</label>
-                        {{ form.piston_no }}
-                        {% for error in form.piston_no.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.piston_marked_no.id_for_label }}">Piston Marked Number</label>
-                        {{ form.piston_marked_no }}
-                        {% for error in form.piston_marked_no.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.oh_kit_no.id_for_label }}">OH Kit Number</label>
-                        {{ form.oh_kit_no }}
-                        {% for error in form.oh_kit_no.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label class="form-label" for="{{ form.piston_notes.id_for_label }}">Piston Notes</label>
-                        {{ form.piston_notes }}
-                        {% for error in form.piston_notes.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Engine Characteristics -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Engine Characteristics</h2>
-                <p class="edit-card-subtitle">Injection, valve, and fuel system configuration</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="{{ form.injection_type.id_for_label }}" class="form-label">
-                            Injection Type
-                        </label>
-                        {{ form.injection_type }}
-                        {% for error in form.injection_type.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.valve_config.id_for_label }}" class="form-label">
-                            Valve Configuration
-                        </label>
-                        {{ form.valve_config }}
-                        {% for error in form.valve_config.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="{{ form.fuel_system_type.id_for_label }}" class="form-label">
-                            Fuel System Type
-                        </label>
-                        {{ form.fuel_system_type }}
-                        {% for error in form.fuel_system_type.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Overview -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Overview</h2>
-                <p class="edit-card-subtitle">General engine information</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.interference.id_for_label }}">Interference</label>
-                        {{ form.interference }}
-                        {% for error in form.interference.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.camshaft.id_for_label }}">Camshaft</label>
-                        {{ form.camshaft }}
-                        {% for error in form.camshaft.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.valve_adjustment.id_for_label }}">Valve Adjustment</label>
-                        {{ form.valve_adjustment }}
-                        {% for error in form.valve_adjustment.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group full-width">
-                        <label class="form-label" for="{{ form.overview_comments.id_for_label }}">Overview Comments</label>
-                        {{ form.overview_comments }}
-                        {% for error in form.overview_comments.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Journals -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Journals</h2>
-                <p class="edit-card-subtitle">Journal diameter specifications</p>
-            </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.rod_journal_diameter.id_for_label }}">Rod Journal Diameter</label>
-                        {{ form.rod_journal_diameter }}
-                        {% for error in form.rod_journal_diameter.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.main_journal_diameter_pos1.id_for_label }}">Main Journal Diameter Pos1</label>
-                        {{ form.main_journal_diameter_pos1 }}
-                        {% for error in form.main_journal_diameter_pos1.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.main_journal_diameter_1.id_for_label }}">Main Journal Diameter 1</label>
-                        {{ form.main_journal_diameter_1 }}
-                        {% for error in form.main_journal_diameter_1.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.big_end_housing_bore.id_for_label }}">Big End Housing Bore</label>
-                        {{ form.big_end_housing_bore }}
-                        {% for error in form.big_end_housing_bore.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Form Actions -->
-        <div class="edit-card">
-            <div class="edit-card-body">
-                <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">Save Changes</button>
-                    <a href="{% url 'inventory:engine_detail' engine.pk %}" class="btn btn-secondary">Cancel</a>
-                </div>
-            </div>
+            {% endif %}
         </div>
     </form>
-</div>
-{% endblock %}
 
+    {% if not is_new %}
+    <!-- Delete form (hidden) -->
+    <form method="post" action="{% url 'inventory:engine_delete' engine.pk %}" id="delete-form" style="display: none;">
+        {% csrf_token %}
+    </form>
+    {% endif %}
+</div>
+
+<style>
+/* Engine Page Layout */
+.engine-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Sticky Header */
+.engine-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    margin: -2rem -1rem 1.5rem -1rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+}
+
+.engine-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.engine-id-display {
+    display: flex;
+    flex-direction: column;
+}
+
+.engine-id-display .engine-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.engine-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.engine-header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.engine-header-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.engine-header-btn-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Type Badges */
+.engine-sg-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.engine-status-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+/* Two Column Layout */
+.engine-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.engine-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.engine-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 90px;
+}
+
+/* Card Styles */
+.engine-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.engine-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.engine-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.engine-card-title svg {
+    color: var(--gray-500);
+}
+
+.engine-card-body {
+    padding: 1.25rem;
+}
+
+.engine-card-body.p-0 {
+    padding: 0;
+}
+
+/* Compact Card Styles */
+.engine-card-compact .engine-card-header {
+    padding: 0.625rem 1rem;
+}
+
+.engine-card-body-compact {
+    padding: 0.75rem 1rem !important;
+}
+
+/* Engine Info Grids */
+.engine-info-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.engine-info-grid-1col {
+    grid-template-columns: 1fr;
+}
+
+.engine-info-grid-2col {
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.engine-info-grid-3col {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+.engine-info-grid-4col {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.engine-info-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.engine-info-field-sm {
+    /* Status/Price fields - smaller */
+}
+
+.engine-input-sm,
+.engine-card select {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.engine-input-sm:focus,
+.engine-card select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.engine-input-sm::placeholder {
+    color: var(--gray-400);
+}
+
+textarea.engine-input-sm {
+    resize: vertical;
+    min-height: 40px;
+}
+
+/* Form Elements */
+.engine-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+}
+
+.engine-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.engine-label-sm {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.engine-form-error {
+    color: var(--error);
+    font-size: 0.75rem;
+}
+
+.engine-value {
+    font-size: 0.875rem;
+    color: var(--gray-900);
+}
+
+.engine-value.empty {
+    color: var(--gray-400);
+    font-style: italic;
+}
+
+/* Badge Count */
+.engine-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    background: var(--gray-200);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+/* Stats Grid */
+.engine-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.engine-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 0.375rem;
+}
+
+.engine-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.engine-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Loading State */
+.engine-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--gray-200);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Button Variants */
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-danger-outline {
+    background: white;
+    color: var(--error);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: var(--error);
+}
+
+/* Table in Cards */
+.engine-card .engine-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.engine-card .engine-table th,
+.engine-card .engine-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.engine-card .engine-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.engine-card .engine-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.engine-card .engine-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+    .engine-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .engine-sidebar {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .engine-info-grid,
+    .engine-info-grid-4col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .engine-info-grid-3col {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .engine-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .engine-header-left {
+        flex-wrap: wrap;
+    }
+    
+    .engine-header-actions {
+        flex-wrap: wrap;
+    }
+    
+    .engine-sidebar {
+        grid-template-columns: 1fr;
+    }
+    
+    .engine-info-grid,
+    .engine-info-grid-2col,
+    .engine-info-grid-3col,
+    .engine-info-grid-4col {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Event delegation for clickable rows - set up immediately
+document.body.addEventListener('click', function(e) {
+    // Find if click was on a clickable row
+    const row = e.target.closest('.engine-clickable-row');
+    if (!row) return;
+    
+    // Don't navigate if clicking on actions cell or button
+    // Note: We check for .engine-actions-cell or direct button click, NOT parent form
+    // because the whole page is wrapped in a form
+    if (e.target.closest('.engine-actions-cell') || e.target.closest('button')) {
+        return;
+    }
+    
+    // Navigate to the href
+    const href = row.getAttribute('data-href');
+    if (href) {
+        window.location.href = href;
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle escape key for modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.po-modal-overlay');
+            modals.forEach(modal => modal.remove());
+        }
+    });
+    
+    // Clear casting form when successfully added/edited
+    document.body.addEventListener('clearCastingForm', function() {
+        document.getElementById('casting-form-container').innerHTML = '';
+    });
+});
+</script>
+{% endblock %}

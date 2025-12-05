@@ -1,0 +1,163 @@
+{% load static %}
+
+<table class="settings-table">
+    <thead>
+        <tr>
+            <th>User</th>
+            <th>Email</th>
+            <th>Department</th>
+            <th>Role</th>
+            <th>Status</th>
+            <th>Last Login</th>
+            <th style="text-align: right;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in items %}
+        <tr>
+            <td>
+                <div class="cell-primary">{{ user.username }}</div>
+                {% if user.get_full_name %}
+                <div class="cell-muted">{{ user.get_full_name }}</div>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.email %}
+                <span>{{ user.email }}</span>
+                {% else %}
+                <span class="cell-muted">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.profile.department %}
+                <span>{{ user.profile.department }}</span>
+                {% else %}
+                <span class="cell-muted">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.profile.role %}
+                <span class="badge badge-info">{{ user.profile.role.name }}</span>
+                {% else %}
+                <span class="badge badge-warning">No Role</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.is_active %}
+                <span class="badge badge-success">Active</span>
+                {% else %}
+                <span class="badge badge-danger">Inactive</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if user.last_login %}
+                <span class="cell-date">{{ user.last_login|date:"M d, Y" }}</span>
+                {% else %}
+                <span class="cell-muted">Never</span>
+                {% endif %}
+            </td>
+            <td>
+                <div class="table-actions">
+                    <button class="btn-action"
+                            hx-get="{% url 'settings_app:user_edit' user.pk %}"
+                            hx-target="body"
+                            hx-swap="beforeend"
+                            title="Edit User">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                        Edit
+                    </button>
+                    <button class="btn-action {% if user.is_active %}btn-action-danger{% else %}btn-action-success{% endif %}"
+                            onclick="toggleUserActive({{ user.pk }})"
+                            title="{% if user.is_active %}Deactivate{% else %}Activate{% endif %} User">
+                        {% if user.is_active %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line>
+                        </svg>
+                        Deactivate
+                        {% else %}
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Activate
+                        {% endif %}
+                    </button>
+                    {% if user != request.user %}
+                    <form method="post" action="{% url 'settings_app:user_delete' user.pk %}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this user? This action cannot be undone.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn-action btn-action-danger" title="Delete User">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Delete
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="7">
+                <div class="settings-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="9" cy="7" r="4"></circle>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                    </svg>
+                    <h3>No users found</h3>
+                    <p>{% if request.GET.search %}Try a different search term{% else %}Create your first user to get started{% endif %}</p>
+                </div>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+{% if page_obj.has_other_pages %}
+<div class="settings-pagination">
+    <div class="settings-pagination-info">
+        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+    </div>
+    <div class="settings-pagination-controls">
+        {% if page_obj.has_previous %}
+        <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&tab=users" 
+           class="settings-page-btn" title="First page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="11 17 6 12 11 7"></polyline>
+                <polyline points="18 17 13 12 18 7"></polyline>
+            </svg>
+        </a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&tab=users" 
+           class="settings-page-btn" title="Previous page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+        </a>
+        {% endif %}
+        
+        <span class="settings-page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&tab=users" 
+           class="settings-page-btn" title="Next page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </a>
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}&tab=users" 
+           class="settings-page-btn" title="Last page">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="13 17 18 12 13 7"></polyline>
+                <polyline points="6 17 11 12 6 7"></polyline>
+            </svg>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}

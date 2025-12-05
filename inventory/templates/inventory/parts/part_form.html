@@ -241,7 +241,7 @@
         {% if mode == 'create' %}
             Create
         {% else %}
-            <a href="{% url 'inventory:part_detail' part.pk %}">{{ part.part_number }}</a> → 
+            <a href="{% url 'inventory:part_edit' part.pk %}">{{ part.part_number }}</a> → 
             Edit
         {% endif %}
     </div>

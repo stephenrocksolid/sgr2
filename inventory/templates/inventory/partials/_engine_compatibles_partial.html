@@ -1,36 +1,51 @@
 {% if compatibles %}
-    <table class="related-table">
-        <thead>
-            <tr>
-                <th>Make</th>
-                <th>Model</th>
-                <th>Identifier</th>
-                <th style="width: 50px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for compatible in compatibles %}
-                <tr data-href="{% url 'inventory:engine_detail' compatible.pk %}" 
-                    onclick="window.location.href=this.dataset.href;">
-                    <td>{{ compatible.engine_make|default:"—" }}</td>
-                    <td>{{ compatible.engine_model|default:"—" }}</td>
-                    <td>{{ compatible.identifier|default:"—" }}</td>
-                    <td onclick="event.stopPropagation();">
-                        <form hx-post="{% url 'inventory:engine_compatible_remove' engine.pk compatible.pk %}"
-                              hx-target="#engine-compatibles-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this compatible relationship?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="engine-table">
+    <thead>
+        <tr>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Identifier</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for compatible in compatibles %}
+        <tr class="engine-clickable-row" data-href="{% url 'inventory:engine_detail' compatible.pk %}">
+            <td>
+                <span class="engine-make-text">{{ compatible.engine_make|default:"—" }}</span>
+            </td>
+            <td>{{ compatible.engine_model|default:"—" }}</td>
+            <td>
+                <span class="engine-text-muted">{{ compatible.identifier|default:"—" }}</span>
+            </td>
+            <td class="engine-actions-cell">
+                <form hx-post="{% url 'inventory:engine_compatible_remove' engine.pk compatible.pk %}"
+                      hx-target="#engine-compatibles-section"
+                      hx-swap="innerHTML"
+                      hx-confirm="Are you sure you want to remove this compatible relationship?"
+                      style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-danger-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
-    <div class="empty-message">
-        <p>This engine has no compatible relationships yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="8.5" cy="7" r="4"></circle>
+        <line x1="20" y1="8" x2="20" y2="14"></line>
+        <line x1="23" y1="11" x2="17" y2="11"></line>
+    </svg>
+    <span>No compatible relationships</span>
+</div>
 {% endif %}

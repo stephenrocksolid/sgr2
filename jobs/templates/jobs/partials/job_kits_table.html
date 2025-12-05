@@ -1,0 +1,188 @@
+<div id="job-kits-section">
+    <table class="job-table">
+        <thead>
+            <tr>
+                <th style="width: 60px;">#</th>
+                <th>Kit Name</th>
+                <th>Notes</th>
+                <th style="width: 60px; text-align: center;">Select</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jkit in job_kits %}
+            <tr class="job-row-clickable"
+                hx-get="{% url 'jobs:job_kit_items_modal' job.pk jkit.pk %}"
+                hx-target="body"
+                hx-swap="beforeend">
+                <td>
+                    <span class="job-item-number">{{ forloop.counter }}</span>
+                </td>
+                <td>
+                    <span class="job-name-text">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        {{ jkit.name }}
+                    </span>
+                </td>
+                <td>
+                    <span class="job-text-muted">{{ jkit.notes|truncatewords:5|default:"—" }}</span>
+                </td>
+                <td style="text-align: center;" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="job-checkbox" {% if jkit.is_selected %}checked{% endif %}>
+                </td>
+                <td onclick="event.stopPropagation()">
+                    <form method="post" action="{% url 'jobs:job_kit_remove' job.pk jkit.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline" onclick="event.stopPropagation(); return confirm('Remove this kit?')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="job-empty-row">
+                    <div class="job-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        </svg>
+                        <span>No kits added</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.job-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.job-table th,
+.job-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.job-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.job-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.job-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.job-row-clickable:hover {
+    background: var(--gray-100);
+}
+
+.job-item-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--gray-200);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.job-name-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--primary);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.job-row-clickable:hover .job-name-text {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.job-name-text svg {
+    color: var(--gray-400);
+}
+
+.job-text-muted {
+    color: var(--gray-500);
+    font-size: 0.8125rem;
+}
+
+.job-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.job-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.job-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.job-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>

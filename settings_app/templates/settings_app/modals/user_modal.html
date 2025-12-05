@@ -1,0 +1,198 @@
+<!-- User Modal - Modern Style -->
+<div class="settings-modal-overlay" onclick="if(event.target === this) this.remove()">
+    <div class="settings-modal settings-modal-lg" onclick="event.stopPropagation()">
+        <div class="settings-modal-header">
+            <div class="settings-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                {{ modal_title }}
+            </div>
+            <button type="button" class="settings-modal-close" onclick="this.closest('.settings-modal-overlay').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form method="post" 
+              action="{% if edit_user %}{% url 'settings_app:user_edit' edit_user.pk %}{% else %}{% url 'settings_app:user_create' %}{% endif %}"
+              hx-post="{% if edit_user %}{% url 'settings_app:user_edit' edit_user.pk %}{% else %}{% url 'settings_app:user_create' %}{% endif %}"
+              hx-target="this"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="settings-modal-body">
+                {% if form.non_field_errors %}
+                <div class="settings-form-error">
+                    <strong>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Error
+                    </strong>
+                    {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="settings-form-grid">
+                    <!-- Username -->
+                    <div class="settings-form-group settings-form-full">
+                        <label class="settings-form-label">
+                            Username <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               name="username" 
+                               value="{{ form.username.value|default:'' }}"
+                               class="settings-form-input {% if form.username.errors %}is-invalid{% endif %}"
+                               placeholder="Enter username"
+                               required>
+                        {% if form.username.errors %}
+                        <div class="settings-field-error">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- First Name -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">First Name</label>
+                        <input type="text" 
+                               name="first_name" 
+                               value="{{ form.first_name.value|default:'' }}"
+                               class="settings-form-input"
+                               placeholder="Enter first name">
+                    </div>
+
+                    <!-- Last Name -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Last Name</label>
+                        <input type="text" 
+                               name="last_name" 
+                               value="{{ form.last_name.value|default:'' }}"
+                               class="settings-form-input"
+                               placeholder="Enter last name">
+                    </div>
+
+                    <!-- Email -->
+                    <div class="settings-form-group settings-form-full">
+                        <label class="settings-form-label">Email</label>
+                        <input type="email" 
+                               name="email" 
+                               value="{{ form.email.value|default:'' }}"
+                               class="settings-form-input {% if form.email.errors %}is-invalid{% endif %}"
+                               placeholder="Enter email address">
+                        {% if form.email.errors %}
+                        <div class="settings-field-error">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Password -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">
+                            Password {% if not edit_user %}<span class="required">*</span>{% endif %}
+                        </label>
+                        <input type="password" 
+                               name="password" 
+                               class="settings-form-input {% if form.password.errors %}is-invalid{% endif %}"
+                               placeholder="{% if edit_user %}Leave blank to keep current{% else %}Enter password{% endif %}"
+                               {% if not edit_user %}required{% endif %}>
+                        {% if edit_user %}
+                        <div class="settings-form-helptext">Leave blank to keep current password</div>
+                        {% endif %}
+                        {% if form.password.errors %}
+                        <div class="settings-field-error">{{ form.password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Confirm Password -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">
+                            Confirm Password {% if not edit_user %}<span class="required">*</span>{% endif %}
+                        </label>
+                        <input type="password" 
+                               name="confirm_password" 
+                               class="settings-form-input {% if form.confirm_password.errors %}is-invalid{% endif %}"
+                               placeholder="Confirm password"
+                               {% if not edit_user %}required{% endif %}>
+                        {% if form.confirm_password.errors %}
+                        <div class="settings-field-error">{{ form.confirm_password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Role -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Role</label>
+                        <select name="role" class="settings-form-select">
+                            <option value="">-- Select Role --</option>
+                            {% for choice in form.role.field.queryset %}
+                            <option value="{{ choice.pk }}" {% if form.role.value == choice.pk|stringformat:'s' %}selected{% endif %}>
+                                {{ choice.name }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Department -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Department</label>
+                        <input type="text" 
+                               name="department" 
+                               value="{{ form.department.value|default:'' }}"
+                               class="settings-form-input"
+                               placeholder="Enter department">
+                    </div>
+
+                    <!-- Phone -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Phone</label>
+                        <input type="text" 
+                               name="phone" 
+                               value="{{ form.phone.value|default:'' }}"
+                               class="settings-form-input"
+                               placeholder="Enter phone number">
+                    </div>
+
+                    <!-- Active Status -->
+                    <div class="settings-form-group">
+                        <label class="settings-form-label">Status</label>
+                        <div class="settings-form-checkbox" style="padding-top: 0.5rem;">
+                            <input type="checkbox" 
+                                   name="is_active" 
+                                   id="is_active"
+                                   {% if form.is_active.value %}checked{% endif %}>
+                            <label for="is_active">Active User</label>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="settings-form-group settings-form-full">
+                        <label class="settings-form-label">Notes</label>
+                        <textarea name="notes" 
+                                  class="settings-form-textarea" 
+                                  rows="3"
+                                  placeholder="Add any notes about this user...">{{ form.notes.value|default:'' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-modal-footer">
+                <button type="button" class="btn btn-outline" onclick="this.closest('.settings-modal-overlay').remove()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {% if edit_user %}Update User{% else %}Create User{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

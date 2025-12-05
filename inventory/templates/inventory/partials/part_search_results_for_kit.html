@@ -1,37 +1,44 @@
 {% if parts %}
     {% for part in parts %}
-        <div class="part-result-row"
+        <div class="po-result-row"
              hx-get="{% url 'inventory:part_details_form_for_kit' kit.id %}?part_id={{ part.id }}"
-             hx-target="#modal-container"
-             hx-swap="innerHTML"
-             hx-on::after-request="if(event.detail.successful) this.closest('.modal-overlay').remove();">
-            <div class="result-title">
-                {{ part.part_number }} - {{ part.name }}
+             hx-target="body"
+             hx-swap="beforeend"
+             hx-on::after-request="if(event.detail.successful) document.getElementById('part-search-modal').remove();">
+            <div class="po-result-info">
+                <div class="po-result-title">
+                    {{ part.part_number }} - {{ part.name }}
+                    {% if part.category %}
+                        <span class="po-result-badge">{{ part.category.name }}</span>
+                    {% endif %}
+                </div>
+                <div class="po-result-subtitle">
+                    {% if part.primary_vendor %}
+                        Vendor: {{ part.primary_vendor.name }}
+                    {% else %}
+                        No vendor assigned
+                    {% endif %}
+                </div>
             </div>
-            <div class="result-details">
-                {% if part.category %}
-                    <span class="result-badge">{{ part.category.name }}</span>
-                {% endif %}
-                {% if part.primary_vendor %}
-                    <span><strong>Vendor:</strong> {{ part.primary_vendor.name }}</span>
-                {% endif %}
+            <div class="po-result-action">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
             </div>
         </div>
     {% endfor %}
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <p class="empty-state-text">
+    <div class="po-search-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>
             {% if request.GET.q %}
-                No parts found matching your search.
+                No parts found matching "{{ request.GET.q }}"
             {% else %}
                 Start typing to search for parts...
             {% endif %}
         </p>
     </div>
 {% endif %}
-
-
-
-
-

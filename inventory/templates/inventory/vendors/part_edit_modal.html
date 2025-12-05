@@ -1,0 +1,393 @@
+<!-- Modal for Editing Part-Vendor Relationship -->
+<div class="po-modal-overlay" id="part-edit-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-md" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Part Details
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('part-edit-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Part Info Header -->
+            <div class="part-info-header">
+                <div class="part-info-name">{{ link.part.name }}</div>
+                {% if link.part.part_number %}
+                <div class="part-info-number">{{ link.part.part_number }}</div>
+                {% endif %}
+            </div>
+
+            <form hx-post="{% url 'inventory:vendor_part_edit' vendor.pk link.pk %}"
+                  hx-target="#vendor-parts-section"
+                  hx-swap="outerHTML"
+                  hx-on::after-request="if(event.detail.successful) document.getElementById('part-edit-modal').remove()">
+                {% csrf_token %}
+                
+                <!-- Vendor-Specific Information -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="1" y="3" width="15" height="13"></rect>
+                            <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                            <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                            <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                        </svg>
+                        Vendor Information
+                    </div>
+                    <div class="po-create-vendor-grid">
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Vendor Part Number</label>
+                            <input type="text" name="vendor_part_number" class="po-create-vendor-input" 
+                                   value="{{ link.vendor_part_number|default:'' }}" placeholder="Vendor's part number">
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Vendor SKU</label>
+                            <input type="text" name="vendor_sku" class="po-create-vendor-input" 
+                                   value="{{ link.vendor_sku|default:'' }}" placeholder="Vendor's SKU">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing & Inventory -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg>
+                        Pricing & Inventory
+                    </div>
+                    <div class="po-create-vendor-grid">
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Price</label>
+                            <div class="po-input-with-prefix">
+                                <span class="po-input-prefix">$</span>
+                                <input type="number" step="0.01" name="price" class="po-create-vendor-input po-input-with-prefix-input" 
+                                       value="{{ link.price|default:'' }}" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Cost</label>
+                            <div class="po-input-with-prefix">
+                                <span class="po-input-prefix">$</span>
+                                <input type="number" step="0.01" name="cost" class="po-create-vendor-input po-input-with-prefix-input" 
+                                       value="{{ link.cost|default:'' }}" placeholder="0.00">
+                            </div>
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Stock Qty</label>
+                            <input type="number" name="stock_qty" class="po-create-vendor-input" 
+                                   value="{{ link.stock_qty|default:'' }}" placeholder="0">
+                        </div>
+                        <div class="po-create-vendor-field">
+                            <label class="po-create-vendor-label">Lead Time (Days)</label>
+                            <input type="number" name="lead_time_days" class="po-create-vendor-input" 
+                                   value="{{ link.lead_time_days|default:'' }}" placeholder="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="po-form-section">
+                    <div class="po-form-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="17" y1="10" x2="3" y2="10"></line>
+                            <line x1="21" y1="6" x2="3" y2="6"></line>
+                            <line x1="21" y1="14" x2="3" y2="14"></line>
+                            <line x1="17" y1="18" x2="3" y2="18"></line>
+                        </svg>
+                        Notes
+                    </div>
+                    <div class="po-create-vendor-field po-create-vendor-field-full">
+                        <textarea name="notes" class="po-create-vendor-textarea" rows="3" 
+                                  placeholder="Add any notes about this part-vendor relationship...">{{ link.notes|default:'' }}</textarea>
+                    </div>
+                </div>
+
+                <div class="po-create-vendor-actions">
+                    <button type="button" class="po-create-vendor-cancel" onclick="document.getElementById('part-edit-modal').remove()">Cancel</button>
+                    <button type="submit" class="po-create-vendor-submit">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-md {
+    max-width: 580px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Part Info Header */
+.part-info-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.part-info-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.part-info-number {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8125rem;
+    padding: 0.125rem 0.5rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.25rem;
+    color: var(--gray-600);
+}
+
+/* Form Section */
+.po-form-section {
+    margin-bottom: 1.5rem;
+}
+
+.po-form-section:last-of-type {
+    margin-bottom: 0;
+}
+
+.po-form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-form-section-title svg {
+    color: var(--gray-400);
+}
+
+/* Form Grid */
+.po-create-vendor-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.po-create-vendor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.po-create-vendor-field-full {
+    grid-column: 1 / -1;
+}
+
+.po-create-vendor-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-create-vendor-input,
+.po-create-vendor-textarea {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.po-create-vendor-input:focus,
+.po-create-vendor-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-create-vendor-input::placeholder,
+.po-create-vendor-textarea::placeholder {
+    color: var(--gray-400);
+}
+
+.po-create-vendor-textarea {
+    resize: vertical;
+    min-height: 80px;
+    line-height: 1.5;
+}
+
+/* Input with Prefix */
+.po-input-with-prefix {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.po-input-prefix {
+    position: absolute;
+    left: 0.75rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    pointer-events: none;
+}
+
+.po-input-with-prefix-input {
+    padding-left: 1.5rem;
+}
+
+/* Actions */
+.po-create-vendor-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-create-vendor-cancel {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-create-vendor-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-create-vendor-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-create-vendor-submit:hover {
+    background: #2f855a;
+}
+
+@media (max-width: 480px) {
+    .po-create-vendor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

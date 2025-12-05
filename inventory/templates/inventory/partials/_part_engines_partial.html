@@ -1,48 +1,176 @@
-{% if links %}
-    <table class="related-table">
+<div id="part-engines-section">
+    <table class="part-table">
         <thead>
             <tr>
                 <th>Make</th>
                 <th>Model</th>
                 <th>Identifier</th>
                 <th>Status</th>
-                <th style="width: 50px;">Actions</th>
+                <th style="width: 100px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for link in links %}
-                <tr data-href="{% url 'inventory:engine_detail' link.engine.pk %}"
-                    onclick="if (event.target.tagName !== 'BUTTON' && event.target.tagName !== 'FORM') window.location.href='{% url 'inventory:engine_detail' link.engine.pk %}'">
-                    <td><strong>{{ link.engine.engine_make|default:"—" }}</strong></td>
-                    <td>{{ link.engine.engine_model|default:"—" }}</td>
-                    <td>{{ link.engine.identifier|default:"—" }}</td>
-                    <td>{{ link.engine.status|default:"—" }}</td>
-                    <td onclick="event.stopPropagation();">
-                        <form style="display: inline;"
-                              hx-post="{% url 'inventory:part_engine_remove' part.pk link.pk %}"
-                              hx-target="#part-engines-section"
-                              hx-confirm="Are you sure you want to remove this engine from the part?"
-                              hx-swap="innerHTML"
-                              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr class="part-clickable-row" data-href="{% url 'inventory:engine_detail' link.engine.pk %}">
+                <td>
+                    <span class="part-engine-make">{{ link.engine.engine_make|default:"—" }}</span>
+                </td>
+                <td>{{ link.engine.engine_model|default:"—" }}</td>
+                <td>
+                    {% if link.engine.identifier %}
+                        <code class="part-identifier">{{ link.engine.identifier }}</code>
+                    {% else %}
+                        <span class="part-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if link.engine.status %}
+                        <span class="part-status-badge">{{ link.engine.status }}</span>
+                    {% else %}
+                        <span class="part-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td class="part-actions-cell">
+                    <form hx-post="{% url 'inventory:part_engine_remove' part.pk link.pk %}"
+                          hx-target="#part-engines-section"
+                          hx-swap="outerHTML"
+                          hx-confirm="Are you sure you want to remove this engine from the part?"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="part-empty-row">
+                    <div class="part-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span>This part is not used on any engines</span>
+                    </div>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <div class="empty-message">
-        <p>This part is not associated with any engines.</p>
-    </div>
-{% endif %}
-
-<div class="mt-3">
-    <button class="add-button"
-            hx-get="{% url 'inventory:engine_search_modal_for_part' part.id %}"
-            hx-target="#modal-container"
-            hx-swap="innerHTML">
-        Add Engine
-    </button>
 </div>
+
+<style>
+.part-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.part-table th,
+.part-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.part-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.part-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.part-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.part-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.part-engine-make {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.part-identifier {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.part-status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.part-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.part-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.part-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.part-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+
+.part-actions-cell {
+    text-align: center;
+}
+</style>

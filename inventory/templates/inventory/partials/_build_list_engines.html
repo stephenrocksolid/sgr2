@@ -1,43 +1,194 @@
 {% load static %}
 
-{% if engines %}
-<table class="related-table">
-    <thead>
-        <tr>
-            <th>Engine Make</th>
-            <th>Engine Model</th>
-            <th>Serial Number</th>
-            <th>Status</th>
-            <th style="width: 80px; text-align: right;">Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for engine in engines %}
-            <tr onclick="window.location='{% url 'inventory:engine_detail' engine.pk %}';">
-                <td><strong>{{ engine.engine_make }}</strong></td>
+<div id="build-list-engines-section">
+    <table class="build-list-table">
+        <thead>
+            <tr>
+                <th>Engine Make</th>
+                <th>Engine Model</th>
+                <th>Serial Number</th>
+                <th>Status</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for engine in engines %}
+            <tr class="build-list-clickable-row" data-href="{% url 'inventory:engine_detail' engine.pk %}">
+                <td>
+                    <span class="build-list-engine-make">{{ engine.engine_make }}</span>
+                </td>
                 <td>{{ engine.engine_model }}</td>
-                <td>{{ engine.serial_number|default:"—" }}</td>
-                <td>{{ engine.status|default:"—" }}</td>
-                <td style="text-align: right;" onclick="event.stopPropagation();">
-                    <button 
-                        class="btn-icon btn-danger"
-                        hx-post="{% url 'inventory:build_list_engine_remove' build_list.pk engine.pk %}"
-                        hx-target="#engines-table-container"
-                        hx-swap="innerHTML"
-                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                        onclick="return confirm('Remove this engine from build list?');"
-                        title="Remove">
-                        ✕
-                    </button>
+                <td>
+                    {% if engine.serial_number %}
+                        <code class="build-list-serial">{{ engine.serial_number }}</code>
+                    {% else %}
+                        <span class="build-list-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if engine.status %}
+                        <span class="build-list-status-badge">{{ engine.status }}</span>
+                    {% else %}
+                        <span class="build-list-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td class="build-list-actions-cell" onclick="event.stopPropagation();">
+                    <form hx-post="{% url 'inventory:build_list_engine_remove' build_list.pk engine.pk %}"
+                          hx-target="#build-list-engines-section"
+                          hx-swap="outerHTML"
+                          hx-confirm="Are you sure you want to remove this engine from the build list?"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
                 </td>
             </tr>
-        {% endfor %}
-    </tbody>
-</table>
-{% else %}
-<div class="empty-state">
-    <p>This build list is not assigned to any engines yet.</p>
-    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "+ Add Engine" to assign this build list to engines.</p>
+            {% empty %}
+            <tr>
+                <td colspan="5" class="build-list-empty-row">
+                    <div class="build-list-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span>No engines assigned to this build list</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
-{% endif %}
 
+<style>
+.build-list-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.build-list-table th,
+.build-list-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.build-list-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.build-list-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.build-list-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.build-list-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.build-list-engine-make {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.build-list-serial {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.build-list-status-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.build-list-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.build-list-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.build-list-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.build-list-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.build-list-actions-cell {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>
+
+<script>
+// Handle row clicks for navigation (only if not clicking on actions)
+document.querySelectorAll('#build-list-engines-section .build-list-clickable-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+        if (!e.target.closest('.build-list-actions-cell') && !e.target.closest('button')) {
+            const href = this.getAttribute('data-href');
+            if (href) {
+                window.location.href = href;
+            }
+        }
+    });
+});
+</script>

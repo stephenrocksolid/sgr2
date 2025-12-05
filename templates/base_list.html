@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/list-page.css' %}">
+{% block list_extra_css %}{% endblock %}
+{% endblock %}
+
+{% block content %}
+<!-- Compact Header with Title and Search on Same Line -->
+<div class="compact-header">
+    <h2 class="page-title">
+        {% block page_heading %}{% endblock %}
+        {% if page_obj %}
+        <span class="title-count">Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ total_count }} {% block item_name_plural %}items{% endblock %}</span>
+        {% endif %}
+    </h2>
+    
+    {% block search_section %}
+    <div class="search-section">
+        {% block page_actions %}
+        {% if create_url %}
+        <a href="{{ create_url }}" class="btn btn-primary" style="margin-right: 0.5rem;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: middle; margin-right: 0.25rem;">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            {{ create_label|default:"New" }}
+        </a>
+        {% endif %}
+        {% endblock %}
+        <form method="get" class="search-form">
+            <input id="search" name="search" value="{{ search }}" class="search-input" placeholder='{% block search_placeholder %}Search...{% endblock %}'>
+            <button class="btn btn-dark">Search</button>
+            
+            <!-- Hidden field to preserve sorting -->
+            <input type="hidden" name="sort" value="{{ sort }}">
+        </form>
+    </div>
+    {% endblock %}
+</div>
+
+{% block extra_filters %}
+<!-- Optional: Additional filters can be added here by child templates -->
+{% endblock %}
+
+<!-- Table -->
+<div class="table-wrap">
+    <table class="table sticky">
+        <thead>
+            <tr>
+                {% block table_headers %}
+                <!-- Child templates should define table headers here -->
+                {% endblock %}
+            </tr>
+        </thead>
+        <tbody>
+            {% block table_body %}
+            <!-- Child templates should define table rows here -->
+            {% endblock %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+    <div class="pagination">
+        {% if page_obj.has_previous %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1">First</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}">Previous</a>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+                <span class="current">{{ num }}</span>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}">{{ num }}</a>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}">Next</a>
+            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">Last</a>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/list-page.js' %}"></script>
+<script>
+    // Set the current sort parameter for the list page JavaScript
+    window.listPageSort = '{{ sort|escapejs }}';
+</script>
+{% block list_extra_js %}{% endblock %}
+{% endblock %}
+

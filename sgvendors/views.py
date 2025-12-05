@@ -17,6 +17,7 @@ def index(request):
     """List all SG Vendors."""
     # Get filter parameters
     search = request.GET.get('search', '')
+    sort = request.GET.get('sort', 'name')  # Default sort by name
     
     # Build query
     sg_vendors = SGVendor.objects.all()
@@ -31,17 +32,32 @@ def index(request):
     # Annotate with linked vendors count
     sg_vendors = sg_vendors.annotate(
         linked_vendors_count=Count('vendors', distinct=True)
-    ).order_by('name')
+    )
+    
+    # Handle sorting (support multi-column sorting)
+    if sort:
+        sort_fields = [s.strip() for s in sort.split(',') if s.strip()]
+        valid_fields = ['name', '-name', 'website', '-website', 'created', '-created', 
+                       'linked_vendors_count', '-linked_vendors_count']
+        # Filter to only valid sort fields
+        sort_fields = [f for f in sort_fields if f in valid_fields]
+        if sort_fields:
+            sg_vendors = sg_vendors.order_by(*sort_fields)
+        else:
+            sg_vendors = sg_vendors.order_by('name')
+    else:
+        sg_vendors = sg_vendors.order_by('name')
     
     # Pagination
-    paginator = Paginator(sg_vendors, 200)
+    paginator = Paginator(sg_vendors, 50)  # Reduced from 200 for better UX
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
         'page_obj': page_obj,
         'search': search,
-        'total_count': sg_vendors.count(),
+        'sort': sort,
+        'total_count': paginator.count,
     }
     return render(request, 'sgvendors/index.html', context)
 
@@ -54,52 +70,60 @@ def create(request):
         if form.is_valid():
             sg_vendor = form.save()
             messages.success(request, f'SG Vendor "{sg_vendor.name}" created successfully.')
-            return redirect('sgvendors:index')
+            return redirect('sgvendors:detail', sg_vendor_id=sg_vendor.id)
     else:
         form = SGVendorForm()
     
     context = {
         'form': form,
-        'title': 'Create SG Vendor',
+        'sg_vendor': None,
+        'linked_vendors': [],
+        'is_new': True,
     }
-    return render(request, 'sgvendors/form.html', context)
+    return render(request, 'sgvendors/edit.html', context)
 
 
 @login_required
 def edit(request, sg_vendor_id):
-    """Edit an existing SG Vendor."""
+    """Edit an existing SG Vendor (combined view/edit page)."""
     sg_vendor = get_object_or_404(SGVendor, id=sg_vendor_id)
+    
+    # Get linked vendors
+    linked_vendors = sg_vendor.vendors.all().order_by('name')
     
     if request.method == 'POST':
         form = SGVendorForm(request.POST, instance=sg_vendor)
         if form.is_valid():
             sg_vendor = form.save()
             messages.success(request, f'SG Vendor "{sg_vendor.name}" updated successfully.')
-            return redirect('sgvendors:index')
+            return redirect('sgvendors:detail', sg_vendor_id=sg_vendor.id)
     else:
         form = SGVendorForm(instance=sg_vendor)
     
     context = {
         'form': form,
         'sg_vendor': sg_vendor,
-        'title': f'Edit SG Vendor: {sg_vendor.name}',
+        'linked_vendors': linked_vendors,
+        'is_new': False,
     }
-    return render(request, 'sgvendors/form.html', context)
+    return render(request, 'sgvendors/edit.html', context)
 
 
 @login_required
-def detail(request, sg_vendor_id):
-    """View SG Vendor details."""
+@require_http_methods(["POST"])
+def delete(request, sg_vendor_id):
+    """Delete an SG Vendor."""
     sg_vendor = get_object_or_404(SGVendor, id=sg_vendor_id)
     
-    # Get linked vendors
-    linked_vendors = sg_vendor.vendors.all().order_by('name')
+    # Check if there are linked vendors
+    if sg_vendor.vendors.exists():
+        messages.error(request, f'Cannot delete "{sg_vendor.name}" because it has linked vendors.')
+        return redirect('sgvendors:detail', sg_vendor_id=sg_vendor.id)
     
-    context = {
-        'sg_vendor': sg_vendor,
-        'linked_vendors': linked_vendors,
-    }
-    return render(request, 'sgvendors/detail.html', context)
+    name = sg_vendor.name
+    sg_vendor.delete()
+    messages.success(request, f'SG Vendor "{name}" deleted successfully.')
+    return redirect('sgvendors:index')
 
 
 @login_required

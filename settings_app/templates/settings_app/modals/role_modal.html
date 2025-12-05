@@ -1,0 +1,211 @@
+<!-- Role Modal - Modern Style -->
+<div class="settings-modal-overlay" onclick="if(event.target === this) this.remove()">
+    <div class="settings-modal settings-modal-lg" onclick="event.stopPropagation()">
+        <div class="settings-modal-header">
+            <div class="settings-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+                {{ modal_title }}
+            </div>
+            <button type="button" class="settings-modal-close" onclick="this.closest('.settings-modal-overlay').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form method="post" 
+              action="{% if role %}{% url 'settings_app:role_edit' role.pk %}{% else %}{% url 'settings_app:role_create' %}{% endif %}"
+              hx-post="{% if role %}{% url 'settings_app:role_edit' role.pk %}{% else %}{% url 'settings_app:role_create' %}{% endif %}"
+              hx-target="this"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="settings-modal-body">
+                {% if form.non_field_errors %}
+                <div class="settings-form-error">
+                    <strong>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                        Error
+                    </strong>
+                    {% for error in form.non_field_errors %}
+                    <div>{{ error }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Basic Info -->
+                <div class="settings-form-grid">
+                    <div class="settings-form-group settings-form-full">
+                        <label class="settings-form-label">
+                            Role Name <span class="required">*</span>
+                        </label>
+                        <input type="text" 
+                               name="name" 
+                               value="{{ form.name.value|default:'' }}"
+                               class="settings-form-input {% if form.name.errors %}is-invalid{% endif %}"
+                               placeholder="Enter role name"
+                               required>
+                        {% if form.name.errors %}
+                        <div class="settings-field-error">{{ form.name.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="settings-form-group settings-form-full">
+                        <label class="settings-form-label">Description</label>
+                        <textarea name="description" 
+                                  class="settings-form-textarea" 
+                                  rows="2"
+                                  placeholder="Describe this role's purpose...">{{ form.description.value|default:'' }}</textarea>
+                    </div>
+
+                    <div class="settings-form-group">
+                        <div class="settings-form-checkbox" style="padding-top: 0.5rem;">
+                            <input type="checkbox" 
+                                   name="is_system_role" 
+                                   id="is_system_role"
+                                   {% if form.is_system_role.value %}checked{% endif %}>
+                            <label for="is_system_role">System Role</label>
+                        </div>
+                        <div class="settings-form-helptext">System roles cannot be deleted</div>
+                    </div>
+                </div>
+
+                <!-- Permissions Section -->
+                <div class="permissions-section">
+                    <div class="permissions-section-title">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline; vertical-align: middle; margin-right: 0.5rem;">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                        Permissions
+                    </div>
+
+                    <div class="permissions-grid">
+                        <!-- Jobs Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_view_jobs" id="can_view_jobs"
+                                   {% if form.can_view_jobs.value %}checked{% endif %}>
+                            <label for="can_view_jobs">View Jobs</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_edit_jobs" id="can_edit_jobs"
+                                   {% if form.can_edit_jobs.value %}checked{% endif %}>
+                            <label for="can_edit_jobs">Edit Jobs</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_delete_jobs" id="can_delete_jobs"
+                                   {% if form.can_delete_jobs.value %}checked{% endif %}>
+                            <label for="can_delete_jobs">Delete Jobs</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_manage_job_options" id="can_manage_job_options"
+                                   {% if form.can_manage_job_options.value %}checked{% endif %}>
+                            <label for="can_manage_job_options">Manage Job Options</label>
+                        </div>
+
+                        <!-- Inventory Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_view_inventory" id="can_view_inventory"
+                                   {% if form.can_view_inventory.value %}checked{% endif %}>
+                            <label for="can_view_inventory">View Inventory</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_edit_inventory" id="can_edit_inventory"
+                                   {% if form.can_edit_inventory.value %}checked{% endif %}>
+                            <label for="can_edit_inventory">Edit Inventory</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_delete_inventory" id="can_delete_inventory"
+                                   {% if form.can_delete_inventory.value %}checked{% endif %}>
+                            <label for="can_delete_inventory">Delete Inventory</label>
+                        </div>
+
+                        <!-- Import Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_view_imports" id="can_view_imports"
+                                   {% if form.can_view_imports.value %}checked{% endif %}>
+                            <label for="can_view_imports">View Imports</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_create_imports" id="can_create_imports"
+                                   {% if form.can_create_imports.value %}checked{% endif %}>
+                            <label for="can_create_imports">Create Imports</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_revert_imports" id="can_revert_imports"
+                                   {% if form.can_revert_imports.value %}checked{% endif %}>
+                            <label for="can_revert_imports">Revert Imports</label>
+                        </div>
+
+                        <!-- Employee Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_view_employees" id="can_view_employees"
+                                   {% if form.can_view_employees.value %}checked{% endif %}>
+                            <label for="can_view_employees">View Employees</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_edit_employees" id="can_edit_employees"
+                                   {% if form.can_edit_employees.value %}checked{% endif %}>
+                            <label for="can_edit_employees">Edit Employees</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_delete_employees" id="can_delete_employees"
+                                   {% if form.can_delete_employees.value %}checked{% endif %}>
+                            <label for="can_delete_employees">Delete Employees</label>
+                        </div>
+
+                        <!-- Settings Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_manage_users" id="can_manage_users"
+                                   {% if form.can_manage_users.value %}checked{% endif %}>
+                            <label for="can_manage_users">Manage Users</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_manage_roles" id="can_manage_roles"
+                                   {% if form.can_manage_roles.value %}checked{% endif %}>
+                            <label for="can_manage_roles">Manage Roles</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_manage_system_config" id="can_manage_system_config"
+                                   {% if form.can_manage_system_config.value %}checked{% endif %}>
+                            <label for="can_manage_system_config">Manage System Config</label>
+                        </div>
+
+                        <!-- Reports Permissions -->
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_view_reports" id="can_view_reports"
+                                   {% if form.can_view_reports.value %}checked{% endif %}>
+                            <label for="can_view_reports">View Reports</label>
+                        </div>
+                        <div class="permission-item">
+                            <input type="checkbox" name="can_export_reports" id="can_export_reports"
+                                   {% if form.can_export_reports.value %}checked{% endif %}>
+                            <label for="can_export_reports">Export Reports</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-modal-footer">
+                <button type="button" class="btn btn-outline" onclick="this.closest('.settings-modal-overlay').remove()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                        <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                        <polyline points="7 3 7 8 15 8"></polyline>
+                    </svg>
+                    {% if role %}Update Role{% else %}Create Role{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>

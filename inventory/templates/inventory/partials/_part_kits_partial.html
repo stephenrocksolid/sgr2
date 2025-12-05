@@ -1,5 +1,5 @@
-{% if kit_items %}
-    <table class="related-table">
+<div id="part-kits-section">
+    <table class="part-table">
         <thead>
             <tr>
                 <th>Kit Name</th>
@@ -9,22 +9,105 @@
         </thead>
         <tbody>
             {% for item in kit_items %}
-                <tr data-href="{% url 'inventory:kit_detail' item.kit.pk %}"
-                    onclick="if (event.target.tagName !== 'BUTTON' && event.target.tagName !== 'FORM') window.location.href='{% url 'inventory:kit_detail' item.kit.pk %}'">
-                    <td><strong>{{ item.kit.name }}</strong></td>
-                    <td>{{ item.quantity }}</td>
-                    <td>{{ item.kit.notes|default:"—"|truncatewords:10 }}</td>
-                </tr>
+            <tr class="part-clickable-row" data-href="{% url 'inventory:kit_detail' item.kit.pk %}">
+                <td>
+                    <span class="part-kit-name">{{ item.kit.name }}</span>
+                </td>
+                <td>
+                    <span class="part-quantity-badge">{{ item.quantity }}</span>
+                </td>
+                <td>
+                    <span class="part-text-muted">{{ item.kit.notes|default:"—"|truncatewords:10 }}</span>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="part-empty-row">
+                    <div class="part-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <span>This part is not used in any kits</span>
+                    </div>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <div class="empty-message">
-        <p>This part is not used in any kits.</p>
-    </div>
-{% endif %}
+</div>
 
+<style>
+.part-table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
+.part-table th,
+.part-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
 
+.part-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
 
+.part-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
 
+.part-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.part-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.part-kit-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.part-quantity-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.part-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.part-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.part-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.part-empty-state-inline svg {
+    color: var(--gray-400);
+}
+</style>

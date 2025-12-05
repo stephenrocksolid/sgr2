@@ -1,0 +1,234 @@
+{% if customer_data %}
+<div class="po-customer-results-list">
+    {% for data in customer_data %}
+    <div class="po-customer-result-group">
+        <div class="po-customer-header">
+            <div class="po-customer-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                    <circle cx="9" cy="7" r="4"></circle>
+                </svg>
+            </div>
+            <div class="po-customer-name">{{ data.customer.name }}</div>
+        </div>
+        
+        <!-- Bill To Address (if exists) -->
+        {% if data.customer.bill_to_address or data.customer.bill_to_city %}
+        <div class="po-customer-address-item" 
+             onclick="fillShipToAddress('{{ data.customer.bill_to_name|default:data.customer.name|escapejs }}', '{{ data.customer.bill_to_address|default:''|escapejs }}', '{{ data.customer.bill_to_city|default:''|escapejs }}', '{{ data.customer.bill_to_state|default:''|escapejs }}', '{{ data.customer.bill_to_zip|default:''|escapejs }}', '{{ data.customer.phone|default:''|escapejs }}')">
+            <div class="po-address-type">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                Billing Address
+            </div>
+            <div class="po-address-details">
+                <div class="po-address-name">{{ data.customer.bill_to_name|default:data.customer.name }}</div>
+                {% if data.customer.bill_to_address %}<div class="po-address-line">{{ data.customer.bill_to_address }}</div>{% endif %}
+                {% if data.customer.bill_to_city or data.customer.bill_to_state or data.customer.bill_to_zip %}
+                <div class="po-address-line">{{ data.customer.bill_to_city }}{% if data.customer.bill_to_city and data.customer.bill_to_state %}, {% endif %}{{ data.customer.bill_to_state }} {{ data.customer.bill_to_zip }}</div>
+                {% endif %}
+                {% if data.customer.phone %}<div class="po-address-phone">{{ data.customer.phone }}</div>{% endif %}
+            </div>
+            <div class="po-address-select-hint">Click to use</div>
+        </div>
+        {% endif %}
+        
+        <!-- Ship To Addresses -->
+        {% for ship_to in data.ship_to_addresses %}
+        <div class="po-customer-address-item"
+             onclick="fillShipToAddress('{{ ship_to.name|escapejs }}', '{{ ship_to.address|default:''|escapejs }}', '{{ ship_to.city|default:''|escapejs }}', '{{ ship_to.state|default:''|escapejs }}', '{{ ship_to.zip|default:''|escapejs }}', '')">
+            <div class="po-address-type">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                </svg>
+                {{ ship_to.name }}{% if ship_to.is_default %} <span class="po-address-default-badge">Default</span>{% endif %}
+            </div>
+            <div class="po-address-details">
+                {% if ship_to.address %}<div class="po-address-line">{{ ship_to.address }}</div>{% endif %}
+                {% if ship_to.city or ship_to.state or ship_to.zip %}
+                <div class="po-address-line">{{ ship_to.city }}{% if ship_to.city and ship_to.state %}, {% endif %}{{ ship_to.state }} {{ ship_to.zip }}</div>
+                {% endif %}
+            </div>
+            <div class="po-address-select-hint">Click to use</div>
+        </div>
+        {% empty %}
+        {% if not data.customer.bill_to_address and not data.customer.bill_to_city %}
+        <div class="po-customer-no-address">
+            <span>No addresses on file</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="po-search-empty">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <line x1="17" y1="11" x2="23" y2="11"></line>
+    </svg>
+    <p class="po-search-empty-title">No customers found</p>
+    <p class="po-search-empty-subtitle">Try a different search term</p>
+</div>
+{% endif %}
+
+<style>
+.po-customer-results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.po-customer-result-group {
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.po-customer-header {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem 1rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-customer-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 50%;
+    color: var(--gray-500);
+}
+
+.po-customer-name {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+}
+
+.po-customer-address-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid var(--gray-100);
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.po-customer-address-item:last-child {
+    border-bottom: none;
+}
+
+.po-customer-address-item:hover {
+    background: #f0f9ff;
+}
+
+.po-customer-address-item:hover .po-address-select-hint {
+    opacity: 1;
+}
+
+.po-address-type {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    min-width: 120px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.po-address-type svg {
+    color: var(--gray-400);
+}
+
+.po-address-default-badge {
+    padding: 0.125rem 0.375rem;
+    background: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    text-transform: uppercase;
+}
+
+.po-address-details {
+    flex: 1;
+}
+
+.po-address-name {
+    font-weight: 500;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+}
+
+.po-address-line {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    line-height: 1.4;
+}
+
+.po-address-phone {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin-top: 0.25rem;
+}
+
+.po-address-select-hint {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--primary);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    white-space: nowrap;
+}
+
+.po-customer-no-address {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    font-style: italic;
+}
+
+.po-search-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-empty svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.po-search-empty-title {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-600);
+    margin: 0 0 0.25rem;
+}
+
+.po-search-empty-subtitle {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+</style>
+
+

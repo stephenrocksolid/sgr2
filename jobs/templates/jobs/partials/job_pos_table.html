@@ -1,0 +1,138 @@
+<div id="job-pos-section">
+    <table class="job-table">
+        <thead>
+            <tr>
+                <th>PO #</th>
+                <th>Vendor</th>
+                <th>Status</th>
+                <th>Items</th>
+                <th>Date</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for po in job_pos %}
+            <tr class="job-row-clickable" onclick="window.location.href='{% url 'jobs:po_detail' po.pk %}'">
+                <td>
+                    <span class="job-po-number">
+                        <code class="job-part-number">{{ po.po_number }}</code>
+                    </span>
+                </td>
+                <td>
+                    {% if po.vendor %}
+                    <span class="job-vendor-name">{{ po.vendor.name }}</span>
+                    {% else %}
+                    <span class="job-text-muted">No vendor</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="job-status-badge job-status-{{ po.status }}">{{ po.get_status_display }}</span>
+                </td>
+                <td>
+                    <span class="job-qty-badge">{{ po.item_count }}</span>
+                </td>
+                <td>
+                    <span class="job-text-muted">{{ po.po_date|date:"M j, Y" }}</span>
+                </td>
+                <td onclick="event.stopPropagation()">
+                    <a href="{% url 'jobs:po_detail' po.pk %}" class="btn btn-xs btn-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        View
+                    </a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="job-empty-row">
+                    <div class="job-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span>No purchase orders yet</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.job-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.job-row-clickable:hover {
+    background: var(--gray-100);
+}
+
+.job-po-number {
+    display: inline-flex;
+    align-items: center;
+}
+
+.job-row-clickable:hover .job-part-number {
+    background: var(--primary);
+    color: white;
+}
+
+.job-vendor-name {
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.job-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.job-status-draft {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.job-status-submitted {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.job-status-partially_received {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.job-status-received {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.job-status-closed {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.job-status-cancelled {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+</style>

@@ -1,0 +1,25 @@
+{% if jobs %}
+    {% for job in jobs %}
+    <div class="job-result-item" 
+         data-job-id="{{ job.pk }}"
+         data-job-number="{{ job.job_number|default:job.pk }}"
+         data-job-details="{{ job.customer.name|default:'No customer' }}{% if job.engine_make or job.engine_model %} · {{ job.engine_make }} {{ job.engine_model }}{% endif %}">
+        <span class="job-result-number">{% if job.job_number %}{{ job.job_number }}{% else %}#{{ job.pk }}{% endif %}</span>
+        <span class="job-result-details">
+            {{ job.customer.name|default:"No customer" }}
+            {% if job.engine_make or job.engine_model %} · {{ job.engine_make }} {{ job.engine_model }}{% endif %}
+        </span>
+        <svg class="job-result-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+    </div>
+    {% endfor %}
+{% elif query %}
+    <div class="job-search-no-results">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>No jobs found for "{{ query }}"</p>
+    </div>
+{% endif %}

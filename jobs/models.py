@@ -97,6 +97,7 @@ class Job(AuditMixin):
     
     STATUS_CHOICES = [
         ('draft', 'Draft'),
+        ('ready_for_review', 'Ready for Review'),
         ('new', 'New'),
         ('in_progress', 'In Progress'),
         ('completed', 'Completed'),
@@ -104,6 +105,12 @@ class Job(AuditMixin):
         ('quote', 'Quote'),
         ('wo', 'WO'),
         ('invoice', 'Invoice'),
+    ]
+    
+    # Status choices for Job Tickets only
+    TICKET_STATUS_CHOICES = [
+        ('draft', 'Draft'),
+        ('ready_for_review', 'Ready for Review'),
     ]
     
     INJECTION_TYPE_CHOICES = [
@@ -229,6 +236,8 @@ class JobComponent(AuditMixin):
         blank=True
     )
     manifold_diameter = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
+    main_bearing = models.CharField(max_length=50, null=True, blank=True)
+    piston_size = models.CharField(max_length=50, null=True, blank=True)
     
     # Component progress flags
     block_done = models.BooleanField(default=False)
@@ -335,6 +344,15 @@ class JobBuildList(AuditMixin):
 
     def __str__(self):
         return f"{self.job} - {self.name}"
+
+    @property
+    def percent_complete(self):
+        """Calculate completion percentage based on items marked as complete (only items on job)."""
+        total_items = self.items.filter(on_job=True).count()
+        if total_items == 0:
+            return 0
+        completed_items = self.items.filter(on_job=True, is_complete=True).count()
+        return round((completed_items / total_items) * 100)
 
 
 class JobBuildListItem(AuditMixin):

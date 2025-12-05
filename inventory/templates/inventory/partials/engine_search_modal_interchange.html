@@ -1,29 +1,46 @@
-<div class="modal-overlay" id="engine-search-modal" onclick="if(event.target === this) this.remove()">
-    <div class="modal-content-large" onclick="event.stopPropagation()">
-        <div class="modal-header">
-            <h3>Add Interchange Engine</h3>
-            <button class="modal-close" onclick="document.getElementById('engine-search-modal').remove()">✕</button>
+<!-- Modal for Adding Interchange Engine -->
+<div class="po-modal-overlay" id="engine-search-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-lg" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="17 1 21 5 17 9"></polyline>
+                    <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+                    <polyline points="7 23 3 19 7 15"></polyline>
+                    <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+                </svg>
+                Add Interchange Engine
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('engine-search-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
-        
-        <div class="modal-body">
-            <!-- Search input -->
-            <div class="search-box">
+
+        <div class="po-modal-body">
+            <!-- Search Box -->
+            <div class="po-search-box">
+                <svg class="po-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
                 <input type="text" 
                        id="engine-search"
-                       placeholder="Search engines by make, model, identifier, serial number, or SG engine..."
+                       placeholder="Search engines by make, model, identifier, serial number..." 
+                       class="po-search-input"
                        hx-get="{% url 'inventory:engine_search_results_interchange' parent_engine.pk %}"
                        hx-trigger="keyup changed delay:300ms"
                        hx-target="#engine-results"
                        hx-include="this"
                        name="q"
                        autocomplete="off"
-                       class="search-input"
                        autofocus>
-                <span class="search-icon">🔍</span>
             </div>
-            
-            <!-- Results container -->
-            <div id="engine-results" style="margin-top: 1rem;">
+
+            <!-- Results Container -->
+            <div id="engine-results" class="po-search-results">
                 {% include "inventory/partials/engine_search_results_interchange.html" %}
             </div>
         </div>
@@ -31,246 +48,257 @@
 </div>
 
 <style>
-.modal-overlay {
+.po-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
-    animation: fadeIn 0.2s ease-in-out;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes poModalFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-.modal-content-large {
+.po-modal {
     background: white;
-    border-radius: var(--border-radius);
+    border-radius: 0.75rem;
     width: 90%;
-    max-width: 1000px;
-    max-height: 85vh;
+    max-width: 700px;
+    height: 70vh;
+    max-height: 600px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
-    animation: slideUp 0.3s ease-out;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
 }
 
-@keyframes slideUp {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+.po-modal-lg {
+    max-width: 900px;
+    height: 75vh;
+    max-height: 700px;
+    min-height: 500px;
 }
 
-.modal-header {
-    padding: 1rem 1.25rem;
-    border-bottom: 1px solid var(--gray-200);
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--gray-50);
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
 }
 
-.modal-header h3 {
-    margin: 0;
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--gray-900);
 }
 
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
-    cursor: pointer;
+.po-modal-title svg {
     color: var(--gray-500);
-    padding: 0;
-    width: 32px;
-    height: 32px;
+}
+
+.po-modal-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--border-radius);
-    transition: all 0.2s;
-}
-
-.modal-close:hover {
-    background: var(--gray-200);
-    color: var(--gray-700);
-}
-
-.modal-body {
-    padding: 1.25rem;
-    overflow-y: auto;
-    flex: 1;
-}
-
-.search-box {
-    position: relative;
-    margin-bottom: 1rem;
-}
-
-.search-input {
-    width: 100%;
-    padding: 0.75rem 1rem 0.75rem 2.75rem;
-    font-size: 1rem;
-    border: 2px solid var(--gray-300);
-    border-radius: var(--border-radius);
-    transition: all 0.2s;
-}
-
-.search-input:focus {
-    outline: none;
-    border-color: var(--red-500);
-    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
-}
-
-.search-icon {
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.25rem;
-    pointer-events: none;
-}
-
-#engine-results {
-    max-height: calc(85vh - 200px);
-    overflow-y: auto;
-    border: 1px solid var(--gray-200);
-    border-radius: var(--border-radius);
-}
-
-.engine-result-row {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--gray-100);
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 1rem;
-    align-items: center;
-    transition: all 0.2s;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
     cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.engine-result-row:hover {
-    background-color: var(--red-50);
-    border-left: 3px solid var(--red-600);
-    padding-left: calc(1rem - 3px);
-}
-
-.engine-result-row:active {
-    background-color: var(--red-100);
-}
-
-.engine-result-row:last-child {
-    border-bottom: none;
-}
-
-.engine-info {
-    flex: 1;
-}
-
-.engine-title {
-    font-weight: 600;
-    color: var(--gray-900);
-    font-size: 0.9375rem;
-    margin-bottom: 0.25rem;
-}
-
-.engine-details {
-    font-size: 0.8125rem;
+.po-modal-close:hover {
+    background: var(--gray-100);
     color: var(--gray-600);
 }
 
-.engine-badge {
+.po-modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.po-search-box {
+    position: relative;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-search-icon {
+    position: absolute;
+    left: 2.25rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+}
+
+.po-search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 2.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.po-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-search-input::placeholder {
+    color: var(--gray-400);
+}
+
+.po-search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0;
+    font-size: 0.9375rem;
+}
+
+.po-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 0.25rem;
+}
+
+.po-result-row:hover {
+    background: var(--gray-50);
+}
+
+.po-result-row:last-child {
+    margin-bottom: 0;
+}
+
+.po-result-info {
+    flex: 1;
+}
+
+.po-result-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 0.9375rem;
+    margin-bottom: 0.125rem;
+}
+
+.po-result-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.po-result-badge {
     display: inline-block;
     padding: 0.125rem 0.5rem;
     background: var(--blue-100);
     color: var(--blue-800);
-    border-radius: var(--border-radius);
+    border-radius: 9999px;
     font-size: 0.75rem;
     font-weight: 600;
     margin-left: 0.5rem;
 }
 
-.select-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: var(--gray-500);
-    transition: all 0.2s;
-    pointer-events: none;
+.po-result-action {
+    color: var(--gray-400);
+    transition: all 0.15s ease;
 }
 
-.engine-result-row:hover .select-indicator {
-    color: var(--red-600);
+.po-result-row:hover .po-result-action {
+    color: var(--primary);
     transform: translateX(2px);
 }
 
-.select-indicator svg {
-    flex-shrink: 0;
-}
-
-.empty-state {
+.po-empty-state {
     text-align: center;
     padding: 3rem 1rem;
     color: var(--gray-500);
 }
 
-.empty-state-icon {
-    font-size: 3rem;
-    margin-bottom: 1rem;
+.po-empty-state-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.75rem;
     opacity: 0.5;
 }
 
-.empty-state-text {
-    font-size: 0.9375rem;
+.po-search-results::-webkit-scrollbar {
+    width: 6px;
 }
 
-/* Scrollbar styling */
-#engine-results::-webkit-scrollbar {
-    width: 8px;
-}
-
-#engine-results::-webkit-scrollbar-track {
+.po-search-results::-webkit-scrollbar-track {
     background: var(--gray-100);
-    border-radius: var(--border-radius);
+    border-radius: 3px;
 }
 
-#engine-results::-webkit-scrollbar-thumb {
+.po-search-results::-webkit-scrollbar-thumb {
+    background: var(--gray-300);
+    border-radius: 3px;
+}
+
+.po-search-results::-webkit-scrollbar-thumb:hover {
     background: var(--gray-400);
-    border-radius: var(--border-radius);
-}
-
-#engine-results::-webkit-scrollbar-thumb:hover {
-    background: var(--gray-500);
 }
 
 @media (max-width: 768px) {
-    .modal-content-large {
+    .po-modal {
         width: 95%;
-        max-height: 90vh;
+        height: 85vh;
+        max-height: none;
     }
     
-    .engine-result-row {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-    }
-    
-    .select-indicator {
-        justify-content: center;
+    .po-modal-lg {
+        max-width: none;
+        height: 90vh;
     }
 }
 </style>
-

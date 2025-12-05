@@ -1,481 +1,911 @@
 {% extends "base.html" %}
-{% block title %}Edit Part — {{ part.part_number }}{% endblock %}
+{% load static %}
+{% load inventory_extras %}
 
-{% block extra_css %}
-<style>
-    .edit-header {
-        background: linear-gradient(135deg, var(--gray-900) 0%, var(--gray-700) 100%);
-        color: white;
-        padding: 2rem;
-        margin: -1rem -1rem 2rem -1rem;
-        border-radius: var(--border-radius);
-    }
-    
-    .edit-title {
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.5rem;
-    }
-    
-    .edit-subtitle {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin-bottom: 1rem;
-    }
-    
-    .breadcrumb {
-        font-size: 0.875rem;
-        opacity: 0.8;
-    }
-    
-    .breadcrumb a {
-        color: white;
-        text-decoration: none;
-    }
-    
-    .breadcrumb a:hover {
-        text-decoration: underline;
-    }
-    
-    .edit-container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-    
-    .edit-card {
-        background: white;
-        border: 1px solid var(--gray-200);
-        border-radius: var(--border-radius);
-        box-shadow: var(--shadow);
-        margin-bottom: 2rem;
-    }
-    
-    .edit-card-header {
-        padding: 1.5rem;
-        border-bottom: 1px solid var(--gray-200);
-        background: var(--gray-50);
-    }
-    
-    .edit-card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--gray-900);
-        margin-bottom: 0.5rem;
-    }
-    
-    .edit-card-subtitle {
-        color: var(--gray-600);
-        font-size: 0.875rem;
-    }
-    
-    .edit-card-body {
-        padding: 1.5rem;
-    }
-    
-    .form-section {
-        margin-bottom: 2rem;
-    }
-    
-    .form-section-title {
-        font-size: 1.1rem;
-        font-weight: 600;
-        color: var(--gray-800);
-        margin-bottom: 1rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 2px solid var(--red-600);
-    }
-    
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 1.5rem;
-    }
-    
-    .form-group {
-        margin-bottom: 1.5rem;
-    }
-    
-    .form-group.full-width {
-        grid-column: 1 / -1;
-    }
-    
-    .form-label {
-        display: block;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-        color: var(--gray-700);
-        font-size: 0.875rem;
-    }
-    
-    .form-control {
-        width: 100%;
-        padding: 0.75rem;
-        border: 1px solid var(--gray-300);
-        border-radius: var(--border-radius);
-        font-size: 1rem;
-        transition: border-color 0.2s ease;
-    }
-    
-    .form-control:focus {
-        outline: none;
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
-    }
-    
-    .form-error {
-        color: var(--error);
-        font-size: 0.875rem;
-        margin-top: 0.25rem;
-        background-color: #fed7d7;
-        padding: 0.25rem 0.5rem;
-        border-radius: var(--border-radius);
-        border: 1px solid #feb2b2;
-    }
-    
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--gray-200);
-    }
-    
-    .specs-empty {
-        text-align: center;
-        padding: 2rem;
-        color: var(--gray-500);
-        background: var(--gray-50);
-        border-radius: var(--border-radius);
-        font-style: italic;
-    }
-    
-    @media (max-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-            gap: 1rem;
-        }
-        
-        .edit-header {
-            margin: -1rem -1rem 1rem -1rem;
-            padding: 1.5rem;
-        }
-        
-        .edit-title {
-            font-size: 1.5rem;
-        }
-        
-        .form-actions {
-            flex-direction: column;
-        }
-    }
-</style>
-{% endblock %}
+{% block title %}{% if is_new %}New Part{% else %}Part — {{ part.part_number }}{% endif %} — Spring Garden Repair{% endblock %}
 
 {% block content %}
-<div class="edit-header">
-    <div class="breadcrumb">
-        <a href="{% url 'imports:index' %}">Home</a> → 
-        <a href="{% url 'inventory:parts_list' %}">Parts</a> → 
-        <a href="{% url 'inventory:part_detail' part.pk %}">{{ part.part_number }}</a> → 
-        Edit
+<div class="part-page">
+    <!-- Sticky Header -->
+    <div class="part-header">
+        <div class="part-header-left">
+            <div class="part-id-display">
+                <span class="part-label">Part</span>
+                <h1 class="part-title">{% if is_new %}New Part{% else %}{{ part.part_number }}{% endif %}</h1>
+            </div>
+            {% if not is_new %}
+            <span class="part-name-badge">{{ part.name|default:"Unnamed Part" }}</span>
+            {% if part.category %}
+            <span class="part-category-badge">{{ part.category.name }}</span>
+            {% endif %}
+            {% endif %}
+        </div>
+        <div class="part-header-actions">
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('part-form').requestSubmit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                {% if is_new %}Create Part{% else %}Save Changes{% endif %}
+            </button>
+            <a href="{% url 'inventory:parts_list' %}" class="btn btn-outline">Cancel</a>
+            {% if not is_new %}
+            <button type="button" class="btn btn-danger-outline" 
+                    onclick="if(confirm('Are you sure you want to delete this Part? This action cannot be undone.')) document.getElementById('delete-form').submit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Delete
+            </button>
+            {% endif %}
+        </div>
     </div>
-    
-    <h1 class="edit-title">Edit Part</h1>
-    <p class="edit-subtitle">{{ part.part_number }} - {{ part.name }}</p>
-</div>
 
-<div class="edit-container">
-    <form method="post" action="{% url 'inventory:part_update' part.pk %}">
+    <form method="post" id="part-form" {% if not is_new %}action="{% url 'inventory:part_update' part.pk %}"{% endif %}>
         {% csrf_token %}
         
-        <!-- Basic Information -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Basic Information</h2>
-                <p class="edit-card-subtitle">Core part details</p>
+        <div class="part-layout">
+            <!-- Main Content Column -->
+            <div class="part-main">
+                <!-- Part Information Card (Compact) -->
+                <div class="part-card part-card-compact">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                            </svg>
+                            Part Information
+                        </div>
+                    </div>
+                    <div class="part-card-body part-card-body-compact">
+                        <div class="part-info-grid">
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Part Number</label>
+                                <input type="text" name="part_number" value="{{ form.part_number.value|default_if_none:'' }}" class="part-input-sm" placeholder="Part Number">
+                                {% for error in form.part_number.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Name</label>
+                                <input type="text" name="name" value="{{ form.name.value|default_if_none:'' }}" class="part-input-sm" placeholder="Name">
+                                {% for error in form.name.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Category</label>
+                                <select name="category" id="id_category" class="part-input-sm"
+                                        {% if not is_new %}hx-get="{% url 'inventory:part_category_preview' part.pk %}"
+                                        hx-target="#category-preview"
+                                        hx-trigger="change"
+                                        hx-include="[name='category']"{% endif %}>
+                                    <option value="">Select Category</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category.pk }}" {% if form.category.value == category.pk|stringformat:"s" or form.category.value == category.pk %}selected{% endif %}>{{ category.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.category.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Manufacturer</label>
+                                <input type="text" name="manufacturer" value="{{ form.manufacturer.value|default_if_none:'' }}" class="part-input-sm" placeholder="Manufacturer">
+                                {% for error in form.manufacturer.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Unit</label>
+                                <input type="text" name="unit" value="{{ form.unit.value|default_if_none:'' }}" class="part-input-sm" placeholder="Unit">
+                                {% for error in form.unit.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Type</label>
+                                <input type="text" name="type" value="{{ form.type.value|default_if_none:'' }}" class="part-input-sm" placeholder="Type">
+                                {% for error in form.type.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Weight (lbs)</label>
+                                <input type="number" name="weight" value="{{ form.weight.value|default_if_none:'' }}" class="part-input-sm" placeholder="Weight" step="0.01">
+                                {% for error in form.weight.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Manufacturer Type</label>
+                                <input type="text" name="manufacturer_type" value="{{ form.manufacturer_type.value|default_if_none:'' }}" class="part-input-sm" placeholder="Manufacturer Type">
+                                {% for error in form.manufacturer_type.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                            <div class="part-info-field">
+                                <label class="part-label-sm">Primary Vendor</label>
+                                <select name="primary_vendor" class="part-input-sm">
+                                    <option value="">No Primary Vendor</option>
+                                    {% for vendor in vendors %}
+                                    <option value="{{ vendor.pk }}" {% if form.primary_vendor.value == vendor.pk|stringformat:"s" or form.primary_vendor.value == vendor.pk %}selected{% endif %}>{{ vendor.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                {% for error in form.primary_vendor.errors %}<span class="part-form-error">{{ error }}</span>{% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if not is_new %}
+                <!-- Category Change Preview -->
+                <div id="category-preview"></div>
+                {% endif %}
+
+                {% if not is_new %}
+                <!-- Specifications Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            Specifications
+                            {% if part.category %}<span class="part-badge-count">{{ part.category.name }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="part-card-body">
+                        {% if part.category %}
+                            <div class="specs-form-grid">
+                                {% for field in specs_form %}
+                                    <div class="spec-field">
+                                        <label class="part-label-sm">{{ field.label }}</label>
+                                        {{ field }}
+                                        {% if field.help_text %}
+                                            <p class="spec-help-text">{{ field.help_text }}</p>
+                                        {% endif %}
+                                        {% for error in field.errors %}
+                                            <span class="part-form-error">{{ error }}</span>
+                                        {% endfor %}
+                                    </div>
+                                {% empty %}
+                                    <div class="specs-empty">
+                                        This category has no specifications defined.
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="specs-empty">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                <p>Select a category to add specifications.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Related Engines Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                            </svg>
+                            Used on Engines
+                            {% if engine_count %}<span class="part-badge-count">{{ engine_count }}</span>{% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:engine_search_modal_for_part' part.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Engine
+                        </button>
+                    </div>
+                    <div class="part-card-body p-0">
+                        <div id="part-engines-section"
+                             hx-get="{% url 'inventory:part_engines_partial' part.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="part-loading">
+                                <span class="spinner"></span>
+                                Loading engines...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Related Machines Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+                                <rect x="9" y="9" width="6" height="6"></rect>
+                                <line x1="9" y1="1" x2="9" y2="4"></line>
+                                <line x1="15" y1="1" x2="15" y2="4"></line>
+                            </svg>
+                            Used on Machines
+                            {% if machine_count %}<span class="part-badge-count">{{ machine_count }}</span>{% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:machine_search_modal_for_part' part.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Machine
+                        </button>
+                    </div>
+                    <div class="part-card-body p-0">
+                        <div id="part-machines-section"
+                             hx-get="{% url 'inventory:part_machines_partial' part.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="part-loading">
+                                <span class="spinner"></span>
+                                Loading machines...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Used in Kits Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                            Used in Kits
+                            {% if kit_count %}<span class="part-badge-count">{{ kit_count }}</span>{% endif %}
+                        </div>
+                    </div>
+                    <div class="part-card-body p-0">
+                        <div id="part-kits-section"
+                             hx-get="{% url 'inventory:part_kits_partial' part.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="part-loading">
+                                <span class="spinner"></span>
+                                Loading kits...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vendors Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                            Vendors
+                            {% if vendor_count %}<span class="part-badge-count">{{ vendor_count }}</span>{% endif %}
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'inventory:vendor_search_modal_for_part' part.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Vendor
+                        </button>
+                    </div>
+                    <div class="part-card-body p-0">
+                        <div id="part-vendors-section"
+                             hx-get="{% url 'inventory:part_vendors_section' part.id %}"
+                             hx-trigger="load"
+                             hx-target="this"
+                             hx-swap="innerHTML">
+                            <div class="part-loading">
+                                <span class="spinner"></span>
+                                Loading vendors...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
             </div>
-            
-            <div class="edit-card-body">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.part_number.id_for_label }}">Part Number</label>
-                        {{ form.part_number }}
-                        {% for error in form.part_number.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+
+            {% if not is_new %}
+            <!-- Sidebar Column -->
+            <div class="part-sidebar">
+                <!-- Record Information Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Record Information
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.name.id_for_label }}">Name</label>
-                        {{ form.name }}
-                        {% for error in form.name.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                    <div class="part-card-body">
+                        <div class="part-form-group">
+                            <label class="part-label-sm">ID</label>
+                            <div class="part-value">{{ part.pk }}</div>
+                        </div>
+                        <div class="part-form-group">
+                            <label class="part-label-sm">Created</label>
+                            <div class="part-value">{{ part.created_at|date:"M j, Y g:i A" }}</div>
+                        </div>
+                        <div class="part-form-group">
+                            <label class="part-label-sm">Updated</label>
+                            <div class="part-value">{{ part.updated_at|date:"M j, Y g:i A" }}</div>
+                        </div>
+                        <div class="part-form-group">
+                            <label class="part-label-sm">Created By</label>
+                            <div class="part-value {% if not part.created_by %}empty{% endif %}">
+                                {{ part.created_by|default:"System" }}
+                            </div>
+                        </div>
+                        <div class="part-form-group">
+                            <label class="part-label-sm">Updated By</label>
+                            <div class="part-value {% if not part.updated_by %}empty{% endif %}">
+                                {{ part.updated_by|default:"System" }}
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.category.id_for_label }}">Category</label>
-                        {{ form.category }}
-                        {% for error in form.category.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                </div>
+
+                <!-- Quick Stats Card -->
+                <div class="part-card">
+                    <div class="part-card-header">
+                        <div class="part-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10"></line>
+                                <line x1="18" y1="20" x2="18" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="16"></line>
+                            </svg>
+                            Quick Stats
+                        </div>
                     </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.manufacturer.id_for_label }}">Manufacturer</label>
-                        {{ form.manufacturer }}
-                        {% for error in form.manufacturer.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.unit.id_for_label }}">Unit</label>
-                        {{ form.unit }}
-                        {% for error in form.unit.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.type.id_for_label }}">Type</label>
-                        {{ form.type }}
-                        {% for error in form.type.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.weight.id_for_label }}">Weight (lbs)</label>
-                        {{ form.weight }}
-                        {% for error in form.weight.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.manufacturer_type.id_for_label }}">Manufacturer Type</label>
-                        {{ form.manufacturer_type }}
-                        {% for error in form.manufacturer_type.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
-                    </div>
-                    
-                    <div class="form-group">
-                        <label class="form-label" for="{{ form.primary_vendor.id_for_label }}">Primary Vendor</label>
-                        {{ form.primary_vendor }}
-                        {% for error in form.primary_vendor.errors %}
-                            <div class="form-error">{{ error }}</div>
-                        {% endfor %}
+                    <div class="part-card-body">
+                        <div class="part-stats-grid">
+                            <div class="part-stat">
+                                <span class="part-stat-value">{{ engine_count|default:0 }}</span>
+                                <span class="part-stat-label">Engines</span>
+                            </div>
+                            <div class="part-stat">
+                                <span class="part-stat-value">{{ machine_count|default:0 }}</span>
+                                <span class="part-stat-label">Machines</span>
+                            </div>
+                            <div class="part-stat">
+                                <span class="part-stat-value">{{ kit_count|default:0 }}</span>
+                                <span class="part-stat-label">Kits</span>
+                            </div>
+                            <div class="part-stat">
+                                <span class="part-stat-value">{{ vendor_count|default:0 }}</span>
+                                <span class="part-stat-label">Vendors</span>
+                            </div>
+                        </div>
+                        <div class="part-stat-highlight">
+                            <span class="part-stat-label">Total Stock</span>
+                            <span class="part-stat-value-lg">{{ total_stock|default:0 }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
-        
-                 <!-- Category Change Preview -->
-         <div id="category-preview" class="mt-4"></div>
-         
-         <!-- Specifications -->
-         <div class="edit-card">
-             <div class="edit-card-header">
-                 <h2 class="edit-card-title">Specifications</h2>
-                 <p class="edit-card-subtitle">
-                     {% if part.category %}
-                         Category: {{ part.category.name }}
-                     {% else %}
-                         No category selected
-                     {% endif %}
-                 </p>
-             </div>
-             
-             <div class="edit-card-body">
-                 {% if part.category %}
-                     <div class="form-grid">
-                         {% for field in specs_form %}
-                             <div class="form-group">
-                                 <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-                                 {{ field }}
-                                 {% if field.help_text %}
-                                     <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
-                                 {% endif %}
-                                 {% for error in field.errors %}
-                                     <div class="form-error">{{ error }}</div>
-                                 {% endfor %}
-                             </div>
-                         {% empty %}
-                             <div class="form-group full-width">
-                                 <div class="specs-empty">
-                                     This category has no specifications.
-                                 </div>
-                             </div>
-                         {% endfor %}
-                     </div>
-                 {% else %}
-                     <div class="specs-empty">
-                         Select a category to add specifications.
-                     </div>
-                 {% endif %}
-             </div>
-         </div>
-        
-        <!-- Vendor Relationships -->
-        <div class="edit-card">
-            <div class="edit-card-header">
-                <h2 class="edit-card-title">Vendor Relationships</h2>
-                <p class="edit-card-subtitle">Pricing and stock information by vendor</p>
-            </div>
-            
-            <div class="edit-card-body">
-                {{ vset.management_form }}
-                
-                <table class="vendor-table" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
-                    <thead>
-                        <tr style="background-color: var(--gray-50);">
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor Part Number</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Vendor SKU</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Price</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Cost</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Stock Qty</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Lead Time (days)</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Notes</th>
-                            <th style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200); font-weight: 600; color: var(--gray-700);">Remove</th>
-                        </tr>
-                    </thead>
-                    <tbody id="vendor-rows">
-                        {% for vendor_form in vset %}
-                            <tr class="vendor-row">
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor_part_number }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.vendor_sku }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.price }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.cost }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.stock_qty }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.lead_time_days }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">{{ vendor_form.notes }}</td>
-                                <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-                                    {% if vendor_form.DELETE %}
-                                        {{ vendor_form.DELETE }}
-                                    {% endif %}
-                                    <button type="button" class="remove-vendor-btn" onclick="removeVendorRow(this)" style="background-color: var(--error); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.75rem;">Remove</button>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-                
-                <button type="button" class="add-vendor-btn" onclick="addVendorRow()" style="background-color: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.875rem; margin-top: 1rem;">Add Vendor</button>
-            </div>
-        </div>
-        
-        <!-- Form Actions -->
-        <div class="edit-card">
-            <div class="edit-card-body">
-                <div class="form-actions">
-                    <button class="btn btn-primary" type="submit">Save Changes</button>
-                    <a href="{% url 'inventory:part_detail' part.pk %}" class="btn btn-secondary">Cancel</a>
-                </div>
-            </div>
-        </div>
-         </form>
- </div>
+    </form>
+
+    {% if not is_new %}
+    <!-- Delete form (hidden) -->
+    <form method="post" action="{% url 'inventory:part_delete' part.pk %}" id="delete-form" style="display: none;">
+        {% csrf_token %}
+    </form>
+    {% endif %}
+</div>
+
+<style>
+/* Part Page Layout */
+.part-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Sticky Header */
+.part-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    margin: -2rem -1rem 1.5rem -1rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+}
+
+.part-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.part-id-display {
+    display: flex;
+    flex-direction: column;
+}
+
+.part-id-display .part-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.part-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.part-header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.part-header-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Type Badges */
+.part-name-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+.part-category-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+/* Two Column Layout */
+.part-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.part-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.part-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 90px;
+}
+
+/* Card Styles */
+.part-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.part-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.part-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.part-card-title svg {
+    color: var(--gray-500);
+}
+
+.part-card-body {
+    padding: 1.25rem;
+}
+
+.part-card-body.p-0 {
+    padding: 0;
+}
+
+/* Compact Card Styles */
+.part-card-compact .part-card-header {
+    padding: 0.625rem 1rem;
+}
+
+.part-card-body-compact {
+    padding: 0.75rem 1rem !important;
+}
+
+/* Compact Part Info Grid */
+.part-info-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    align-items: end;
+}
+
+.part-info-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.part-input-sm {
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.part-input-sm:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.part-input-sm::placeholder {
+    color: var(--gray-400);
+}
+
+/* Form Elements */
+.part-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+}
+
+.part-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.part-label-sm {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.part-form-error {
+    color: var(--error);
+    font-size: 0.75rem;
+}
+
+.part-value {
+    font-size: 0.875rem;
+    color: var(--gray-900);
+}
+
+.part-value.empty {
+    color: var(--gray-400);
+    font-style: italic;
+}
+
+/* Badge Count */
+.part-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    background: var(--gray-200);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+/* Stats Grid */
+.part-stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.part-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: 0.375rem;
+}
+
+.part-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.part-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.part-stat-highlight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--gray-700) 100%);
+    border-radius: 0.375rem;
+    color: white;
+}
+
+.part-stat-highlight .part-stat-label {
+    color: rgba(255,255,255,0.8);
+}
+
+.part-stat-value-lg {
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* Specs Form */
+.specs-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.spec-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.spec-field input,
+.spec-field select,
+.spec-field textarea {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.spec-field input:focus,
+.spec-field select:focus,
+.spec-field textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.spec-help-text {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+
+.specs-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+    background: var(--gray-50);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+}
+
+.specs-empty svg {
+    color: var(--gray-400);
+}
+
+/* Loading State */
+.part-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 2rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--gray-200);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Button Variants */
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-danger-outline {
+    background: white;
+    color: var(--error);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: var(--error);
+}
+
+/* Table in Cards - reuse machine styles for consistency */
+.part-card .part-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.part-card .part-table th,
+.part-card .part-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.part-card .part-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.part-card .part-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.part-card .part-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+    .part-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .part-sidebar {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 1024px) {
+    .part-info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .part-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .part-header-left {
+        flex-wrap: wrap;
+    }
+    
+    .part-header-actions {
+        flex-wrap: wrap;
+    }
+    
+    .part-sidebar {
+        grid-template-columns: 1fr;
+    }
+    
+    .specs-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .part-info-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <script>
-  document.addEventListener('DOMContentLoaded', function(){
-    const sel = document.querySelector('#id_category');
-    const preview = document.getElementById('category-preview');
-    if (!sel || !preview) return;
+// Event delegation for clickable rows - set up immediately
+document.body.addEventListener('click', function(e) {
+    // Find if click was on a clickable row
+    const row = e.target.closest('.part-clickable-row');
+    if (!row) return;
     
-    sel.addEventListener('change', () => {
-      const categoryId = sel.value;
-      if (!categoryId) {
-        preview.innerHTML = '';
+    // Don't navigate if clicking on actions cell or button
+    if (e.target.closest('.part-actions-cell') || e.target.closest('button')) {
         return;
-      }
-      
-      const url = "{% url 'inventory:part_category_preview' part.pk %}" + "?category_id=" + categoryId;
-      fetch(url, {headers: {'X-Requested-With':'XMLHttpRequest'}})
-        .then(r => r.text())
-        .then(html => { 
-          preview.innerHTML = html; 
-        })
-        .catch(error => {
-          console.error('Error loading category preview:', error);
-          preview.innerHTML = '<div class="alert alert-error">Error loading category preview</div>';
-        });
+    }
+    
+    // Navigate to the href
+    const href = row.getAttribute('data-href');
+    if (href) {
+        window.location.href = href;
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle escape key for modals
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modals = document.querySelectorAll('.po-modal-overlay');
+            modals.forEach(modal => modal.remove());
+        }
     });
-  });
-  
-  // Vendor formset functionality
-  let vendorRowCount = {{ vset.total_form_count }};
-
-  function addVendorRow() {
-      const tbody = document.getElementById('vendor-rows');
-      const newRow = document.createElement('tr');
-      newRow.className = 'vendor-row';
-      
-      newRow.innerHTML = `
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <select name="vendors-${vendorRowCount}-vendor" class="form-control">
-                  <option value="">Select vendor...</option>
-                  {% for vendor in vendors %}
-                      <option value="{{ vendor.id }}">{{ vendor.name }}</option>
-                  {% endfor %}
-              </select>
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="text" name="vendors-${vendorRowCount}-vendor_part_number" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="text" name="vendors-${vendorRowCount}-vendor_sku" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="number" name="vendors-${vendorRowCount}-price" step="0.01" min="0" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="number" name="vendors-${vendorRowCount}-cost" step="0.01" min="0" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="number" name="vendors-${vendorRowCount}-stock_qty" step="1" min="0" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="number" name="vendors-${vendorRowCount}-lead_time_days" step="1" min="0" class="form-control">
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <textarea name="vendors-${vendorRowCount}-notes" rows="2" class="form-control"></textarea>
-          </td>
-          <td style="padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--gray-200);">
-              <input type="hidden" name="vendors-${vendorRowCount}-id" value="">
-              <button type="button" class="remove-vendor-btn" onclick="removeVendorRow(this)" style="background-color: var(--error); color: white; border: none; padding: 0.25rem 0.5rem; border-radius: var(--border-radius); cursor: pointer; font-size: 0.75rem;">Remove</button>
-          </td>
-      `;
-      
-      tbody.appendChild(newRow);
-      vendorRowCount++;
-      
-      // Update the form count
-      const totalFormsInput = document.querySelector('input[name="vendors-TOTAL_FORMS"]');
-      if (totalFormsInput) {
-          totalFormsInput.value = vendorRowCount;
-      }
-  }
-
-  function removeVendorRow(button) {
-      const row = button.closest('tr');
-      const deleteInput = row.querySelector('input[name*="-DELETE"]');
-      if (deleteInput) {
-          deleteInput.checked = true;
-          row.style.display = 'none';
-      } else {
-          row.remove();
-          vendorRowCount--;
-          
-          // Update the form count
-          const totalFormsInput = document.querySelector('input[name="vendors-TOTAL_FORMS"]');
-          if (totalFormsInput) {
-              totalFormsInput.value = vendorRowCount;
-          }
-      }
-  }
+});
 </script>
 {% endblock %}

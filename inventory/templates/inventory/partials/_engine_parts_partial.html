@@ -1,54 +1,57 @@
 {% if engine_parts %}
-    <table class="related-table">
-        <thead>
-            <tr>
-                <th>Part Number</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Manufacturer</th>
-                <th>Notes</th>
-                <th style="width: 50px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for engine_part in engine_parts %}
-                <tr class="part-row engine-part-row"
-                    data-href="{% url 'inventory:part_detail' engine_part.part.pk %}">
-                    <td>{{ engine_part.part.part_number }}</td>
-                    <td>{{ engine_part.part.name }}</td>
-                    <td>{{ engine_part.part.category|default:"—" }}</td>
-                    <td>{{ engine_part.part.manufacturer|default:"—" }}</td>
-                    <td>{{ engine_part.notes|default:"—" }}</td>
-                    <td class="text-right">
-                        <form hx-post="{% url 'inventory:engine_part_remove' engine.pk engine_part.pk %}"
-                              hx-target="#engine-parts-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this part from the engine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="engine-table">
+    <thead>
+        <tr>
+            <th>Part Number</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Manufacturer</th>
+            <th>Notes</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for engine_part in engine_parts %}
+        <tr class="engine-clickable-row" data-href="{% url 'inventory:part_edit' engine_part.part.pk %}">
+            <td>
+                <span class="engine-make-text">{{ engine_part.part.part_number }}</span>
+            </td>
+            <td>{{ engine_part.part.name }}</td>
+            <td>
+                <span class="engine-text-muted">{{ engine_part.part.category|default:"—" }}</span>
+            </td>
+            <td>
+                <span class="engine-text-muted">{{ engine_part.part.manufacturer|default:"—" }}</span>
+            </td>
+            <td>
+                <span class="engine-text-muted">{{ engine_part.notes|truncatewords:5|default:"—" }}</span>
+            </td>
+            <td class="engine-actions-cell">
+                <form hx-post="{% url 'inventory:engine_part_remove' engine.pk engine_part.pk %}"
+                      hx-target="#engine-parts-section"
+                      hx-swap="innerHTML"
+                      hx-confirm="Are you sure you want to remove this part from the engine?"
+                      style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-danger-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
-    <div class="empty-message">
-        <p>This engine is not associated with any parts yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+    </svg>
+    <span>No parts associated with this engine</span>
+</div>
 {% endif %}
-
-<script>
-if (!window.__enginePartRowHandlerAttached) {
-    document.addEventListener('click', function(event) {
-        const row = event.target.closest('.engine-part-row');
-        if (!row || event.target.closest('button') || event.target.closest('form')) {
-            return;
-        }
-        window.location.href = row.dataset.href;
-    });
-    window.__enginePartRowHandlerAttached = true;
-}
-</script>
-

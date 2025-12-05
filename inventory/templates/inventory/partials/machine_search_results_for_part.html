@@ -1,26 +1,144 @@
 {% if machines %}
     {% for machine in machines %}
-        <div class="machine-result-row"
-             hx-post="{% url 'inventory:part_machine_add' part.id %}"
-             hx-vals='{"machine_id": "{{ machine.id }}"}'
-             hx-target="#part-machines-section"
-             hx-swap="innerHTML"
-             hx-on::after-request="if(event.detail.successful) document.querySelector('.modal-overlay').remove();">
-            <div class="result-title">
-                {{ machine.year }} {{ machine.make }} {{ machine.model }}
+    <div class="po-result-row"
+         hx-post="{% url 'inventory:part_machine_add' part.id %}"
+         hx-vals='{"machine_id": "{{ machine.id }}"}'
+         hx-target="#part-machines-section"
+         hx-swap="innerHTML"
+         hx-on::after-request="if(event.detail.successful) document.getElementById('machine-search-modal').remove()">
+        <div class="po-result-info">
+            <div class="po-result-title">
+                {% if machine.year %}{{ machine.year }} {% endif %}{{ machine.make }} {{ machine.model }}
+                {% if machine.machine_type %}
+                    <span class="po-result-badge">{{ machine.machine_type }}</span>
+                {% endif %}
+            </div>
+            <div class="po-result-subtitle">
+                {% if machine.market_type %}
+                    Market: {{ machine.market_type }}
+                {% else %}
+                    <span style="color: var(--gray-400);">No market type specified</span>
+                {% endif %}
             </div>
         </div>
+        <div class="po-result-action">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+        </div>
+    </div>
     {% endfor %}
+    
+    {% if machines|length >= 100 %}
+    <div class="po-search-limit-notice">
+        Showing first 100 results. Refine your search for more specific results.
+    </div>
+    {% endif %}
+{% elif query %}
+    <div class="po-search-placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>No machines found matching "<strong>{{ query }}</strong>"</p>
+        <span style="font-size: 0.8125rem;">Try adjusting your search terms</span>
+    </div>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <p class="empty-state-text">
-            {% if request.GET.q %}
-                No machines found matching your search.
-            {% else %}
-                Start typing to search for machines...
-            {% endif %}
-        </p>
+    <div class="po-search-placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+            <rect x="9" y="9" width="6" height="6"></rect>
+            <line x1="9" y1="1" x2="9" y2="4"></line>
+            <line x1="15" y1="1" x2="15" y2="4"></line>
+        </svg>
+        <p>Start typing to search for machines...</p>
+        <span style="font-size: 0.8125rem;">Search by year, make, model, or type</span>
     </div>
 {% endif %}
 
+<style>
+.po-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 0.25rem;
+}
+
+.po-result-row:hover {
+    background: var(--gray-50);
+}
+
+.po-result-row:last-child {
+    margin-bottom: 0;
+}
+
+.po-result-info {
+    flex: 1;
+}
+
+.po-result-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 0.9375rem;
+    margin-bottom: 0.125rem;
+}
+
+.po-result-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.po-result-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.po-result-action {
+    color: var(--gray-400);
+    transition: all 0.15s ease;
+}
+
+.po-result-row:hover .po-result-action {
+    color: var(--primary);
+    transform: translateX(2px);
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9375rem;
+}
+
+.po-search-limit-notice {
+    text-align: center;
+    padding: 1rem;
+    color: var(--gray-500);
+    font-size: 0.8125rem;
+    border-top: 1px solid var(--gray-200);
+    margin-top: 0.5rem;
+}
+</style>

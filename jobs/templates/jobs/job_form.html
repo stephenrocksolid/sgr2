@@ -1,0 +1,1881 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Job {{ job.job_number|default:job.pk }}{% if job.ticket_number %} (from Ticket {{ job.ticket_number }}){% endif %} - Spring Garden Repair{% endblock %}
+
+{% block content %}
+<div class="job-page">
+    <!-- Sticky Header -->
+    <div class="job-header">
+        <div class="job-header-left">
+            <div class="job-number-display">
+                <span class="job-label">Job</span>
+                <h1 class="job-number">{{ job.job_number|default:job.pk }}</h1>
+            </div>
+            <span id="job-status-badge" class="job-status-badge job-status-{{ job.status }}">{{ job.get_status_display }}</span>
+            {% if job.ticket_number %}
+            <span class="job-ticket-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+                Ticket {{ job.ticket_number }}
+            </span>
+            {% endif %}
+        </div>
+        <div class="job-header-actions">
+            {% if job.ticket_number %}
+            <a href="{% url 'jobs:ticket_detail' job.pk %}" class="btn btn-outline">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                View Job Ticket
+            </a>
+            {% endif %}
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('job-form').requestSubmit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                    <polyline points="17 21 17 13 7 13 7 21"></polyline>
+                    <polyline points="7 3 7 8 15 8"></polyline>
+                </svg>
+                Save Changes
+            </button>
+            <button type="button" class="btn btn-outline" onclick="window.print()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                    <rect x="6" y="14" width="12" height="8"></rect>
+                </svg>
+                Print
+            </button>
+            <a href="{% url 'jobs:job_list' %}" class="btn btn-outline">Cancel</a>
+            <button type="button" class="btn btn-danger-outline" 
+                    onclick="if(confirm('Are you sure you want to delete this Job? This action cannot be undone.')) document.getElementById('delete-form').submit()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+                Delete
+            </button>
+        </div>
+    </div>
+
+    <form method="post" id="job-form">
+        {% csrf_token %}
+        
+        <div class="job-layout">
+            <!-- Main Content Column -->
+            <div class="job-main">
+                <!-- Customer & Engine Row (side by side) -->
+                <div class="job-two-column-row">
+                    <!-- Customer Card -->
+                    <div class="job-card">
+                        <div class="job-card-header">
+                            <div class="job-card-title">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="12" cy="7" r="4"></circle>
+                                </svg>
+                                Customer
+                            </div>
+                        </div>
+                        <div class="job-card-body">
+                            <div id="customer-section">
+                                {% include 'jobs/partials/customer_selected_section.html' with ticket=job %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Engine Card -->
+                    <div class="job-card">
+                        <div class="job-card-header">
+                            <div class="job-card-title">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                                </svg>
+                                Engine
+                            </div>
+                        </div>
+                        <div class="job-card-body">
+                            <div id="engine-section">
+                                {% include 'jobs/partials/engine_selected_section.html' with ticket=job %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="20" x2="12" y2="10"></line>
+                                <line x1="18" y1="20" x2="18" y2="4"></line>
+                                <line x1="6" y1="20" x2="6" y2="16"></line>
+                            </svg>
+                            Progress
+                            <span class="job-badge-progress">{{ progress_percentage }}%</span>
+                        </div>
+                        <div class="job-progress-actions">
+                            <label class="job-notify-checkbox">
+                                <input type="checkbox" name="email_client_on_step_complete" {% if job.email_client_on_step_complete %}checked{% endif %}>
+                                <span>Notify on step complete</span>
+                            </label>
+                            <button type="button" class="btn btn-sm btn-outline" onclick="document.getElementById('email-client-modal').classList.add('active')">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                    <polyline points="22,6 12,13 2,6"></polyline>
+                                </svg>
+                                Email Client
+                            </button>
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    hx-get="{% url 'jobs:job_notify_team_modal' job.pk %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                    <circle cx="9" cy="7" r="4"></circle>
+                                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                </svg>
+                                Notify Team
+                            </button>
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <div class="job-progress-grid">
+                            {% if component.block %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="block_done" {% if component.block_done %}checked{% endif %}>
+                                <span class="job-progress-label">Block</span>
+                            </label>
+                            {% endif %}
+                            {% if component.head %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="head_done" {% if component.head_done %}checked{% endif %}>
+                                <span class="job-progress-label">Head</span>
+                            </label>
+                            {% endif %}
+                            {% if component.crankshaft %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="crankshaft_done" {% if component.crankshaft_done %}checked{% endif %}>
+                                <span class="job-progress-label">Crankshaft</span>
+                            </label>
+                            {% endif %}
+                            {% if component.waterpump %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="waterpump_done" {% if component.waterpump_done %}checked{% endif %}>
+                                <span class="job-progress-label">Water Pump</span>
+                            </label>
+                            {% endif %}
+                            {% if component.rods %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="rods_done" {% if component.rods_done %}checked{% endif %}>
+                                <span class="job-progress-label">Rods</span>
+                            </label>
+                            {% endif %}
+                            {% if component.pistons %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="pistons_done" {% if component.pistons_done %}checked{% endif %}>
+                                <span class="job-progress-label">Pistons</span>
+                            </label>
+                            {% endif %}
+                            {% if component.flywheel %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="flywheel_done" {% if component.flywheel_done %}checked{% endif %}>
+                                <span class="job-progress-label">Flywheel</span>
+                            </label>
+                            {% endif %}
+                            {% if component.manifold %}
+                            <label class="job-progress-item">
+                                <input type="checkbox" name="manifold_done" {% if component.manifold_done %}checked{% endif %}>
+                                <span class="job-progress-label">Manifold</span>
+                            </label>
+                            {% endif %}
+                        </div>
+                        <!-- Main Brg. and Piston Size Fields -->
+                        <div class="job-progress-fields">
+                            <div class="job-progress-field">
+                                <label class="job-progress-field-label">Main Brg.</label>
+                                <input type="text" name="main_bearing" value="{{ component.main_bearing|default:'' }}" class="job-progress-field-input" placeholder="e.g., STD, .010, .020">
+                            </div>
+                            <div class="job-progress-field">
+                                <label class="job-progress-field-label">Piston Size</label>
+                                <input type="text" name="piston_size" value="{{ component.piston_size|default:'' }}" class="job-progress-field-input" placeholder="e.g., STD, .020, .040">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assigned Employees Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            Assigned Employees
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'jobs:job_user_assign_modal' job.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Employee
+                        </button>
+                    </div>
+                    <div class="job-card-body p-0">
+                        <div id="assigned-employees-list">
+                            {% include 'jobs/partials/job_employees_table_body.html' %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Build Lists Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Build Lists
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary"
+                                hx-get="{% url 'jobs:job_buildlist_add_modal' job.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Add Build List
+                        </button>
+                    </div>
+                    <div class="job-card-body p-0">
+                        <div id="job-buildlists-section">
+                            {% include 'jobs/partials/job_buildlists_table.html' %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kits Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                            </svg>
+                            Kits
+                        </div>
+                        <div class="job-card-actions">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    hx-get="{% url 'jobs:job_kit_add_modal' job.pk %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add Kit
+                            </button>
+                        </div>
+                    </div>
+                    <div class="job-card-body p-0">
+                        <div id="job-kits-section">
+                            {% include 'jobs/partials/job_kits_table.html' %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Parts Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="3"></circle>
+                                <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                            </svg>
+                            Parts
+                        </div>
+                        <div class="job-card-actions">
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    hx-get="{% url 'jobs:job_part_add_modal' job.pk %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Add Part
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline"
+                                    hx-get="{% url 'jobs:job_create_po_modal' job.pk %}"
+                                    hx-target="body"
+                                    hx-swap="beforeend">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                    <polyline points="14 2 14 8 20 8"></polyline>
+                                </svg>
+                                Create PO
+                            </button>
+                        </div>
+                    </div>
+                    <div class="job-card-body p-0">
+                        <div id="job-parts-section">
+                            {% include 'jobs/partials/job_parts_table.html' %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attachments Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                            </svg>
+                            Attachments
+                            <span class="job-badge-count">{{ attachments.count }}</span>
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <form hx-post="{% url 'jobs:job_attachment_upload' job.pk %}"
+                              hx-target="#attachments-list"
+                              hx-swap="outerHTML"
+                              hx-encoding="multipart/form-data"
+                              class="job-upload-form">
+                            {% csrf_token %}
+                            <div class="job-upload-row">
+                                <div class="job-file-input-wrapper">
+                                    <input type="file" name="file" id="job-file-input" class="job-file-input">
+                                    <label for="job-file-input" class="job-file-label">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                            <polyline points="17 8 12 3 7 8"></polyline>
+                                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                                        </svg>
+                                        Choose file...
+                                    </label>
+                                </div>
+                                <button type="submit" class="btn btn-sm btn-primary">Upload</button>
+                            </div>
+                        </form>
+                        {% include 'jobs/partials/job_attachments_list.html' %}
+                    </div>
+                </div>
+
+                <!-- Notes Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                            Notes
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <textarea name="notes" class="job-textarea" rows="4" placeholder="Enter notes about this job...">{{ job.notes }}</textarea>
+                    </div>
+                </div>
+
+                <!-- Purchase Orders Card -->
+                <div class="job-card" id="job-pos-card" hx-trigger="poCreated from:body" hx-get="{% url 'jobs:job_detail' job.pk %}" hx-select="#job-pos-section" hx-target="#job-pos-section" hx-swap="outerHTML">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Purchase Orders
+                            {% if job_pos %}<span class="job-badge-count">{{ job_pos.count }}</span>{% endif %}
+                        </div>
+                        <a href="{% url 'jobs:purchase_order_list' %}" class="btn btn-sm btn-outline">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
+                                <polyline points="15 3 21 3 21 9"></polyline>
+                                <line x1="10" y1="14" x2="21" y2="3"></line>
+                            </svg>
+                            View All POs
+                        </a>
+                    </div>
+                    <div class="job-card-body p-0">
+                        {% include 'jobs/partials/job_pos_table.html' %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Column -->
+            <div class="job-sidebar">
+                <!-- Status & Dates Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                                <line x1="16" y1="2" x2="16" y2="6"></line>
+                                <line x1="8" y1="2" x2="8" y2="6"></line>
+                                <line x1="3" y1="10" x2="21" y2="10"></line>
+                            </svg>
+                            Status & Dates
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Status</label>
+                            <select name="status" id="status-select" class="job-select">
+                                <option value="">---------</option>
+                                <option value="quote" {% if job.status == 'quote' %}selected{% endif %}>Quote</option>
+                                <option value="wo" {% if job.status == 'wo' %}selected{% endif %}>WO</option>
+                                <option value="invoice" {% if job.status == 'invoice' %}selected{% endif %}>Invoice</option>
+                            </select>
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Job Date</label>
+                            <input type="date" name="date" value="{{ job.date|date:'Y-m-d' }}" class="job-input">
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Finish Date</label>
+                            <input type="date" name="finish_date" value="{{ job.finish_date|date:'Y-m-d' }}" class="job-input">
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Invoice Date</label>
+                            <input type="date" name="invoice_date" value="{{ job.invoice_date|date:'Y-m-d' }}" class="job-input">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sales Info Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            Sales Information
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Store</label>
+                            <input type="text" name="store" value="{{ job.store }}" class="job-input" placeholder="Store location">
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Sales Person</label>
+                            <select name="sales_person" class="job-select">
+                                <option value="">Select...</option>
+                                {% for user in sales_people %}
+                                <option value="{{ user.id }}" {% if job.sales_person_id == user.id %}selected{% endif %}>
+                                    {{ user.get_full_name|default:user.username }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Customer PO</label>
+                            <input type="text" name="customer_po" value="{{ job.customer_po }}" class="job-input" placeholder="Customer's PO number">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing & Terms Card -->
+                <div class="job-card">
+                    <div class="job-card-header">
+                        <div class="job-card-title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                                <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                            </svg>
+                            Pricing & Terms
+                        </div>
+                    </div>
+                    <div class="job-card-body">
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Price Setting</label>
+                            <select name="price_setting" class="job-select">
+                                <option value="">Select...</option>
+                                <option value="list" {% if job.price_setting == 'list' %}selected{% endif %}>List</option>
+                                <option value="jobber" {% if job.price_setting == 'jobber' %}selected{% endif %}>Jobber</option>
+                            </select>
+                        </div>
+                        <div class="job-form-group">
+                            <label class="job-label-sm">Terms</label>
+                            <select name="terms" class="job-select">
+                                <option value="">Select...</option>
+                                <option value="net_30" {% if job.terms == 'net_30' %}selected{% endif %}>Net 30</option>
+                                <option value="1pct_10" {% if job.terms == '1pct_10' %}selected{% endif %}>1% 10</option>
+                                <option value="other" {% if job.terms == 'other' %}selected{% endif %}>Other</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    <!-- Delete form (hidden) -->
+    <form method="post" action="{% url 'jobs:job_delete' job.pk %}" id="delete-form" style="display: none;">
+        {% csrf_token %}
+    </form>
+
+    <!-- Print Document (only visible when printing) -->
+    <div class="print-document">
+        <!-- Document Header -->
+        <div class="print-doc-header">
+            <div class="print-doc-company">
+                <h1 class="print-doc-company-name">Spring Garden Repair</h1>
+                <p class="print-doc-company-tagline">Engine Rebuilding Specialists</p>
+            </div>
+            <div class="print-doc-type">
+                <span class="print-doc-type-label" data-status="{{ job.status }}">
+                    {% if job.status == 'invoice' %}INVOICE{% elif job.status == 'quote' %}QUOTE{% else %}WORK ORDER{% endif %}
+                </span>
+                <span class="print-doc-number">#{{ job.job_number|default:job.pk }}</span>
+            </div>
+        </div>
+
+        <!-- Document Info Row -->
+        <div class="print-doc-info-row">
+            <div class="print-doc-info-block">
+                <h3>Bill To</h3>
+                <p class="print-doc-customer-name">{{ job.customer.name|default:"—" }}</p>
+                {% if job.bill_to_address or job.customer.bill_to_address %}
+                <p>{{ job.bill_to_address|default:job.customer.bill_to_address }}</p>
+                <p>{{ job.bill_to_city|default:job.customer.bill_to_city }}{% if job.bill_to_state or job.customer.bill_to_state %}, {{ job.bill_to_state|default:job.customer.bill_to_state }}{% endif %} {{ job.bill_to_zip|default:job.customer.bill_to_zip }}</p>
+                {% endif %}
+            </div>
+            <div class="print-doc-info-block">
+                <h3>Ship To</h3>
+                {% if job.ship_to_name %}
+                <p class="print-doc-customer-name">{{ job.ship_to_name }}</p>
+                <p>{{ job.ship_to_address }}</p>
+                <p>{{ job.ship_to_city }}{% if job.ship_to_state %}, {{ job.ship_to_state }}{% endif %} {{ job.ship_to_zip }}</p>
+                {% else %}
+                <p class="print-doc-muted">Same as billing</p>
+                {% endif %}
+            </div>
+            <div class="print-doc-info-block print-doc-details">
+                <table>
+                    <tr>
+                        <td>Date:</td>
+                        <td>{{ job.date|date:"M d, Y"|default:"—" }}</td>
+                    </tr>
+                    {% if job.status == 'invoice' and job.invoice_date %}
+                    <tr>
+                        <td>Invoice Date:</td>
+                        <td>{{ job.invoice_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if job.finish_date %}
+                    <tr>
+                        <td>Finish Date:</td>
+                        <td>{{ job.finish_date|date:"M d, Y" }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if job.customer_po %}
+                    <tr>
+                        <td>Customer PO:</td>
+                        <td>{{ job.customer_po }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if job.terms %}
+                    <tr>
+                        <td>Terms:</td>
+                        <td>{{ job.get_terms_display }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+            </div>
+        </div>
+
+        <!-- Engine Information -->
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Engine Information</h2>
+            <div class="print-doc-engine-grid">
+                <div class="print-doc-engine-item">
+                    <span class="print-doc-engine-label">Make</span>
+                    <span class="print-doc-engine-value">{% if job.engine_make %}{{ job.engine_make }}{% elif job.engine %}{{ job.engine.make }}{% else %}—{% endif %}</span>
+                </div>
+                <div class="print-doc-engine-item">
+                    <span class="print-doc-engine-label">Model</span>
+                    <span class="print-doc-engine-value">{% if job.engine_model %}{{ job.engine_model }}{% elif job.engine %}{{ job.engine.model }}{% else %}—{% endif %}</span>
+                </div>
+                <div class="print-doc-engine-item">
+                    <span class="print-doc-engine-label">Identifier</span>
+                    <span class="print-doc-engine-value">{% if job.engine_identifier %}{{ job.engine_identifier }}{% elif job.engine %}{{ job.engine.sg_identifier }}{% else %}—{% endif %}</span>
+                </div>
+                {% if job.engine_serial_number %}
+                <div class="print-doc-engine-item">
+                    <span class="print-doc-engine-label">Serial #</span>
+                    <span class="print-doc-engine-value">{{ job.engine_serial_number }}</span>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Components -->
+        {% if component %}
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Components</h2>
+            <div class="print-doc-components-grid">
+                {% if component.block %}<span class="print-doc-component">Block{% if component.block_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.head %}<span class="print-doc-component">Head{% if component.head_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.crankshaft %}<span class="print-doc-component">Crankshaft{% if component.crankshaft_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.waterpump %}<span class="print-doc-component">Water Pump{% if component.waterpump_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.rods %}<span class="print-doc-component">Rods{% if component.rods_qty %} ({{ component.rods_qty }}){% endif %}{% if component.rods_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.pistons %}<span class="print-doc-component">Pistons{% if component.pistons_qty %} ({{ component.pistons_qty }}){% endif %}{% if component.pistons_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.flywheel %}<span class="print-doc-component">Flywheel{% if component.flywheel_done %} ✓{% endif %}</span>{% endif %}
+                {% if component.manifold %}<span class="print-doc-component">Manifold{% if component.manifold_done %} ✓{% endif %}</span>{% endif %}
+            </div>
+            {% if component.main_bearing or component.piston_size %}
+            <div class="print-doc-component-specs">
+                {% if component.main_bearing %}<span>Main Brg: {{ component.main_bearing }}</span>{% endif %}
+                {% if component.piston_size %}<span>Piston Size: {{ component.piston_size }}</span>{% endif %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Build Lists -->
+        {% if job_build_lists %}
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Build Lists</h2>
+            {% for build_list in job_build_lists %}
+            <div class="print-doc-buildlist">
+                <h3 class="print-doc-buildlist-name">{{ build_list.name }}</h3>
+                {% if build_list.items.exists %}
+                <table class="print-doc-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%">Item</th>
+                            <th style="width: 30%">Description</th>
+                            <th style="width: 10%">Est. Hours</th>
+                            <th style="width: 10%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in build_list.items.all %}
+                        {% if item.on_job %}
+                        <tr>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.description|default:"" }}</td>
+                            <td>{{ item.estimated_hours|default:"—" }}</td>
+                            <td>{% if item.is_complete %}Complete{% else %}Pending{% endif %}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Kits -->
+        {% if job_kits %}
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Kits</h2>
+            {% for kit in job_kits %}
+            <div class="print-doc-buildlist">
+                <h3 class="print-doc-buildlist-name">{{ kit.name }}</h3>
+                {% if kit.items.exists %}
+                <table class="print-doc-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%">Part #</th>
+                            <th style="width: 45%">Description</th>
+                            <th style="width: 15%">Qty</th>
+                            <th style="width: 15%">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in kit.items.all %}
+                        {% if item.on_job %}
+                        <tr>
+                            <td>{{ item.part_number|default:"—" }}</td>
+                            <td>{{ item.name }}</td>
+                            <td>{{ item.quantity|floatformat:0 }}</td>
+                            <td>{% if item.is_complete %}Complete{% else %}Pending{% endif %}</td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Parts -->
+        {% if job_parts %}
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Parts</h2>
+            <table class="print-doc-table">
+                <thead>
+                    <tr>
+                        <th style="width: 25%">Part #</th>
+                        <th style="width: 45%">Description</th>
+                        <th style="width: 15%">Qty</th>
+                        <th style="width: 15%">Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in job_parts %}
+                    <tr>
+                        <td>{{ part.part_number|default:"—" }}</td>
+                        <td>{{ part.name }}</td>
+                        <td>{{ part.quantity|floatformat:0|default:"1" }}</td>
+                        <td>{{ part.notes|default:"" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Notes -->
+        {% if job.notes %}
+        <div class="print-doc-section">
+            <h2 class="print-doc-section-title">Notes</h2>
+            <p class="print-doc-notes">{{ job.notes|linebreaks }}</p>
+        </div>
+        {% endif %}
+
+        <!-- Footer -->
+        <div class="print-doc-footer">
+            <p>Thank you for your business!</p>
+            <p class="print-doc-footer-small">Spring Garden Repair • Questions? Contact us at your service representative</p>
+        </div>
+    </div>
+
+    <!-- Email Client Feature Modal -->
+    <div id="email-client-modal" class="job-modal-overlay" onclick="if(event.target === this) this.classList.remove('active')">
+        <div class="job-modal-content">
+            <div class="job-modal-header">
+                <div class="job-modal-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                        <polyline points="22,6 12,13 2,6"></polyline>
+                    </svg>
+                    Email Client
+                </div>
+                <button type="button" class="job-modal-close" onclick="document.getElementById('email-client-modal').classList.remove('active')">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+            <div class="job-modal-body">
+                <div style="text-align: center; padding: 1rem 0;">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--gray-400)" stroke-width="1.5" style="margin-bottom: 1rem;">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <path d="M12 16v-4"></path>
+                        <path d="M12 8h.01"></path>
+                    </svg>
+                    <h3 style="margin: 0 0 0.5rem 0; font-size: 1.125rem; font-weight: 600; color: var(--gray-900);">Feature Under Development</h3>
+                    <p style="margin: 0; color: var(--gray-600); font-size: 0.875rem;">
+                        The Email Client feature is currently under development and will be available in a future update.
+                    </p>
+                </div>
+            </div>
+            <div class="job-modal-footer">
+                <button type="button" class="btn btn-primary" onclick="document.getElementById('email-client-modal').classList.remove('active')">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Job Page Layout */
+.job-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Sticky Header */
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    margin: -2rem -1rem 1.5rem -1rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+}
+
+.job-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.job-number-display {
+    display: flex;
+    flex-direction: column;
+}
+
+.job-number-display .job-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.job-number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.job-header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.job-header-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Status Badge */
+.job-status-badge {
+    padding: 0.375rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-status-quote { background: #fef3c7; color: #92400e; }
+.job-status-wo { background: #dbeafe; color: #1e40af; }
+.job-status-invoice { background: #d1fae5; color: #065f46; }
+
+.job-ticket-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Two Column Layout */
+.job-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+.job-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Two Column Row (Customer + Engine) */
+.job-two-column-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+
+.job-two-column-row .job-card {
+    min-width: 0;
+}
+
+.job-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    position: sticky;
+    top: 90px;
+}
+
+/* Card Styles */
+.job-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.job-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.job-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.job-card-title svg {
+    color: var(--gray-500);
+}
+
+.job-card-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.job-card-body {
+    padding: 1.25rem;
+}
+
+.job-card-body.p-0 {
+    padding: 0;
+}
+
+/* Form Elements */
+.job-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.job-form-group:last-child {
+    margin-bottom: 0;
+}
+
+.job-label-sm {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-input,
+.job-select,
+.job-textarea {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+    width: 100%;
+}
+
+.job-input:focus,
+.job-select:focus,
+.job-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.job-input::placeholder,
+.job-textarea::placeholder {
+    color: var(--gray-400);
+}
+
+.job-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Progress Section */
+.job-progress-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.job-notify-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: var(--gray-600);
+    cursor: pointer;
+}
+
+.job-notify-checkbox input {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--primary);
+}
+
+.job-progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+}
+
+.job-progress-item {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.job-progress-item:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.job-progress-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.job-progress-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Progress Fields (Main Brg. and Piston Size) */
+.job-progress-fields {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.job-progress-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.job-progress-field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-progress-field-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+}
+
+.job-progress-field-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.job-progress-field-input::placeholder {
+    color: var(--gray-400);
+}
+
+/* Badge Styles */
+.job-badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    background: var(--gray-200);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.job-badge-progress {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.625rem;
+    background: #dbeafe;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+/* Upload Form */
+.job-upload-form {
+    margin-bottom: 1rem;
+}
+
+.job-upload-row {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.job-file-input-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.job-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.job-file-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--gray-100);
+    border: 1px dashed var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.job-file-label:hover {
+    background: var(--gray-200);
+    border-color: var(--gray-400);
+}
+
+/* Button Variants */
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-danger-outline {
+    background: white;
+    color: var(--error);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: var(--error);
+}
+
+/* Modal Styles */
+.job-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.job-modal-overlay.active {
+    display: flex;
+}
+
+.job-modal-content {
+    background-color: white;
+    border-radius: 0.5rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.job-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.job-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.job-modal-title svg {
+    color: var(--gray-500);
+}
+
+.job-modal-close {
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--gray-400);
+    transition: color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.job-modal-close:hover {
+    color: var(--gray-600);
+}
+
+.job-modal-body {
+    padding: 1.5rem;
+}
+
+.job-modal-description {
+    margin: 0 0 1rem 0;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+}
+
+.job-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+/* Success toast notification */
+.success-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background-color: #10b981;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    z-index: 3000;
+    animation: slideInUp 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Table in Cards */
+.job-card .job-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.job-card .job-table th,
+.job-card .job-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.job-card .job-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-card .job-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.job-card .job-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+    .job-layout {
+        grid-template-columns: 1fr;
+    }
+    
+    .job-sidebar {
+        position: static;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1.5rem;
+    }
+}
+
+@media (max-width: 900px) {
+    .job-sidebar {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .job-two-column-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .job-progress-actions {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 640px) {
+    .job-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .job-header-left {
+        flex-wrap: wrap;
+    }
+    
+    .job-header-actions {
+        flex-wrap: wrap;
+    }
+    
+    .job-sidebar {
+        grid-template-columns: 1fr;
+    }
+    
+    .job-progress-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .job-upload-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+/* Print Document (hidden on screen, visible only when printing) */
+.print-document {
+    display: none;
+}
+
+/* Print Styles */
+@media print {
+    /* Reset body and html for print - prevent extra pages from min-height: 100vh */
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        background: white !important;
+    }
+    
+    body.app-body {
+        display: block !important;
+        min-height: 0 !important;
+    }
+    
+    /* Hide sidebar completely */
+    .sidebar {
+        display: none !important;
+        height: 0 !important;
+        width: 0 !important;
+        position: absolute !important;
+        overflow: hidden !important;
+    }
+    
+    /* Reset main content wrapper - remove min-height and margin that push content */
+    .main-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        display: block !important;
+        flex: none !important;
+        background: white !important;
+    }
+    
+    .main-content-container {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    /* Hide flash messages */
+    .messages {
+        display: none !important;
+    }
+    
+    /* Hide the interactive job page content but show print-document */
+    .job-page {
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .job-page > *:not(.print-document) {
+        display: none !important;
+    }
+    
+    /* Hide modals and hidden forms */
+    .job-modal-overlay,
+    #email-client-modal,
+    #delete-form,
+    .job-header,
+    .job-layout,
+    #job-form {
+        display: none !important;
+    }
+    
+    .print-document {
+        display: block !important;
+        position: static;
+        width: 100%;
+        background: white;
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        font-size: 10pt;
+        color: #333;
+        line-height: 1.4;
+    }
+
+    /* Document Header */
+    .print-doc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding-bottom: 20px;
+        border-bottom: 3px solid #2563eb;
+        margin-bottom: 20px;
+    }
+
+    .print-doc-company-name {
+        font-size: 24pt;
+        font-weight: 700;
+        color: #1e40af;
+        margin: 0;
+        letter-spacing: -0.5px;
+    }
+
+    .print-doc-company-tagline {
+        font-size: 9pt;
+        color: #64748b;
+        margin: 4px 0 0 0;
+        font-style: italic;
+    }
+
+    .print-doc-type {
+        text-align: right;
+    }
+
+    .print-doc-type-label {
+        display: block;
+        font-size: 18pt;
+        font-weight: 700;
+        color: #1e40af;
+        letter-spacing: 2px;
+    }
+
+    .print-doc-type-label[data-status="invoice"] {
+        color: #059669;
+    }
+
+    .print-doc-type-label[data-status="quote"] {
+        color: #d97706;
+    }
+
+    .print-doc-number {
+        display: block;
+        font-size: 14pt;
+        font-weight: 600;
+        color: #374151;
+        margin-top: 4px;
+    }
+
+    /* Info Row */
+    .print-doc-info-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 24px;
+        margin-bottom: 24px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .print-doc-info-block h3 {
+        font-size: 8pt;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 8px 0;
+        padding-bottom: 4px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .print-doc-info-block p {
+        margin: 0 0 2px 0;
+        font-size: 10pt;
+    }
+
+    .print-doc-customer-name {
+        font-weight: 600;
+        font-size: 11pt !important;
+        color: #111;
+    }
+
+    .print-doc-muted {
+        color: #9ca3af;
+        font-style: italic;
+    }
+
+    .print-doc-details table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .print-doc-details td {
+        padding: 2px 0;
+        font-size: 9pt;
+    }
+
+    .print-doc-details td:first-child {
+        font-weight: 600;
+        color: #6b7280;
+        width: 45%;
+    }
+
+    .print-doc-details td:last-child {
+        text-align: right;
+    }
+
+    /* Sections */
+    .print-doc-section {
+        margin-bottom: 20px;
+        page-break-inside: avoid;
+    }
+
+    .print-doc-section-title {
+        font-size: 11pt;
+        font-weight: 700;
+        color: #1e40af;
+        margin: 0 0 12px 0;
+        padding: 6px 10px;
+        background: #f1f5f9;
+        border-left: 4px solid #2563eb;
+    }
+
+    /* Engine Grid */
+    .print-doc-engine-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    .print-doc-engine-item {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .print-doc-engine-label {
+        font-size: 8pt;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+
+    .print-doc-engine-value {
+        font-size: 11pt;
+        font-weight: 600;
+        color: #111;
+    }
+
+    /* Components */
+    .print-doc-components-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .print-doc-component {
+        display: inline-block;
+        padding: 4px 12px;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 4px;
+        font-size: 9pt;
+        font-weight: 500;
+    }
+
+    .print-doc-component-specs {
+        margin-top: 12px;
+        padding-top: 8px;
+        border-top: 1px dashed #d1d5db;
+        display: flex;
+        gap: 24px;
+        font-size: 10pt;
+    }
+
+    .print-doc-component-specs span {
+        font-weight: 500;
+    }
+
+    /* Build Lists */
+    .print-doc-buildlist {
+        margin-bottom: 16px;
+    }
+
+    .print-doc-buildlist:last-child {
+        margin-bottom: 0;
+    }
+
+    .print-doc-buildlist-name {
+        font-size: 10pt;
+        font-weight: 600;
+        color: #374151;
+        margin: 0 0 8px 0;
+        padding-left: 8px;
+        border-left: 2px solid #9ca3af;
+    }
+
+    /* Tables */
+    .print-doc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 9pt;
+    }
+
+    .print-doc-table th {
+        background: #f8fafc;
+        padding: 8px 10px;
+        text-align: left;
+        font-weight: 600;
+        color: #475569;
+        font-size: 8pt;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .print-doc-table td {
+        padding: 6px 10px;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: top;
+    }
+
+    .print-doc-table tbody tr:nth-child(even) {
+        background: #fafafa;
+    }
+
+    /* Notes */
+    .print-doc-notes {
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        padding: 12px 16px;
+        border-radius: 4px;
+        font-size: 10pt;
+        line-height: 1.5;
+    }
+
+    .print-doc-notes p {
+        margin: 0 0 8px 0;
+    }
+
+    .print-doc-notes p:last-child {
+        margin-bottom: 0;
+    }
+
+    /* Footer */
+    .print-doc-footer {
+        margin-top: 32px;
+        padding-top: 16px;
+        border-top: 2px solid #2563eb;
+        text-align: center;
+    }
+
+    .print-doc-footer p {
+        margin: 0;
+        font-size: 10pt;
+        color: #374151;
+    }
+
+    .print-doc-footer p:first-child {
+        font-weight: 600;
+        font-size: 11pt;
+        margin-bottom: 4px;
+    }
+
+    .print-doc-footer-small {
+        font-size: 8pt !important;
+        color: #9ca3af !important;
+    }
+
+    /* Page settings */
+    @page {
+        size: letter;
+        margin: 0.5in;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const progressGrid = document.querySelector('.job-progress-grid');
+    const progressBadge = document.querySelector('.job-badge-progress');
+    
+    if (progressGrid && progressBadge) {
+        function updateProgressPercentage() {
+            const checkboxes = progressGrid.querySelectorAll('input[type="checkbox"]');
+            const totalSteps = checkboxes.length;
+            const completedSteps = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            const percentage = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+            progressBadge.textContent = percentage + '%';
+        }
+        
+        const checkboxes = progressGrid.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateProgressPercentage);
+        });
+    }
+    
+    // Update status badge when dropdown changes
+    const statusSelect = document.getElementById('status-select');
+    const statusBadge = document.getElementById('job-status-badge');
+    const openPosCount = {{ open_pos_count }};
+    let previousStatus = statusSelect ? statusSelect.value : '';
+    
+    if (statusSelect && statusBadge) {
+        const statusLabels = {
+            'quote': 'Quote',
+            'wo': 'WO',
+            'invoice': 'Invoice',
+            '': ''
+        };
+        
+        statusSelect.addEventListener('change', function() {
+            const newStatus = this.value;
+            const newLabel = statusLabels[newStatus] || newStatus;
+            
+            // Check if changing from WO to Invoice with open POs
+            if (previousStatus === 'wo' && newStatus === 'invoice' && openPosCount > 0) {
+                const confirmChange = confirm(
+                    'Warning: There ' + (openPosCount === 1 ? 'is ' : 'are ') + 
+                    openPosCount + ' open Purchase Order' + (openPosCount === 1 ? '' : 's') + 
+                    ' for this job.\n\nAre you sure you want to change the status to Invoice?'
+                );
+                
+                if (!confirmChange) {
+                    // Revert to previous status
+                    this.value = previousStatus;
+                    return;
+                }
+            }
+            
+            // Update previous status
+            previousStatus = newStatus;
+            
+            // Update badge text
+            statusBadge.textContent = newLabel;
+            
+            // Update badge class
+            statusBadge.className = 'job-status-badge';
+            if (newStatus) {
+                statusBadge.classList.add('job-status-' + newStatus);
+            }
+        });
+    }
+});
+
+</script>
+{% endblock %}

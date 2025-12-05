@@ -9,11 +9,13 @@ urlpatterns = [
     
     # Machine views
     path('machines/', views.machines_list, name='machines_list'),
+    path('machines/new/', views.machine_create, name='machine_create'),
     path('machines/<int:machine_id>/', views.machine_detail, name='machine_detail'),
     
     # Machine edit routes
     path('machines/<int:pk>/edit/', views.machine_edit, name='machine_edit'),
     path('machines/<int:pk>/update/', views.machine_update, name='machine_update'),
+    path('machines/<int:pk>/delete/', views.machine_delete, name='machine_delete'),
     
     # New stable container endpoints
     path('machines/<int:machine_id>/engines/partial/', views.machine_engines_partial, name='machine_engines_partial'),
@@ -35,11 +37,13 @@ urlpatterns = [
     
     # Engine views
     path('engines/', views.engines_list, name='engines_list'),
+    path('engines/new/', views.engine_create, name='engine_create'),
     path('engines/<int:engine_id>/', views.engine_detail, name='engine_detail'),
     
     # Engine edit routes
     path('engines/<int:pk>/edit/', views.engine_edit, name='engine_edit'),
     path('engines/<int:pk>/update/', views.engine_update, name='engine_update'),
+    path('engines/<int:pk>/delete/', views.engine_delete, name='engine_delete'),
     
     # Engine-Machine relationship HTMX endpoints (stable container)
     path('engines/<int:engine_id>/machines/partial/', views.engine_machines_partial, name='engine_machines_partial'),
@@ -102,6 +106,7 @@ urlpatterns = [
     # Part edit routes
     path('parts/<int:pk>/edit/', views.part_edit, name='part_edit'),
     path('parts/<int:pk>/update/', views.part_update, name='part_update'),
+    path('parts/<int:pk>/delete/', views.part_delete, name='part_delete'),
     path('parts/<int:pk>/category/preview/', views.part_category_preview, name='part_category_preview'),
     
     # Part custom fields HTMX endpoints
@@ -153,8 +158,10 @@ urlpatterns = [
     # Build Lists
     path('build-lists/', views.build_lists_list, name='build_lists_list'),
     path('build-lists/new/', views.build_list_create, name='build_list_create'),
+    path('build-lists/create-modal/', views.build_list_create_modal, name='build_list_create_modal'),
     path('build-lists/<int:build_list_id>/', views.build_list_detail, name='build_list_detail'),
     path('build-lists/<int:build_list_id>/edit/', views.build_list_edit, name='build_list_edit'),
+    path('build-lists/<int:build_list_id>/update/', views.build_list_update, name='build_list_update'),
     path('build-lists/<int:build_list_id>/delete/', views.build_list_delete, name='build_list_delete'),
     
     # Build list items (HTMX)
@@ -163,6 +170,7 @@ urlpatterns = [
     path('build-lists/<int:build_list_id>/items/add/modal/', views.build_list_item_add_modal, name='build_list_item_add_modal'),
     path('build-lists/<int:build_list_id>/items/add/', views.build_list_item_add, name='build_list_item_add'),
     path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/form/', views.build_list_item_edit_form, name='build_list_item_edit_form'),
+    path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/modal/', views.build_list_item_edit_modal, name='build_list_item_edit_modal'),
     path('build-lists/<int:build_list_id>/items/<int:item_id>/edit/', views.build_list_item_edit, name='build_list_item_edit'),
     path('build-lists/<int:build_list_id>/items/<int:item_id>/delete/', views.build_list_item_delete, name='build_list_item_delete'),
     
@@ -182,8 +190,10 @@ urlpatterns = [
     # Kits
     path('kits/', views.kits_list, name='kits_list'),
     path('kits/new/', views.kit_create, name='kit_create'),
+    path('kits/create-modal/', views.kit_create_modal, name='kit_create_modal'),
     path('kits/<int:kit_id>/', views.kit_detail, name='kit_detail'),
     path('kits/<int:kit_id>/edit/', views.kit_edit, name='kit_edit'),
+    path('kits/<int:kit_id>/update/', views.kit_update, name='kit_update'),
     path('kits/<int:kit_id>/delete/', views.kit_delete, name='kit_delete'),
     
     # Kit items (HTMX)
@@ -228,6 +238,9 @@ urlpatterns = [
     
     # Vendor contacts
     path("vendors/<int:vendor_id>/contacts/new/", views.vendor_contact_create, name="vendor_contact_create"),
+    path("vendors/<int:vendor_id>/contacts/modal/", views.vendor_contact_create_modal, name="vendor_contact_create_modal"),
+    path("vendors/<int:vendor_id>/contacts/create/", views.vendor_contact_create_ajax, name="vendor_contact_create_ajax"),
+    path("vendors/<int:vendor_id>/contacts/partial/", views.vendor_contacts_partial, name="vendor_contacts_partial"),
     path("vendors/<int:vendor_id>/contacts/<int:contact_id>/edit/", views.vendor_contact_edit, name="vendor_contact_edit"),
     path("vendors/<int:vendor_id>/contacts/<int:contact_id>/delete/", views.vendor_contact_delete_confirm, name="vendor_contact_delete_confirm"),
     path("vendors/<int:vendor_id>/contacts/<int:contact_id>/delete/confirm/", views.vendor_contact_delete, name="vendor_contact_delete"),
@@ -235,11 +248,13 @@ urlpatterns = [
 
     # Vendor detail partials (HTMX)
     path("vendors/<int:vendor_id>/parts/partial/", views.vendor_parts_partial, name="vendor_parts_partial"),
+    path("vendors/<int:vendor_id>/parts/modal/", views.vendor_part_add_modal, name="vendor_part_add_modal"),
                 path("vendors/<int:vendor_id>/parts/add/form/", views.vendor_part_add_form, name="vendor_part_add_form"),
             path("vendors/<int:vendor_id>/parts/add/", views.vendor_part_add, name="vendor_part_add"),
             path("vendors/<int:vendor_id>/parts/options/", views.vendor_part_options, name="vendor_part_options"),
     path("vendors/<int:vendor_id>/parts/<int:link_id>/edit/form/", views.vendor_part_edit_form, name="vendor_part_edit_form"),
     path("vendors/<int:vendor_id>/parts/<int:link_id>/edit/", views.vendor_part_edit, name="vendor_part_edit"),
+    path("vendors/<int:vendor_id>/parts/<int:link_id>/edit/modal/", views.vendor_part_edit_modal, name="vendor_part_edit_modal"),
     path("vendors/<int:vendor_id>/parts/<int:link_id>/remove/", views.vendor_part_remove, name="vendor_part_remove"),
 
     # Set primary vendor for a part (works from either page)

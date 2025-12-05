@@ -1,0 +1,707 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Time Tracking - Spring Garden Repair{% endblock %}
+
+{% block content %}
+<div class="tt-page">
+    <!-- Sticky Header -->
+    <div class="tt-header">
+        <div class="tt-header-left">
+            <div class="tt-title-display">
+                <span class="tt-label">Time Management</span>
+                <h1 class="tt-title">Time Tracking</h1>
+            </div>
+            <span class="tt-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                Track Hours
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Layout -->
+    <div class="tt-layout">
+        <!-- Main Content Column -->
+        <div class="tt-main">
+            <!-- Active Entry Card -->
+            <div class="tt-card" id="active-entry-card">
+                <div class="tt-card-header">
+                    <div class="tt-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        Active Time Entry
+                    </div>
+                </div>
+                <div class="tt-card-body">
+                    <div id="active-entry-container">
+                        <!-- Active entry will be loaded here via HTMX -->
+                        <div class="tt-empty-state">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            <span>No active time entry</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start New Entry Card -->
+            <div class="tt-card">
+                <div class="tt-card-header">
+                    <div class="tt-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Start New Entry
+                    </div>
+                </div>
+                <div class="tt-card-body">
+                    <form id="time-tracking-form">
+                        {% csrf_token %}
+                        <div class="tt-form-grid">
+                            <div class="tt-form-group">
+                                <label class="tt-label-sm required">Employee</label>
+                                <select id="employee-select" name="user_id" required class="tt-select"
+                                        hx-get="{% url 'jobs:time_tracking_active_entry' %}"
+                                        hx-trigger="change"
+                                        hx-target="#active-entry-container"
+                                        hx-include="#employee-select"
+                                        onchange="loadEmployeeHistory()">
+                                    <option value="">Select Employee...</option>
+                                    {% for user in users %}
+                                    <option value="{{ user.id }}" {% if user.id == current_user_id %}selected{% endif %}>{{ user.get_full_name|default:user.username }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="tt-form-group">
+                                <label class="tt-label-sm required">Job</label>
+                                <select id="job-select" name="job_id" required class="tt-select"
+                                        hx-get=""
+                                        hx-trigger="change"
+                                        hx-target="#buildlist-select"
+                                        hx-swap="innerHTML"
+                                        onchange="updateBuildListUrl()">
+                                    <option value="">Select Job...</option>
+                                    {% for job in jobs %}
+                                    <option value="{{ job.id }}">
+                                        {{ job.job_number }} - {{ job.customer.name|default:"No Customer" }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="tt-form-group">
+                                <label class="tt-label-sm">Build List</label>
+                                <select id="buildlist-select" name="job_build_list_id" class="tt-select"
+                                        hx-get=""
+                                        hx-trigger="change"
+                                        hx-target="#buildlist-item-select"
+                                        hx-swap="innerHTML"
+                                        onchange="updateBuildListItemUrl()">
+                                    <option value="">Select Build List...</option>
+                                </select>
+                            </div>
+
+                            <div class="tt-form-group">
+                                <label class="tt-label-sm">Build List Item</label>
+                                <select id="buildlist-item-select" name="job_build_list_item_id" class="tt-select">
+                                    <option value="">Select Build List Item...</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="tt-form-actions">
+                            <button type="button" id="start-btn" class="btn btn-success"
+                                    hx-post="{% url 'jobs:time_tracking_start' %}"
+                                    hx-include="#time-tracking-form"
+                                    hx-target="#active-entry-container"
+                                    hx-swap="innerHTML"
+                                    disabled
+                                    title="Please select an Employee and a Job to start tracking time">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                                </svg>
+                                Start Time
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Time History Card -->
+            <div class="tt-card">
+                <div class="tt-card-header">
+                    <div class="tt-card-title">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        Time History
+                    </div>
+                </div>
+                <div class="tt-card-body p-0">
+                    <div id="history-table-container">
+                        <div class="tt-table-wrapper">
+                            <table class="tt-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Job</th>
+                                        <th>Build List</th>
+                                        <th>Build List Item</th>
+                                        <th>Start Time</th>
+                                        <th>End Time</th>
+                                        <th>Duration</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="8" class="tt-empty-row">Select an employee to view their time history</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Time Tracking Page Layout */
+.tt-page {
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+/* Sticky Header */
+.tt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 1rem 1.5rem;
+    margin: -2rem -1rem 1.5rem -1rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+}
+
+.tt-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.tt-title-display {
+    display: flex;
+    flex-direction: column;
+}
+
+.tt-title-display .tt-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    font-weight: 600;
+}
+
+.tt-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.tt-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: #dbeafe;
+    color: #1e40af;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Layout */
+.tt-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.tt-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Card Styles */
+.tt-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-sm);
+    overflow: hidden;
+}
+
+.tt-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.875rem 1.25rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.tt-card-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-700);
+}
+
+.tt-card-title svg {
+    color: var(--gray-500);
+}
+
+.tt-card-body {
+    padding: 1.25rem;
+}
+
+.tt-card-body.p-0 {
+    padding: 0;
+}
+
+/* Form Styles */
+.tt-form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+.tt-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.tt-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.tt-label-sm {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.tt-label-sm.required::after {
+    content: " *";
+    color: #dc2626;
+}
+
+.tt-select {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+    cursor: pointer;
+}
+
+.tt-select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.tt-select:disabled {
+    background: var(--gray-50);
+    cursor: not-allowed;
+}
+
+/* Button Styles */
+.btn-success {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #10b981;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-success:hover:not(:disabled) {
+    background: #059669;
+}
+
+.btn-success:disabled {
+    background: var(--gray-300);
+    color: var(--gray-500);
+    cursor: not-allowed;
+}
+
+.btn-danger {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: #ef4444;
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background: #dc2626;
+}
+
+/* Active Entry Styles */
+.tt-active-entry {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 2px solid #fbbf24;
+    border-radius: 0.5rem;
+    padding: 1.25rem;
+}
+
+.tt-active-entry-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tt-active-entry-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.625rem;
+    background: #92400e;
+    color: white;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.tt-active-entry-badge svg {
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}
+
+.tt-active-entry-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.tt-active-entry-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.tt-active-entry-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #92400e;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.tt-active-entry-value {
+    font-size: 0.875rem;
+    color: #78350f;
+    font-weight: 500;
+}
+
+.tt-active-entry-actions {
+    display: flex;
+    gap: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(146, 64, 14, 0.2);
+}
+
+/* Empty State */
+.tt-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    color: var(--gray-400);
+    gap: 0.5rem;
+}
+
+.tt-empty-state svg {
+    color: var(--gray-300);
+}
+
+/* Table Styles */
+.tt-table-wrapper {
+    overflow-x: auto;
+}
+
+.tt-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tt-table th,
+.tt-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.tt-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.025em;
+}
+
+.tt-table tbody tr {
+    transition: background 0.15s ease;
+}
+
+.tt-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.tt-table tbody tr[hx-get] {
+    cursor: pointer;
+}
+
+.tt-empty-row {
+    text-align: center !important;
+    color: var(--gray-500);
+    padding: 2rem 1rem !important;
+}
+
+/* Status Badges */
+.tt-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.625rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.tt-status-active {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.tt-status-completed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+/* Job Link */
+.tt-job-link {
+    color: var(--primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.tt-job-link:hover {
+    text-decoration: underline;
+}
+
+.tt-job-customer {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin-top: 0.125rem;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+    .tt-form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .tt-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tt-active-entry-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 480px) {
+    .tt-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+    // Enable start button only when employee and job are selected
+    document.getElementById('employee-select').addEventListener('change', validateForm);
+    document.getElementById('job-select').addEventListener('change', validateForm);
+
+    function validateForm() {
+        const employeeId = document.getElementById('employee-select').value;
+        const jobId = document.getElementById('job-select').value;
+        const startBtn = document.getElementById('start-btn');
+        
+        if (employeeId && jobId) {
+            startBtn.disabled = false;
+            startBtn.title = 'Click to start tracking time';
+        } else {
+            startBtn.disabled = true;
+            // Update tooltip based on what's missing
+            if (!employeeId && !jobId) {
+                startBtn.title = 'Please select an Employee and a Job to start tracking time';
+            } else if (!employeeId) {
+                startBtn.title = 'Please select an Employee to start tracking time';
+            } else if (!jobId) {
+                startBtn.title = 'Please select a Job to start tracking time';
+            }
+        }
+    }
+
+    function updateBuildListUrl() {
+        const jobId = document.getElementById('job-select').value;
+        if (jobId) {
+            const url = `/jobs/time-tracking/job-buildlists/${jobId}/`;
+            document.getElementById('job-select').setAttribute('hx-get', url);
+            htmx.process(document.getElementById('job-select'));
+            htmx.trigger('#job-select', 'change');
+        } else {
+            document.getElementById('buildlist-select').innerHTML = '<option value="">Select Build List...</option>';
+            document.getElementById('buildlist-item-select').innerHTML = '<option value="">Select Build List Item...</option>';
+        }
+    }
+
+    function updateBuildListItemUrl() {
+        const buildListId = document.getElementById('buildlist-select').value;
+        if (buildListId) {
+            const url = `/jobs/time-tracking/buildlist-items/${buildListId}/`;
+            document.getElementById('buildlist-select').setAttribute('hx-get', url);
+            htmx.process(document.getElementById('buildlist-select'));
+            htmx.trigger('#buildlist-select', 'change');
+        } else {
+            document.getElementById('buildlist-item-select').innerHTML = '<option value="">Select Build List Item...</option>';
+        }
+    }
+
+    function loadEmployeeHistory() {
+        const employeeId = document.getElementById('employee-select').value;
+        if (employeeId) {
+            const url = `/jobs/time-tracking/history/${employeeId}/`;
+            htmx.ajax('GET', url, {target: '#history-table-container', swap: 'innerHTML'});
+        } else {
+            document.getElementById('history-table-container').innerHTML = `
+                <div class="tt-table-wrapper">
+                    <table class="tt-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Job</th>
+                                <th>Build List</th>
+                                <th>Build List Item</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td colspan="8" class="tt-empty-row">Select an employee to view their time history</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+    }
+
+    // Reload history after ending time
+    document.body.addEventListener('htmx:afterSwap', function(event) {
+        if (event.detail.target.id === 'active-entry-container') {
+            loadEmployeeHistory();
+        }
+    });
+
+    // Listen for timeEnded custom event
+    document.body.addEventListener('timeEnded', function(event) {
+        loadEmployeeHistory();
+    });
+
+    // Listen for timeUpdated custom event (after edit/delete)
+    document.body.addEventListener('timeUpdated', function(event) {
+        loadEmployeeHistory();
+    });
+
+    // Auto-load current user's data on page load
+    window.addEventListener('DOMContentLoaded', function() {
+        const employeeSelect = document.getElementById('employee-select');
+        const currentUserId = employeeSelect.value;
+        
+        if (currentUserId) {
+            // Load active entry
+            htmx.ajax('GET', '{% url 'jobs:time_tracking_active_entry' %}?user_id=' + currentUserId, {
+                target: '#active-entry-container',
+                swap: 'innerHTML'
+            });
+            
+            // Load history
+            loadEmployeeHistory();
+        }
+    });
+</script>
+{% endblock %}

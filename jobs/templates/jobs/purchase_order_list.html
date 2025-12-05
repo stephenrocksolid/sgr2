@@ -1,0 +1,897 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Purchase Orders - Spring Garden Repair{% endblock %}
+
+{% block content %}
+<div class="po-list-page">
+    <!-- Page Header -->
+    <div class="po-list-header">
+        <div class="po-list-header-left">
+            <h1 class="po-list-title">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                    <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
+                Purchase Orders
+            </h1>
+            <span class="po-list-count">{{ total_count }} total</span>
+        </div>
+        <div class="po-list-header-right">
+            <a href="{% url 'jobs:po_create' %}" class="btn btn-primary btn-create">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Purchase Order
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="po-stats-row">
+        <div class="po-stat-card">
+            <div class="po-stat-icon po-stat-icon-draft">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+            </div>
+            <div class="po-stat-info">
+                <div class="po-stat-value">{{ stats.draft|default:0 }}</div>
+                <div class="po-stat-label">Draft</div>
+            </div>
+        </div>
+        <div class="po-stat-card">
+            <div class="po-stat-icon po-stat-icon-submitted">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+            </div>
+            <div class="po-stat-info">
+                <div class="po-stat-value">{{ stats.submitted|default:0 }}</div>
+                <div class="po-stat-label">Submitted</div>
+            </div>
+        </div>
+        <div class="po-stat-card">
+            <div class="po-stat-icon po-stat-icon-partial">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                </svg>
+            </div>
+            <div class="po-stat-info">
+                <div class="po-stat-value">{{ stats.partially_received|default:0 }}</div>
+                <div class="po-stat-label">Partial</div>
+            </div>
+        </div>
+        <div class="po-stat-card">
+            <div class="po-stat-icon po-stat-icon-received">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <div class="po-stat-info">
+                <div class="po-stat-value">{{ stats.received|default:0 }}</div>
+                <div class="po-stat-label">Received</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="po-filter-bar">
+        <div class="po-search-wrapper">
+            <svg class="po-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form method="get" class="po-search-form" id="searchForm">
+                <input type="text" name="search" value="{{ search }}" class="po-search-input" placeholder="Search by PO number, vendor, notes...">
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+            </form>
+            {% if search %}
+            <button type="button" class="po-search-clear" onclick="clearSearch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+        <div class="po-filter-tabs">
+            <a href="?{% if search %}search={{ search }}&{% endif %}sort={{ sort }}" class="po-filter-tab {% if not status_filter %}active{% endif %}">
+                All
+            </a>
+            <a href="?status=draft{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="po-filter-tab {% if status_filter == 'draft' %}active{% endif %}">
+                Draft
+            </a>
+            <a href="?status=submitted{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="po-filter-tab {% if status_filter == 'submitted' %}active{% endif %}">
+                Submitted
+            </a>
+            <a href="?status=partially_received{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="po-filter-tab {% if status_filter == 'partially_received' %}active{% endif %}">
+                Partial
+            </a>
+            <a href="?status=received{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="po-filter-tab {% if status_filter == 'received' %}active{% endif %}">
+                Received
+            </a>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="po-table-card">
+        <table class="po-table">
+            <thead>
+                <tr>
+                    <th class="po-th-number">
+                        <a href="?sort={% if sort == 'po_number' %}-{% endif %}po_number{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="po-sort-link {% if sort == 'po_number' or sort == '-po_number' %}active{% endif %}">
+                            PO #
+                            {% if sort == 'po_number' %}↑{% elif sort == '-po_number' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="po-th-vendor">
+                        <a href="?sort={% if sort == 'vendor__name' %}-{% endif %}vendor__name{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="po-sort-link {% if sort == 'vendor__name' or sort == '-vendor__name' %}active{% endif %}">
+                            Vendor
+                            {% if sort == 'vendor__name' %}↑{% elif sort == '-vendor__name' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="po-th-status">Status</th>
+                    <th class="po-th-date">
+                        <a href="?sort={% if sort == '-po_date' %}{% else %}-{% endif %}po_date{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="po-sort-link {% if sort == 'po_date' or sort == '-po_date' %}active{% endif %}">
+                            PO Date
+                            {% if sort == 'po_date' %}↑{% elif sort == '-po_date' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="po-th-date">
+                        <a href="?sort={% if sort == 'expected_delivery_date' %}-{% endif %}expected_delivery_date{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="po-sort-link {% if sort == 'expected_delivery_date' or sort == '-expected_delivery_date' %}active{% endif %}">
+                            Expected
+                            {% if sort == 'expected_delivery_date' %}↑{% elif sort == '-expected_delivery_date' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="po-th-amount">
+                        <a href="?sort={% if sort == '-total_amount' %}{% else %}-{% endif %}total_amount{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="po-sort-link {% if sort == 'total_amount' or sort == '-total_amount' %}active{% endif %}">
+                            Total
+                            {% if sort == 'total_amount' %}↑{% elif sort == '-total_amount' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="po-th-items">Items</th>
+                    <th class="po-th-actions"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for po in purchase_orders %}
+                <tr class="po-row" onclick="window.location='{% url 'jobs:po_detail' po.pk %}'">
+                    <td class="po-cell-number">
+                        <span class="po-number-badge">{{ po.po_number }}</span>
+                        {% if po.is_urgent %}
+                        <span class="po-urgent-indicator" title="Urgent">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                                <line x1="12" y1="9" x2="12" y2="13"></line>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="po-cell-vendor">
+                        {% if po.vendor %}
+                        <span class="po-vendor-name">{{ po.vendor.name }}</span>
+                        {% else %}
+                        <span class="po-no-vendor">No vendor</span>
+                        {% endif %}
+                    </td>
+                    <td class="po-cell-status">
+                        <span class="po-status-badge po-status-{{ po.status }}">
+                            {% if po.status == 'partially_received' %}Partial{% else %}{{ po.get_status_display }}{% endif %}
+                        </span>
+                    </td>
+                    <td class="po-cell-date">
+                        {% if po.po_date %}
+                        <span class="po-date-main">{{ po.po_date|date:"M d" }}</span><span class="po-date-year">'{{ po.po_date|date:"y" }}</span>
+                        {% else %}
+                        <span class="po-no-date">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="po-cell-date">
+                        {% if po.expected_delivery_date %}
+                        <span class="po-date-main">{{ po.expected_delivery_date|date:"M d" }}</span><span class="po-date-year">'{{ po.expected_delivery_date|date:"y" }}</span>
+                        {% else %}
+                        <span class="po-no-date">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="po-cell-amount">
+                        {% if po.total_amount %}
+                        <span class="po-amount">${{ po.total_amount|floatformat:2 }}</span>
+                        {% else %}
+                        <span class="po-no-amount">$0.00</span>
+                        {% endif %}
+                    </td>
+                    <td class="po-cell-items">
+                        <span class="po-items-count">{{ po.item_count }}</span>
+                    </td>
+                    <td class="po-cell-actions" onclick="event.stopPropagation()">
+                        <a href="{% url 'jobs:po_detail' po.pk %}" class="po-action-btn" title="View/Edit">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="po-empty-state">
+                        <div class="po-empty-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                            </svg>
+                            <h3>No purchase orders found</h3>
+                            <p>{% if search %}Try a different search term{% else %}Get started by creating your first purchase order{% endif %}</p>
+                            {% if not search %}
+                            <a href="{% url 'jobs:po_create' %}" class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Create Purchase Order
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="po-pagination">
+        <div class="po-pagination-info">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }}
+        </div>
+        <div class="po-pagination-controls">
+            {% if page_obj.has_previous %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page=1" class="po-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="po-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+            
+            <span class="po-page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.next_page_number }}" class="po-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.paginator.num_pages }}" class="po-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Page Layout */
+.po-list-page {
+    max-width: calc(100% - 2rem);
+    margin: 0 auto;
+    padding: 0 1rem;
+    margin-top: -1.25rem;
+}
+
+/* Header */
+.po-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.po-list-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.po-list-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.po-list-title svg {
+    color: var(--gray-500);
+    width: 26px;
+    height: 26px;
+}
+
+.po-list-count {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.btn-create svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Stats Row */
+.po-stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.po-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.875rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+}
+
+.po-stat-card:hover {
+    border-color: var(--gray-300);
+}
+
+.po-stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 0.375rem;
+    flex-shrink: 0;
+}
+
+.po-stat-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.po-stat-icon-draft {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-stat-icon-submitted {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.po-stat-icon-partial {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.po-stat-icon-received {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.po-stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+}
+
+.po-stat-label {
+    font-size: 0.6875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Filter Bar */
+.po-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.po-search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+}
+
+.po-search-icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+}
+
+.po-search-form {
+    width: 100%;
+}
+
+.po-search-input {
+    width: 100%;
+    padding: 0.375rem 2rem 0.375rem 2rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.po-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.po-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: var(--gray-300);
+    border-radius: 50%;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-search-clear:hover {
+    background: var(--gray-400);
+    color: var(--gray-800);
+}
+
+.po-filter-tabs {
+    display: flex;
+    gap: 0.125rem;
+}
+
+.po-filter-tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    text-decoration: none;
+    border-radius: 0.25rem;
+    transition: all 0.15s ease;
+}
+
+.po-filter-tab:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.po-filter-tab.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* Table Card */
+.po-table-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    overflow: auto;
+    max-height: calc(100vh - 240px);
+}
+
+.po-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.po-table thead {
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.po-table tbody {
+    overflow-y: auto;
+}
+
+.po-table th {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gray-500);
+    border-bottom: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.po-sort-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.po-sort-link:hover,
+.po-sort-link.active {
+    color: var(--gray-900);
+}
+
+.po-th-number { width: 100px; white-space: nowrap; }
+.po-th-vendor { min-width: 120px; }
+.po-th-status { width: 75px; }
+.po-th-date { width: 85px; white-space: nowrap; }
+.po-th-amount { width: 80px; text-align: right; white-space: nowrap; }
+.po-th-amount .po-sort-link { justify-content: flex-end; }
+.po-th-items { width: 50px; text-align: center; }
+.po-th-actions { width: 40px; }
+
+/* Table Rows */
+.po-row {
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+.po-row:hover {
+    background: var(--gray-50);
+}
+
+.po-table td {
+    padding: 0.375rem 0.75rem;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+    font-size: 0.8125rem;
+}
+
+.po-row:last-child td {
+    border-bottom: none;
+}
+
+/* Cell Styles */
+.po-cell-number {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.po-number-badge {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    white-space: nowrap;
+}
+
+.po-urgent-indicator {
+    display: flex;
+    color: #f59e0b;
+}
+
+.po-urgent-indicator svg {
+    width: 12px;
+    height: 12px;
+}
+
+.po-vendor-name {
+    font-weight: 500;
+    color: var(--gray-900);
+    white-space: nowrap;
+}
+
+.po-no-vendor {
+    color: var(--gray-400);
+    font-style: italic;
+    font-size: 0.75rem;
+}
+
+/* Status Badge */
+.po-status-badge {
+    display: inline-flex;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    white-space: nowrap;
+}
+
+.po-status-draft { background: var(--gray-100); color: var(--gray-700); }
+.po-status-submitted { background: #dbeafe; color: #1e40af; }
+.po-status-partially_received { background: #fef3c7; color: #92400e; }
+.po-status-received { background: #d1fae5; color: #065f46; }
+.po-status-closed { background: var(--gray-600); color: white; }
+.po-status-cancelled { background: #fee2e2; color: #991b1b; }
+
+/* Date Cell */
+.po-cell-date {
+    white-space: nowrap;
+}
+
+.po-date-main {
+    font-weight: 500;
+    color: var(--gray-900);
+}
+
+.po-date-year {
+    font-size: 0.6875rem;
+    color: var(--gray-500);
+    margin-left: 0.25rem;
+}
+
+.po-no-date {
+    color: var(--gray-400);
+}
+
+/* Amount Cell */
+.po-cell-amount {
+    text-align: right;
+}
+
+.po-amount {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-no-amount {
+    color: var(--gray-400);
+}
+
+/* Items Cell */
+.po-cell-items {
+    text-align: center;
+}
+
+.po-items-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 0.375rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+/* Action Button */
+.po-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 0.25rem;
+    color: var(--gray-400);
+    transition: all 0.15s ease;
+}
+
+.po-action-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.po-action-btn:hover {
+    background: var(--gray-100);
+    color: var(--gray-700);
+}
+
+/* Empty State */
+.po-empty-state {
+    padding: 3rem 2rem !important;
+    text-align: center;
+}
+
+.po-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.po-empty-content svg {
+    color: var(--gray-300);
+    width: 40px;
+    height: 40px;
+}
+
+.po-empty-content h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.po-empty-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.po-empty-content .btn {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Pagination */
+.po-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.po-pagination-info {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.po-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.po-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    color: var(--gray-600);
+    background: white;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.po-page-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.po-page-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-page-current {
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .po-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .po-list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .po-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .po-search-wrapper {
+        max-width: none;
+    }
+    
+    .po-filter-tabs {
+        overflow-x: auto;
+        padding-bottom: 0.25rem;
+    }
+    
+    .po-th-date,
+    .po-cell-date {
+        display: none;
+    }
+}
+
+@media (max-width: 640px) {
+    .po-stats-row {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .po-pagination {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+// Submit search on enter
+document.querySelector('.po-search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+
+// Clear search
+function clearSearch() {
+    const form = document.getElementById('searchForm');
+    const searchInput = form.querySelector('input[name="search"]');
+    searchInput.value = '';
+    form.submit();
+}
+</script>
+{% endblock %}

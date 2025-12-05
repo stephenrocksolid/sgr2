@@ -1,79 +1,103 @@
 {% if supersedes or superseded_by %}
-    <div class="supercessions-container">
-        {% if supersedes %}
-            <div class="supersedes-section mb-4">
-                <h5 style="color: var(--gray-700); font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.5rem;">This Engine Supersedes (Older):</h5>
-                <table class="related-table">
-                    <thead>
-                        <tr>
-                            <th>Make</th>
-                            <th>Model</th>
-                            <th>Identifier</th>
-                            <th style="width: 50px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for superseded in supersedes %}
-                            <tr data-href="{% url 'inventory:engine_detail' superseded.pk %}" 
-                                onclick="window.location.href=this.dataset.href;">
-                                <td>{{ superseded.engine_make|default:"—" }}</td>
-                                <td>{{ superseded.engine_model|default:"—" }}</td>
-                                <td>{{ superseded.identifier|default:"—" }}</td>
-                                <td onclick="event.stopPropagation();">
-                                    <form hx-post="{% url 'inventory:engine_supercession_remove' engine.pk superseded.pk %}"
-                                          hx-target="#engine-supercessions-section"
-                                          hx-swap="innerHTML"
-                                          hx-confirm="Are you sure you want to remove this supercession relationship?"
-                                          style="display: inline;">
-                                        {% csrf_token %}
-                                        <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
-        
-        {% if superseded_by %}
-            <div class="superseded-by-section">
-                <h5 style="color: var(--gray-700); font-size: 0.9375rem; font-weight: 600; margin-bottom: 0.5rem;">This Engine is Superseded By (Newer):</h5>
-                <table class="related-table">
-                    <thead>
-                        <tr>
-                            <th>Make</th>
-                            <th>Model</th>
-                            <th>Identifier</th>
-                            <th style="width: 50px;">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for superseding in superseded_by %}
-                            <tr data-href="{% url 'inventory:engine_detail' superseding.pk %}" 
-                                onclick="window.location.href=this.dataset.href;">
-                                <td>{{ superseding.engine_make|default:"—" }}</td>
-                                <td>{{ superseding.engine_model|default:"—" }}</td>
-                                <td>{{ superseding.identifier|default:"—" }}</td>
-                                <td onclick="event.stopPropagation();">
-                                    <form hx-post="{% url 'inventory:engine_supercession_remove' superseding.pk engine.pk %}"
-                                          hx-target="#engine-supercessions-section"
-                                          hx-swap="innerHTML"
-                                          hx-confirm="Are you sure you want to remove this supercession relationship?"
-                                          style="display: inline;">
-                                        {% csrf_token %}
-                                        <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+<div class="supercessions-container">
+    {% if supersedes %}
+    <div class="supersedes-section" style="margin-bottom: 1.5rem;">
+        <h5 style="color: var(--gray-700); font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.025em;">This Engine Supersedes (Older)</h5>
+        <table class="engine-table">
+            <thead>
+                <tr>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Identifier</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for superseded in supersedes %}
+                <tr class="engine-clickable-row" data-href="{% url 'inventory:engine_detail' superseded.pk %}">
+                    <td>
+                        <span class="engine-make-text">{{ superseded.engine_make|default:"—" }}</span>
+                    </td>
+                    <td>{{ superseded.engine_model|default:"—" }}</td>
+                    <td>
+                        <span class="engine-text-muted">{{ superseded.identifier|default:"—" }}</span>
+                    </td>
+                    <td class="engine-actions-cell">
+                        <form hx-post="{% url 'inventory:engine_supercession_remove' engine.pk superseded.pk %}"
+                              hx-target="#engine-supercessions-section"
+                              hx-swap="innerHTML"
+                              hx-confirm="Are you sure you want to remove this supercession relationship?"
+                              style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-danger-outline">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Remove
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+    {% endif %}
+    
+    {% if superseded_by %}
+    <div class="superseded-by-section">
+        <h5 style="color: var(--gray-700); font-size: 0.8125rem; font-weight: 600; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.025em;">This Engine is Superseded By (Newer)</h5>
+        <table class="engine-table">
+            <thead>
+                <tr>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Identifier</th>
+                    <th style="width: 100px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for superseding in superseded_by %}
+                <tr class="engine-clickable-row" data-href="{% url 'inventory:engine_detail' superseding.pk %}">
+                    <td>
+                        <span class="engine-make-text">{{ superseding.engine_make|default:"—" }}</span>
+                    </td>
+                    <td>{{ superseding.engine_model|default:"—" }}</td>
+                    <td>
+                        <span class="engine-text-muted">{{ superseding.identifier|default:"—" }}</span>
+                    </td>
+                    <td class="engine-actions-cell">
+                        <form hx-post="{% url 'inventory:engine_supercession_remove' superseding.pk engine.pk %}"
+                              hx-target="#engine-supercessions-section"
+                              hx-swap="innerHTML"
+                              hx-confirm="Are you sure you want to remove this supercession relationship?"
+                              style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-danger-outline">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                                Remove
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
 {% else %}
-    <div class="empty-message">
-        <p>This engine has no supercession relationships yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="17 1 21 5 17 9"></polyline>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+        <polyline points="7 23 3 19 7 15"></polyline>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+    </svg>
+    <span>No supercession relationships</span>
+</div>
 {% endif %}

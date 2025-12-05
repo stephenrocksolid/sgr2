@@ -1,0 +1,67 @@
+<!-- Filter Tabs -->
+<div class="filter-tabs">
+    <button class="filter-tab {% if filter == 'on_job' or not filter %}active{% endif %}"
+            hx-get="{% url 'jobs:job_kit_items_modal' job.pk job_kit.pk %}?filter=on_job"
+            hx-target="#kit-items-table-container"
+            hx-swap="innerHTML">
+        On Job ({{ items_on_job_count }})
+    </button>
+    <button class="filter-tab {% if filter == 'all' %}active{% endif %}"
+            hx-get="{% url 'jobs:job_kit_items_modal' job.pk job_kit.pk %}?filter=all"
+            hx-target="#kit-items-table-container"
+            hx-swap="innerHTML">
+        All ({{ all_items_count }})
+    </button>
+</div>
+
+<!-- Items Table -->
+{% if items %}
+<table class="data-table compact-table" style="margin-top: 1rem;">
+    <thead>
+        <tr>
+            <th>Item No.</th>
+            <th>Part Number</th>
+            <th>Name</th>
+            <th>Quantity</th>
+            <th style="text-align: center;">On Job</th>
+            <th style="text-align: center;">Complete</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in items %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.part_number|default:"—" }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.quantity|default:"—" }}</td>
+            <td style="text-align: center;">
+                <input type="checkbox" 
+                       {% if item.on_job %}checked{% endif %}
+                       hx-post="{% url 'jobs:job_kit_item_toggle_on_job' job.pk job_kit.pk item.pk %}"
+                       hx-target="#kit-items-table-container"
+                       hx-swap="innerHTML"
+                       hx-include="[name='current_filter']">
+            </td>
+            <td style="text-align: center;">
+                <input type="checkbox" 
+                       {% if item.is_complete %}checked{% endif %}
+                       hx-post="{% url 'jobs:job_kit_item_toggle_complete' job.pk job_kit.pk item.pk %}"
+                       hx-target="#kit-items-table-container"
+                       hx-swap="innerHTML"
+                       hx-include="[name='current_filter']">
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+<!-- Hidden input to track current filter -->
+<input type="hidden" name="current_filter" value="{{ filter|default:'on_job' }}">
+{% else %}
+<div class="empty-state" style="margin-top: 2rem;">
+    <p>No items {% if filter == 'on_job' %}on job{% endif %}.</p>
+</div>
+{% endif %}
+
+
+
+

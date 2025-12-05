@@ -1,0 +1,347 @@
+<!-- Modal for Ship-To Address Selection -->
+<div class="po-modal-overlay" id="ship-to-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="1" y="3" width="15" height="13"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+                Ship-To Addresses
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('ship-to-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body">
+            <!-- Add New Address Button -->
+            <div class="ship-to-header-row">
+                <span class="ship-to-count">{{ ship_to_addresses|length }} address{{ ship_to_addresses|length|pluralize:"es" }} saved</span>
+                <button type="button"
+                        class="po-create-vendor-btn"
+                        hx-get="{% url 'jobs:customer_ship_to_create_modal' customer.pk %}{% if ticket %}?ticket_id={{ ticket.pk }}{% endif %}"
+                        hx-target="body"
+                        hx-swap="beforeend">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    Add Address
+                </button>
+            </div>
+
+            <!-- Address List -->
+            {% if ship_to_addresses %}
+            <div class="ship-to-list">
+                {% for address in ship_to_addresses %}
+                <div class="ship-to-item {% if address.is_default %}ship-to-item-default{% endif %}">
+                    <div class="ship-to-item-icon">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                            <circle cx="12" cy="10" r="3"></circle>
+                        </svg>
+                    </div>
+                    <div class="ship-to-item-info">
+                        <div class="ship-to-item-name">
+                            {{ address.name }}
+                            {% if address.is_default %}
+                            <span class="ship-to-default-badge">Default</span>
+                            {% endif %}
+                        </div>
+                        <div class="ship-to-item-address">
+                            {% if address.address %}{{ address.address }}{% endif %}
+                            {% if address.city or address.state or address.zip %}
+                            <br>{{ address.city }}{% if address.city and address.state %},{% endif %} {{ address.state }} {{ address.zip }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if ticket %}
+                    <button type="button"
+                            class="ship-to-use-btn"
+                            hx-post="{% url 'jobs:job_ship_to_select' ticket.pk address.pk %}"
+                            hx-target="#customer-section"
+                            hx-swap="outerHTML"
+                            hx-on::after-request="if(event.detail.successful) document.getElementById('ship-to-modal').remove()">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Use
+                    </button>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="ship-to-empty">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                    <circle cx="12" cy="10" r="3"></circle>
+                </svg>
+                <p class="ship-to-empty-title">No addresses saved</p>
+                <p class="ship-to-empty-subtitle">Add a ship-to address for this customer</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-sm {
+    max-width: 500px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Header Row */
+.ship-to-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.ship-to-count {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.po-create-vendor-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+
+.po-create-vendor-btn:hover {
+    background: #2f855a;
+}
+
+/* Address List */
+.ship-to-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.ship-to-item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    transition: all 0.15s ease;
+}
+
+.ship-to-item:hover {
+    background: white;
+    border-color: var(--gray-300);
+}
+
+.ship-to-item-default {
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.ship-to-item-default:hover {
+    background: #dbeafe;
+}
+
+.ship-to-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    color: var(--gray-500);
+    flex-shrink: 0;
+}
+
+.ship-to-item-default .ship-to-item-icon {
+    border-color: #93c5fd;
+    color: #2563eb;
+}
+
+.ship-to-item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.ship-to-item-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+}
+
+.ship-to-default-badge {
+    display: inline-flex;
+    padding: 0.0625rem 0.375rem;
+    background: #3b82f6;
+    color: white;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ship-to-item-address {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    line-height: 1.4;
+}
+
+.ship-to-use-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 0.875rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.ship-to-use-btn:hover {
+    background: var(--gray-700);
+}
+
+/* Empty State */
+.ship-to-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.ship-to-empty svg {
+    margin-bottom: 1rem;
+    color: var(--gray-300);
+}
+
+.ship-to-empty-title {
+    margin: 0 0 0.25rem;
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-600);
+}
+
+.ship-to-empty-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+}
+</style>

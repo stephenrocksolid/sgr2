@@ -1,5 +1,5 @@
-{% if machine_engines %}
-    <table class="related-table">
+<div id="machine-engines-section">
+    <table class="machine-table">
         <thead>
             <tr>
                 <th>Engine Make</th>
@@ -7,54 +7,171 @@
                 <th>SG Engine</th>
                 <th>Primary</th>
                 <th>Notes</th>
-                <th style="width: 50px;">Actions</th>
+                <th style="width: 100px;">Actions</th>
             </tr>
         </thead>
         <tbody>
             {% for machine_engine in machine_engines %}
-                <tr class="engine-row" data-href="{% url 'inventory:engine_detail' machine_engine.engine.pk %}" onclick="if (event.target.tagName !== 'BUTTON' && event.target.tagName !== 'FORM') window.location.href='{% url 'inventory:engine_detail' machine_engine.engine.pk %}'">
-                    <td>{{ machine_engine.engine.engine_make }}</td>
-                    <td>{{ machine_engine.engine.engine_model }}</td>
-                    <td>
-                        {% if machine_engine.engine.sg_engine %}
-                            {{ machine_engine.engine.sg_engine.sg_make }} {{ machine_engine.engine.sg_engine.sg_model }}
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if machine_engine.is_primary %}
-                            <span class="primary-badge">Primary</span>
-                        {% else %}
-                            —
-                        {% endif %}
-                    </td>
-                    <td>{{ machine_engine.notes|default:"—" }}</td>
-                    <td class="text-right">
-                        <form hx-post="{% url 'inventory:machine_engine_remove' machine.pk machine_engine.pk %}"
-                              hx-target="#machine-engines-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this engine from the machine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr class="machine-clickable-row" data-href="{% url 'inventory:engine_detail' machine_engine.engine.pk %}">
+                <td>
+                    <span class="machine-engine-make">{{ machine_engine.engine.engine_make }}</span>
+                </td>
+                <td>{{ machine_engine.engine.engine_model }}</td>
+                <td>
+                    {% if machine_engine.engine.sg_engine %}
+                        <span class="machine-sg-badge">{{ machine_engine.engine.sg_engine.sg_make }} {{ machine_engine.engine.sg_engine.sg_model }}</span>
+                    {% else %}
+                        <span class="machine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if machine_engine.is_primary %}
+                        <span class="machine-primary-badge">Primary</span>
+                    {% else %}
+                        <span class="machine-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="machine-text-muted">{{ machine_engine.notes|truncatewords:5|default:"—" }}</span>
+                </td>
+                <td class="machine-actions-cell">
+                    <form hx-post="{% url 'inventory:machine_engine_remove' machine.pk machine_engine.pk %}"
+                          hx-target="#machine-engines-section"
+                          hx-swap="outerHTML"
+                          hx-confirm="Are you sure you want to remove this engine from the machine?"
+                          style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="machine-empty-row">
+                    <div class="machine-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span>No engines associated with this machine</span>
+                    </div>
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
-{% else %}
-    <div class="empty-message">
-        <p>This machine is not associated with any engines yet.</p>
-    </div>
-{% endif %}
-
-<div class="mt-3">
-    <button class="add-button"
-            hx-get="{% url 'inventory:engine_search_modal' machine.pk %}"
-            hx-target="#modal-container"
-            hx-swap="innerHTML">
-        Add Engine
-    </button>
 </div>
+
+<style>
+.machine-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.machine-table th,
+.machine-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.machine-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.machine-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.machine-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.machine-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.machine-engine-make {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.machine-sg-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--blue-100);
+    color: var(--blue-800);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.machine-primary-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.machine-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.machine-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.machine-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.machine-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>
+

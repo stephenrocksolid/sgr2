@@ -1,0 +1,990 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Jobs - Spring Garden Repair{% endblock %}
+
+{% block content %}
+<div class="job-list-page">
+    <!-- Page Header -->
+    <div class="job-list-header">
+        <div class="job-list-header-left">
+            <h1 class="job-list-title">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+                Jobs
+            </h1>
+            <span class="job-list-count">{{ total_count }} total</span>
+        </div>
+        <div class="job-list-header-right">
+            <a href="{% url 'jobs:job_create' %}" class="btn btn-primary btn-create">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                New Job
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="job-stats-row">
+        <div class="job-stat-card">
+            <div class="job-stat-icon job-stat-icon-quote">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+            </div>
+            <div class="job-stat-info">
+                <div class="job-stat-value">{{ stats.quote|default:0 }}</div>
+                <div class="job-stat-label">Quote</div>
+            </div>
+        </div>
+        <div class="job-stat-card">
+            <div class="job-stat-icon job-stat-icon-wo">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                </svg>
+            </div>
+            <div class="job-stat-info">
+                <div class="job-stat-value">{{ stats.wo|default:0 }}</div>
+                <div class="job-stat-label">Work Order</div>
+            </div>
+        </div>
+        <div class="job-stat-card">
+            <div class="job-stat-icon job-stat-icon-invoice">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            </div>
+            <div class="job-stat-info">
+                <div class="job-stat-value">{{ stats.invoice|default:0 }}</div>
+                <div class="job-stat-label">Invoice</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="job-filter-bar">
+        <div class="job-search-wrapper">
+            <svg class="job-search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+            </svg>
+            <form method="get" class="job-search-form" id="searchForm">
+                <input type="text" name="search" value="{{ search }}" class="job-search-input" placeholder="Search by job #, customer, engine...">
+                <input type="hidden" name="sort" value="{{ sort }}">
+                <input type="hidden" name="status" value="{{ status_filter }}">
+            </form>
+            {% if search %}
+            <button type="button" class="job-search-clear" onclick="clearSearch()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+            {% endif %}
+        </div>
+        <div class="job-filter-tabs">
+            <a href="?status=all{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="job-filter-tab {% if status_filter == 'all' %}active{% endif %}">
+                All
+            </a>
+            <a href="?status=quote{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="job-filter-tab {% if status_filter == 'quote' %}active{% endif %}">
+                Quote
+            </a>
+            <a href="?status=wo{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="job-filter-tab {% if status_filter == 'wo' %}active{% endif %}">
+                Work Order
+            </a>
+            <a href="?status=invoice{% if search %}&search={{ search }}{% endif %}&sort={{ sort }}" class="job-filter-tab {% if status_filter == 'invoice' %}active{% endif %}">
+                Invoice
+            </a>
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="job-table-card">
+        <table class="job-table">
+            <thead>
+                <tr>
+                    <th class="job-th-job-number">
+                        <a href="?sort={% if sort == 'job_number' %}-{% endif %}job_number{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="job-sort-link {% if sort == 'job_number' or sort == '-job_number' %}active{% endif %}">
+                            Job #
+                            {% if sort == 'job_number' %}↑{% elif sort == '-job_number' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="job-th-status">Status</th>
+                    <th class="job-th-customer">
+                        <a href="?sort={% if sort == 'customer__name' %}-{% endif %}customer__name{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="job-sort-link {% if sort == 'customer__name' or sort == '-customer__name' %}active{% endif %}">
+                            Customer
+                            {% if sort == 'customer__name' %}↑{% elif sort == '-customer__name' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="job-th-engine">Engine</th>
+                    <th class="job-th-cyl"># Cyl</th>
+                    <th class="job-th-valves"># Valves</th>
+                    <th class="job-th-component">Head</th>
+                    <th class="job-th-component">Block</th>
+                    <th class="job-th-component">Rods</th>
+                    <th class="job-th-component">Crank</th>
+                    <th class="job-th-main-brg">Main Brg</th>
+                    <th class="job-th-piston-size">Piston Size</th>
+                    <th class="job-th-parts">Parts</th>
+                    <th class="job-th-week">Week</th>
+                    <th class="job-th-finish">
+                        <a href="?sort={% if sort == 'finish_date' %}-{% endif %}finish_date{% if search %}&search={{ search }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}" class="job-sort-link {% if sort == 'finish_date' or sort == '-finish_date' %}active{% endif %}">
+                            Finish
+                            {% if sort == 'finish_date' %}↑{% elif sort == '-finish_date' %}↓{% endif %}
+                        </a>
+                    </th>
+                    <th class="job-th-progress">Progress</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in jobs %}
+                <tr class="job-row" onclick="window.location='{% url 'jobs:job_detail' job.pk %}'">
+                    <td class="job-cell-job-number">
+                        <span class="job-number-badge">{{ job.job_number|default:"—" }}</span>
+                    </td>
+                    <td class="job-cell-status">
+                        <span class="job-status-badge job-status-{{ job.status }}">
+                            {{ job.get_status_display|default:"—" }}
+                        </span>
+                    </td>
+                    <td class="job-cell-customer">
+                        {% if job.customer %}
+                        <span class="job-customer-name">{{ job.customer.name }}</span>
+                        {% else %}
+                        <span class="job-no-customer">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-engine">
+                        {% if job.engine_make or job.engine_model %}
+                        <span class="job-engine-name">{{ job.engine_make|default:"" }} {{ job.engine_model|default:"" }}</span>
+                        {% else %}
+                        <span class="job-no-engine">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-cyl">
+                        {% if job.engine and job.engine.cylinder %}
+                        {{ job.engine.cylinder }}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-valves">
+                        {% if job.engine and job.engine.valves_per_cyl %}
+                        {{ job.engine.valves_per_cyl }}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-component">
+                        {% if job.component_info.head %}
+                            {% if job.component_info.head_done %}
+                            <span class="component-status component-complete" title="Head - Complete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                            {% else %}
+                            <span class="component-status component-incomplete" title="Head - Incomplete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-component">
+                        {% if job.component_info.block %}
+                            {% if job.component_info.block_done %}
+                            <span class="component-status component-complete" title="Block - Complete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                            {% else %}
+                            <span class="component-status component-incomplete" title="Block - Incomplete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-component">
+                        {% if job.component_info.rods %}
+                            {% if job.component_info.rods_done %}
+                            <span class="component-status component-complete" title="Rods - Complete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                            {% else %}
+                            <span class="component-status component-incomplete" title="Rods - Incomplete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-component">
+                        {% if job.component_info.crankshaft %}
+                            {% if job.component_info.crankshaft_done %}
+                            <span class="component-status component-complete" title="Crank - Complete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+                                    <polyline points="20 6 9 17 4 12"></polyline>
+                                </svg>
+                            </span>
+                            {% else %}
+                            <span class="component-status component-incomplete" title="Crank - Incomplete">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+                                </svg>
+                            </span>
+                            {% endif %}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-main-brg">
+                        {% if job.component_info.main_bearing %}
+                        {{ job.component_info.main_bearing }}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-piston-size">
+                        {% if job.component_info.piston_size %}
+                        {{ job.component_info.piston_size }}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-parts">
+                        {{ job.parts_count|default:0 }}
+                    </td>
+                    <td class="job-cell-week">
+                        {% if job.finish_date %}
+                        {{ job.finish_date|date:"W" }}
+                        {% else %}
+                        <span class="job-no-data">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-date">
+                        {% if job.finish_date %}
+                        <span class="job-date-main">{{ job.finish_date|date:"M d" }}</span><span class="job-date-year">'{{ job.finish_date|date:"y" }}</span>
+                        {% else %}
+                        <span class="job-no-date">—</span>
+                        {% endif %}
+                    </td>
+                    <td class="job-cell-progress">
+                        {% with progress=job.component_info.progress_percentage %}
+                        {% if progress is not None %}
+                        <span class="job-progress-text {% if progress == 100 %}progress-complete{% elif progress >= 50 %}progress-mid{% else %}progress-low{% endif %}">{{ progress }}%</span>
+                        {% else %}
+                        <span class="job-no-progress">—</span>
+                        {% endif %}
+                        {% endwith %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="16" class="job-empty-state">
+                        <div class="job-empty-content">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                            </svg>
+                            <h3>No jobs found</h3>
+                            <p>{% if search %}Try a different search term{% else %}Get started by creating your first job{% endif %}</p>
+                            {% if not search %}
+                            <a href="{% url 'jobs:job_create' %}" class="btn btn-primary">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                                </svg>
+                                Create Job
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="job-pagination">
+        <div class="job-pagination-info">
+            Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ total_count }}
+        </div>
+        <div class="job-pagination-controls">
+            {% if page_obj.has_previous %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page=1" class="job-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="11 17 6 12 11 7"></polyline>
+                    <polyline points="18 17 13 12 18 7"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.previous_page_number }}" class="job-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+            
+            <span class="job-page-current">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+            
+            {% if page_obj.has_next %}
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.next_page_number }}" class="job-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+            </a>
+            <a href="?{% if search %}search={{ search }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}sort={{ sort }}&page={{ page_obj.paginator.num_pages }}" class="job-page-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="13 17 18 12 13 7"></polyline>
+                    <polyline points="6 17 11 12 6 7"></polyline>
+                </svg>
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Page Layout */
+.job-list-page {
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 0.5rem;
+    margin-top: -1.25rem;
+}
+
+/* Header */
+.job-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.job-list-header-left {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.job-list-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.job-list-title svg {
+    color: var(--gray-500);
+    width: 26px;
+    height: 26px;
+}
+
+.job-list-count {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+}
+
+.btn-create svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* Stats Row */
+.job-stats-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.job-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.875rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+}
+
+.job-stat-card:hover {
+    border-color: var(--gray-300);
+}
+
+.job-stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 0.375rem;
+    flex-shrink: 0;
+}
+
+.job-stat-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.job-stat-icon-quote {
+    background: #e0e7ff;
+    color: #4338ca;
+}
+
+.job-stat-icon-wo {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.job-stat-icon-invoice {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.job-stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1;
+}
+
+.job-stat-label {
+    font-size: 0.6875rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+/* Filter Bar */
+.job-filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.job-search-wrapper {
+    position: relative;
+    flex: 1;
+    max-width: 320px;
+}
+
+.job-search-icon {
+    position: absolute;
+    left: 0.625rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--gray-400);
+    pointer-events: none;
+    width: 14px;
+    height: 14px;
+}
+
+.job-search-form {
+    width: 100%;
+}
+
+.job-search-input {
+    width: 100%;
+    padding: 0.375rem 2rem 0.375rem 2rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    background: var(--gray-50);
+    transition: all 0.15s ease;
+}
+
+.job-search-input:focus {
+    outline: none;
+    background: white;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(74, 85, 104, 0.1);
+}
+
+.job-search-clear {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    background: var(--gray-300);
+    border-radius: 50%;
+    color: var(--gray-600);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.job-search-clear:hover {
+    background: var(--gray-400);
+    color: var(--gray-800);
+}
+
+.job-filter-tabs {
+    display: flex;
+    gap: 0.125rem;
+}
+
+.job-filter-tab {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-600);
+    text-decoration: none;
+    border-radius: 0.25rem;
+    transition: all 0.15s ease;
+}
+
+.job-filter-tab:hover {
+    background: var(--gray-100);
+    color: var(--gray-900);
+}
+
+.job-filter-tab.active {
+    background: var(--primary);
+    color: white;
+}
+
+/* Table Card */
+.job-table-card {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    overflow: auto;
+    max-height: calc(100vh - 260px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.job-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.job-table thead {
+    background: var(--gray-50);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.job-table th {
+    padding: 0.5rem 0.5rem;
+    text-align: left;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--gray-500);
+    border-bottom: 2px solid var(--gray-200);
+    background: var(--gray-50);
+    white-space: nowrap;
+}
+
+.job-table th:first-child { padding-left: 0.75rem; }
+.job-table th:last-child { padding-right: 0.75rem; }
+
+/* Centered header columns */
+.job-table th.job-th-cyl,
+.job-table th.job-th-valves,
+.job-table th.job-th-component,
+.job-table th.job-th-parts,
+.job-table th.job-th-week,
+.job-table th.job-th-progress {
+    text-align: center;
+}
+
+.job-sort-link {
+    color: var(--gray-500);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    transition: color 0.15s ease;
+}
+
+.job-sort-link:hover,
+.job-sort-link.active {
+    color: var(--gray-900);
+}
+
+/* Table Rows */
+.job-row {
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.job-row:hover {
+    background: #f8fafc;
+}
+
+.job-row:hover td {
+    background: #f8fafc;
+}
+
+.job-table td {
+    padding: 0.6rem 0.5rem;
+    border-bottom: 1px solid var(--gray-100);
+    vertical-align: middle;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+}
+
+.job-table td:first-child { padding-left: 0.75rem; }
+.job-table td:last-child { padding-right: 0.75rem; }
+
+.job-row:last-child td {
+    border-bottom: none;
+}
+
+/* Flexible engine column */
+.job-cell-engine {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+/* Centered data columns */
+.job-cell-cyl,
+.job-cell-valves,
+.job-cell-component,
+.job-cell-parts,
+.job-cell-week,
+.job-cell-progress {
+    text-align: center;
+}
+
+/* Job Number Cell */
+.job-number-badge {
+    font-family: ui-monospace, 'SF Mono', 'Monaco', 'Menlo', monospace;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* Status Badge */
+.job-status-badge {
+    display: inline-flex;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.job-status-quote { background: #eef2ff; color: #4f46e5; }
+.job-status-wo { background: #fef3c7; color: #b45309; }
+.job-status-invoice { background: #d1fae5; color: #059669; }
+
+/* Customer Cell */
+.job-customer-name {
+    font-weight: 500;
+    color: var(--gray-900);
+}
+
+.job-no-customer {
+    color: var(--gray-400);
+    font-size: 0.75rem;
+}
+
+/* Engine Cell */
+.job-engine-name {
+    font-weight: 500;
+    color: var(--gray-800);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.job-no-engine {
+    color: var(--gray-400);
+}
+
+/* Numeric data cells */
+.job-cell-cyl,
+.job-cell-valves,
+.job-cell-parts,
+.job-cell-week {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.job-no-data {
+    color: var(--gray-300);
+    font-weight: 400;
+}
+
+/* Component Status Icons */
+.component-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+}
+
+.component-incomplete {
+    background: #fee2e2;
+    color: #dc2626;
+}
+
+.component-complete {
+    background: #dcfce7;
+    color: #16a34a;
+}
+
+/* Main Bearing */
+.job-cell-main-brg {
+    font-size: 0.75rem;
+    color: var(--gray-700);
+}
+
+/* Piston Size */
+.job-cell-piston-size {
+    font-size: 0.75rem;
+    color: var(--gray-700);
+}
+
+/* Progress */
+.job-progress-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.job-progress-text.progress-low { color: #d97706; }
+.job-progress-text.progress-mid { color: #2563eb; }
+.job-progress-text.progress-complete { color: #16a34a; }
+
+.job-no-progress {
+    color: var(--gray-300);
+}
+
+/* Date Cell */
+.job-date-main {
+    font-weight: 500;
+    color: var(--gray-800);
+}
+
+.job-date-year {
+    font-size: 0.7rem;
+    color: var(--gray-500);
+    margin-left: 1px;
+}
+
+.job-no-date {
+    color: var(--gray-300);
+}
+
+/* Empty State */
+.job-empty-state {
+    padding: 3rem 2rem !important;
+    text-align: center;
+}
+
+.job-empty-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.job-empty-content svg {
+    color: var(--gray-300);
+    width: 40px;
+    height: 40px;
+}
+
+.job-empty-content h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.job-empty-content p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.job-empty-content .btn {
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+/* Pagination */
+.job-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+}
+
+.job-pagination-info {
+    font-size: 0.75rem;
+    color: var(--gray-600);
+}
+
+.job-pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.job-page-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    color: var(--gray-600);
+    background: white;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.job-page-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+.job-page-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.job-page-current {
+    padding: 0 0.625rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+/* Responsive - Progressive column hiding */
+@media (max-width: 1600px) {
+    .job-th-piston-size, .job-cell-piston-size,
+    .job-th-main-brg, .job-cell-main-brg { display: none; }
+}
+
+@media (max-width: 1400px) {
+    .job-th-week, .job-cell-week { display: none; }
+}
+
+@media (max-width: 1200px) {
+    .job-th-valves, .job-cell-valves,
+    .job-th-parts, .job-cell-parts { display: none; }
+}
+
+@media (max-width: 1024px) {
+    .job-stats-row { grid-template-columns: repeat(3, 1fr); }
+    .job-th-cyl, .job-cell-cyl { display: none; }
+}
+
+@media (max-width: 900px) {
+    .job-th-progress, .job-cell-progress { display: none; }
+}
+
+@media (max-width: 768px) {
+    .job-list-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.75rem;
+    }
+    
+    .job-filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .job-search-wrapper { max-width: none; }
+    .job-filter-tabs { overflow-x: auto; padding-bottom: 0.25rem; }
+    
+    .job-th-finish, .job-cell-date { display: none; }
+    .job-cell-engine { max-width: 150px; }
+}
+
+@media (max-width: 640px) {
+    .job-stats-row { grid-template-columns: repeat(3, 1fr); }
+    .job-pagination { flex-direction: column; gap: 0.5rem; }
+    .job-th-engine, .job-cell-engine { display: none; }
+}
+</style>
+
+<script>
+// Submit search on enter
+document.querySelector('.job-search-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        this.form.submit();
+    }
+});
+
+// Clear search
+function clearSearch() {
+    const form = document.getElementById('searchForm');
+    const searchInput = form.querySelector('input[name="search"]');
+    searchInput.value = '';
+    form.submit();
+}
+</script>
+{% endblock %}

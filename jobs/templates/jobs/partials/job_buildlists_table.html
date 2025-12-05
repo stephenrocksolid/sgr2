@@ -1,0 +1,280 @@
+<div id="job-buildlists-section">
+    <table class="job-table">
+        <thead>
+            <tr>
+                <th style="width: 60px;">#</th>
+                <th>Build List Name</th>
+                <th>Time Worked</th>
+                <th style="width: 100px; white-space: nowrap;">% Complete</th>
+                <th style="width: 60px; text-align: center;">Select</th>
+                <th style="width: 180px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jbl in job_build_lists %}
+            <tr class="job-row-clickable"
+                hx-get="{% url 'jobs:job_buildlist_items_modal' job.pk jbl.pk %}"
+                hx-target="body"
+                hx-swap="beforeend">
+                <td>
+                    <span class="job-item-number">{{ forloop.counter }}</span>
+                </td>
+                <td>
+                    <span class="job-name-text">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        {{ jbl.name }}
+                    </span>
+                </td>
+                <td>
+                    <span class="job-time-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        {{ jbl.time_worked }} hrs
+                    </span>
+                </td>
+                <td>
+                    <div class="job-progress-container">
+                        <div class="job-progress-bar">
+                            <div class="job-progress-fill {% if jbl.percent_complete == 100 %}job-progress-complete{% elif jbl.percent_complete >= 50 %}job-progress-half{% endif %}" style="width: {{ jbl.percent_complete }}%;"></div>
+                        </div>
+                        <span class="job-progress-text">{{ jbl.percent_complete }}%</span>
+                    </div>
+                </td>
+                <td style="text-align: center;" onclick="event.stopPropagation()">
+                    <input type="checkbox" class="job-checkbox" {% if jbl.selected %}checked{% endif %}>
+                </td>
+                <td onclick="event.stopPropagation()">
+                    <div class="job-action-buttons">
+                        <button type="button" 
+                                class="btn btn-xs btn-outline"
+                                hx-get="{% url 'jobs:job_buildlist_quick_time_modal' job.pk jbl.pk %}"
+                                hx-target="body"
+                                hx-swap="beforeend">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <polyline points="12 6 12 12 16 14"></polyline>
+                            </svg>
+                            Add Time
+                        </button>
+                        <form method="post" action="{% url 'jobs:job_buildlist_remove' job.pk jbl.pk %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-danger-outline" onclick="event.stopPropagation(); return confirm('Remove this build list?')">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="job-empty-row">
+                    <div class="job-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        <span>No build lists added</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.job-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.job-table th,
+.job-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.job-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.job-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.job-row-clickable {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.job-row-clickable:hover {
+    background: var(--gray-100);
+}
+
+.job-item-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: var(--gray-200);
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.job-name-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: var(--primary);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.job-row-clickable:hover .job-name-text {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.job-name-text svg {
+    color: var(--gray-400);
+}
+
+.job-time-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.25rem 0.5rem;
+    background: #dbeafe;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #1e40af;
+}
+
+.job-time-badge svg {
+    color: #3b82f6;
+}
+
+.job-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.job-action-buttons {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.job-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.job-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.job-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+
+.job-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.job-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 50px;
+}
+
+.job-progress-fill {
+    height: 100%;
+    background: var(--gray-400);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.job-progress-fill.job-progress-half {
+    background: #f59e0b;
+}
+
+.job-progress-fill.job-progress-complete {
+    background: #10b981;
+}
+
+.job-progress-text {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    min-width: 32px;
+    text-align: right;
+}
+</style>

@@ -1,33 +1,52 @@
 {% load static %}
 
-<div class="modal-overlay" onclick="if(event.target === this) this.remove();">
-    <div class="modal-content" onclick="event.stopPropagation();">
-        <div class="modal-header">
-            <h3>Add {{ part.part_number }} to Kit</h3>
-            <button class="modal-close" onclick="this.closest('.modal-overlay').remove();" title="Close">✕</button>
+<!-- Modal for Part Quantity -->
+<div class="po-modal-overlay" id="part-details-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                </svg>
+                Add Part to Kit
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('part-details-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
         </div>
-        <div class="modal-body">
+
+        <div class="po-modal-body">
             <form hx-post="{% url 'inventory:kit_item_add' kit.id %}"
-                  hx-target="#kit-items-table-container"
+                  hx-target="#kit-items-section"
                   hx-swap="innerHTML"
                   hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                  hx-on::after-request="if(event.detail.successful) document.querySelector('.modal-overlay').remove();">
+                  hx-on::after-request="if(event.detail.successful) document.getElementById('part-details-modal').remove();">
                 {% csrf_token %}
                 <input type="hidden" name="part_id" value="{{ part.id }}">
                 
-                <div class="form-group">
-                    <label for="quantity">Quantity <span style="color: var(--red-600);">*</span></label>
-                    <input type="number" name="quantity" id="quantity" min="1" value="1" required>
+                <!-- Part Info Display -->
+                <div class="po-form-info">
+                    <div class="po-form-info-label">Part</div>
+                    <div class="po-form-info-value">{{ part.part_number }} - {{ part.name }}</div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="notes">Notes</label>
-                    <textarea name="notes" id="notes" rows="3" placeholder="Optional notes..."></textarea>
+                <div class="po-form-group">
+                    <label for="quantity" class="po-form-label">Quantity <span class="po-required">*</span></label>
+                    <input type="number" name="quantity" id="quantity" class="po-form-input" min="1" step="0.01" value="1" required autofocus>
                 </div>
                 
-                <div class="form-actions">
+                <div class="po-form-group">
+                    <label for="notes" class="po-form-label">Notes</label>
+                    <textarea name="notes" id="notes" class="po-form-textarea" rows="3" placeholder="Optional notes..."></textarea>
+                </div>
+                
+                <div class="po-form-actions">
+                    <button type="button" class="btn btn-outline" onclick="document.getElementById('part-details-modal').remove()">Cancel</button>
                     <button type="submit" class="btn btn-primary">Add Part</button>
-                    <button type="button" onclick="this.closest('.modal-overlay').remove();" class="btn btn-secondary">Cancel</button>
                 </div>
             </form>
         </div>
@@ -35,113 +54,177 @@
 </div>
 
 <style>
-.modal-overlay {
+.po-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 2000;
-    animation: fadeIn 0.2s ease-in-out;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
 }
 
-@keyframes fadeIn {
+@keyframes poModalFadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
 }
 
-.modal-content {
+.po-modal {
     background: white;
-    border-radius: var(--border-radius);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-    max-width: 500px;
+    border-radius: 0.75rem;
     width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
+    max-width: 700px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
 }
 
-.modal-header {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
+.po-modal-sm {
+    max-width: 480px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
 }
 
-.modal-header h3 {
-    margin: 0;
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
     font-size: 1.125rem;
     font-weight: 600;
     color: var(--gray-900);
 }
 
-.modal-close {
-    background: none;
-    border: none;
-    font-size: 1.5rem;
+.po-modal-title svg {
     color: var(--gray-500);
-    cursor: pointer;
-    padding: 0;
-    width: 2rem;
-    height: 2rem;
+}
+
+.po-modal-close {
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--border-radius);
-    transition: all 0.2s;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
 }
 
-.modal-close:hover {
+.po-modal-close:hover {
     background: var(--gray-100);
-    color: var(--gray-700);
+    color: var(--gray-600);
 }
 
-.modal-body {
+.po-modal-body {
     padding: 1.5rem;
 }
 
-.form-group {
-    margin-bottom: 1rem;
+/* Form Styles */
+.po-form-info {
+    background: var(--gray-50);
+    padding: 0.875rem 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.25rem;
 }
 
-.form-group label {
+.po-form-info-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.25rem;
+}
+
+.po-form-info-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.po-form-label {
     display: block;
     font-size: 0.875rem;
     font-weight: 600;
     color: var(--gray-700);
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
 }
 
-.form-group input,
-.form-group textarea {
+.po-required {
+    color: var(--error);
+}
+
+.po-form-input,
+.po-form-textarea {
     width: 100%;
-    padding: 0.5rem;
-    font-size: 0.875rem;
+    padding: 0.625rem 0.875rem;
     border: 1px solid var(--gray-300);
-    border-radius: var(--border-radius);
-    transition: border-color 0.2s;
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    transition: all 0.15s ease;
 }
 
-.form-group input:focus,
-.form-group textarea:focus {
+.po-form-input:focus,
+.po-form-textarea:focus {
     outline: none;
-    border-color: var(--red-600);
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
 }
 
-.form-actions {
+.po-form-textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.po-form-actions {
     display: flex;
-    gap: 0.5rem;
     justify-content: flex-end;
+    gap: 0.75rem;
     margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+/* Button Variants */
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+@media (max-width: 768px) {
+    .po-modal-sm {
+        max-width: none;
+    }
 }
 </style>
-
-
-
-
-

@@ -1,0 +1,1368 @@
+{% load static %}
+
+<div class="notification-modal-overlay" id="sendNotificationModal" onclick="if(event.target === this) cleanupNotificationModal()">
+    <div class="notification-modal" onclick="event.stopPropagation()">
+        <div class="notification-modal-header">
+            <div class="notification-modal-title">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                Send Notification
+            </div>
+            <button type="button" class="notification-modal-close" onclick="cleanupNotificationModal()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <form id="sendNotificationForm" method="post" action="{% url 'jobs:send_notification' %}"
+              hx-post="{% url 'jobs:send_notification' %}"
+              hx-swap="none">
+            {% csrf_token %}
+            
+            <div class="notification-modal-body">
+                <!-- Job Selection Section -->
+                <div class="form-section">
+                    <label class="form-section-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                        </svg>
+                        Related Job <span class="optional-label">(Optional)</span>
+                    </label>
+                    
+                    <input type="hidden" name="job_id" id="selectedJobId" value="">
+                    
+                    <!-- Add Job Button (shown when no job selected) -->
+                    <button type="button" id="addJobBtn" class="add-job-btn" onclick="openJobSearchModal()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg>
+                        Search for a Job
+                    </button>
+                    
+                    <!-- Selected Job Display (shown when job is selected) -->
+                    <div id="selectedJobDisplay" class="selected-job-display" style="display: none;">
+                        <div class="selected-job-info">
+                            <span class="selected-job-number"></span>
+                            <span class="selected-job-details"></span>
+                        </div>
+                        <button type="button" class="clear-job-btn" onclick="clearSelectedJob()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recipients Section -->
+                <div class="form-section">
+                    <label class="form-section-label">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        Send To
+                    </label>
+                    
+                    <!-- Quick Select Options -->
+                    <div class="quick-select-row">
+                        <button type="button" class="quick-select-btn active" onclick="selectRecipientMode('all')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="9" cy="7" r="4"></circle>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                            </svg>
+                            All Users
+                        </button>
+                        <button type="button" class="quick-select-btn" onclick="selectRecipientMode('select')">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                <circle cx="12" cy="7" r="4"></circle>
+                            </svg>
+                            Select Users
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" name="recipient_mode" id="recipientMode" value="all">
+                    
+                    <!-- User Selection (hidden by default) -->
+                    <div id="userSelectionContainer" class="user-selection-container" style="display: none;">
+                        <div class="select-actions">
+                            <button type="button" class="select-action-btn" onclick="toggleAllUsers(true)">Select All</button>
+                            <button type="button" class="select-action-btn" onclick="toggleAllUsers(false)">Deselect All</button>
+                        </div>
+                        <div class="user-checkbox-list">
+                            {% for user in users %}
+                            <label class="user-checkbox-item" for="user_{{ user.pk }}">
+                                <input type="checkbox" 
+                                       name="user_ids" 
+                                       value="{{ user.pk }}" 
+                                       id="user_{{ user.pk }}"
+                                       class="user-checkbox">
+                                <div class="user-avatar">{{ user.first_name|default:user.username|slice:":1"|upper }}</div>
+                                <div class="user-info">
+                                    <span class="user-name">{{ user.get_full_name|default:user.username }}</span>
+                                    {% if user.email %}<span class="user-email">{{ user.email }}</span>{% endif %}
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Message Section -->
+                <div class="form-section">
+                    <label class="form-section-label" for="notificationMessage">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        Message
+                    </label>
+                    <div class="message-input-container">
+                        <textarea name="message" 
+                                  id="notificationMessage" 
+                                  class="message-textarea" 
+                                  rows="4" 
+                                  placeholder="Type your message here..."
+                                  required></textarea>
+                        <button type="button" 
+                                id="voiceInputBtn" 
+                                class="voice-input-btn" 
+                                title="Click to speak"
+                                onclick="toggleVoiceInput()">
+                            <svg class="mic-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                            <svg class="mic-off-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                                <line x1="1" y1="1" x2="23" y2="23"></line>
+                                <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path>
+                                <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"></path>
+                                <line x1="12" y1="19" x2="12" y2="23"></line>
+                                <line x1="8" y1="23" x2="16" y2="23"></line>
+                            </svg>
+                            <span class="voice-pulse"></span>
+                        </button>
+                    </div>
+                    <div class="message-footer">
+                        <div id="voiceStatus" class="voice-status"></div>
+                        <div class="char-counter">
+                            <span id="charCount">0</span> / 500 characters
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="notification-modal-footer">
+                <button type="button" class="modal-btn-cancel" onclick="cleanupNotificationModal()">
+                    Cancel
+                </button>
+                <button type="submit" class="modal-btn-send" id="sendBtn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                    Send Notification
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Job Search Modal (Nested) -->
+<div class="job-search-modal-overlay" id="jobSearchModal" style="display: none;" onclick="if(event.target === this) closeJobSearchModal()">
+    <div class="job-search-modal" onclick="event.stopPropagation()">
+        <div class="job-search-modal-header">
+            <div class="job-search-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                Search for Job
+            </div>
+            <button type="button" class="job-search-modal-close" onclick="closeJobSearchModal()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+        
+        <div class="job-search-modal-body">
+            <div class="job-search-input-container">
+                <svg class="job-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" 
+                       id="jobSearchInput"
+                       name="q"
+                       class="job-search-input" 
+                       placeholder="Search by job number, customer, or engine..."
+                       autocomplete="off"
+                       hx-get="{% url 'jobs:notification_job_search' %}"
+                       hx-trigger="keyup changed delay:300ms"
+                       hx-target="#jobSearchResults"
+                       hx-include="this"
+                       hx-indicator="#jobSearchSpinner">
+                <div id="jobSearchSpinner" class="job-search-spinner htmx-indicator">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="spinning">
+                        <circle cx="12" cy="12" r="10" stroke-opacity="0.25"></circle>
+                        <path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path>
+                    </svg>
+                </div>
+            </div>
+            
+            <div class="job-search-hint">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <line x1="12" y1="16" x2="12" y2="12"></line>
+                    <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Type to search for jobs by number, customer name, or engine
+            </div>
+            
+            <div id="jobSearchResults" class="job-search-results"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Modal Overlay */
+.notification-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Modal Container */
+.notification-modal {
+    background: white;
+    border-radius: 16px;
+    width: 95%;
+    max-width: 560px;
+    max-height: min(85vh, 650px);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+    animation: modalSlideIn 0.25s ease-out;
+    overflow: hidden;
+}
+
+/* Form inside modal needs flex layout */
+.notification-modal form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+@keyframes modalSlideIn {
+    from { opacity: 0; transform: translateY(-20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Modal Header */
+.notification-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(to bottom, #fafbfc, #f8fafc);
+    flex-shrink: 0; /* Prevent header from being compressed */
+}
+
+.notification-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.notification-modal-title svg {
+    color: #8B0000;
+}
+
+.notification-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.notification-modal-close:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+/* Modal Body */
+.notification-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+    min-height: 0; /* Important for flex scroll */
+}
+
+/* Form Sections */
+.form-section {
+    margin-bottom: 1rem;
+}
+
+.form-section:last-child {
+    margin-bottom: 0;
+}
+
+.form-section-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.form-section-label svg {
+    color: #64748b;
+}
+
+.optional-label {
+    font-weight: 400;
+    text-transform: none;
+    color: #94a3b8;
+    font-size: 0.75rem;
+}
+
+/* Add Job Button */
+.add-job-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    width: 100%;
+    padding: 0.875rem 1.25rem;
+    background: #f8fafc;
+    border: 2px dashed #cbd5e1;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.add-job-btn:hover {
+    background: white;
+    border-color: #8B0000;
+    color: #8B0000;
+    border-style: solid;
+}
+
+.add-job-btn svg {
+    transition: transform 0.15s ease;
+}
+
+.add-job-btn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Selected Job Display */
+.selected-job-display {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.875rem 1rem;
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(139, 0, 0, 0.04));
+    border: 2px solid #8B0000;
+    border-radius: 10px;
+}
+
+.selected-job-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.selected-job-number {
+    font-weight: 700;
+    color: #8B0000;
+    font-size: 0.9375rem;
+}
+
+.selected-job-details {
+    font-size: 0.8125rem;
+    color: #64748b;
+}
+
+.clear-job-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.clear-job-btn:hover {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #ef4444;
+}
+
+/* Quick Select Buttons */
+.quick-select-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.quick-select-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.quick-select-btn:hover {
+    background: white;
+    border-color: #cbd5e1;
+}
+
+.quick-select-btn.active {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.08), rgba(139, 0, 0, 0.04));
+    border-color: #8B0000;
+    color: #8B0000;
+}
+
+/* User Selection Container */
+.user-selection-container {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 0.5rem;
+    animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.select-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.select-action-btn {
+    padding: 0.375rem 0.75rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.select-action-btn:hover {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+}
+
+/* User Checkbox List */
+.user-checkbox-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    max-height: 140px;
+    overflow-y: auto;
+}
+
+.user-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.user-checkbox-item:hover {
+    border-color: #8B0000;
+}
+
+.user-checkbox-item:has(.user-checkbox:checked) {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(139, 0, 0, 0.02));
+    border-color: #8B0000;
+}
+
+.user-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: #8B0000;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.user-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    flex: 1;
+    min-width: 0;
+}
+
+.user-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.user-email {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Message Input Container */
+.message-input-container {
+    position: relative;
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Message Textarea */
+.message-textarea {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    color: #1e293b;
+    background: #f8fafc;
+    resize: none;
+    min-height: 80px;
+    max-height: 100px;
+    font-family: inherit;
+    line-height: 1.5;
+    transition: all 0.15s ease;
+}
+
+.message-textarea:focus {
+    outline: none;
+    border-color: #8B0000;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(139, 0, 0, 0.1);
+}
+
+.message-textarea::placeholder {
+    color: #94a3b8;
+}
+
+/* Voice Input Button */
+.voice-input-btn {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    overflow: hidden;
+}
+
+.voice-input-btn:hover {
+    background: white;
+    border-color: #8B0000;
+    color: #8B0000;
+}
+
+.voice-input-btn.listening {
+    background: linear-gradient(135deg, #8B0000 0%, #660000 100%);
+    border-color: #8B0000;
+    color: white;
+    animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.voice-input-btn.listening .mic-icon {
+    animation: mic-bounce 0.5s ease-in-out infinite;
+}
+
+.voice-input-btn.not-supported {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.voice-input-btn.not-supported:hover {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+    color: #64748b;
+}
+
+/* Pulse animation for listening state */
+.voice-pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background: rgba(139, 0, 0, 0.3);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.voice-input-btn.listening .voice-pulse {
+    animation: voice-pulse-anim 1.5s ease-out infinite;
+}
+
+@keyframes voice-pulse-anim {
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
+}
+
+@keyframes pulse-glow {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(139, 0, 0, 0.4);
+    }
+    50% {
+        box-shadow: 0 0 0 8px rgba(139, 0, 0, 0);
+    }
+}
+
+@keyframes mic-bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Message Footer */
+.message-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.voice-status {
+    font-size: 0.75rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.voice-status.listening {
+    color: #8B0000;
+    font-weight: 500;
+}
+
+.voice-status.error {
+    color: #ef4444;
+}
+
+.voice-status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #8B0000;
+    animation: blink 1s ease-in-out infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+
+.char-counter {
+    text-align: right;
+    font-size: 0.75rem;
+    color: #94a3b8;
+}
+
+/* Modal Footer */
+.notification-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background: #fafbfc;
+    flex-shrink: 0; /* Prevent footer from being compressed */
+}
+
+.modal-btn-cancel {
+    padding: 0.75rem 1.25rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.modal-btn-cancel:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+}
+
+.modal-btn-send {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(135deg, #8B0000 0%, #660000 100%);
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 8px rgba(139, 0, 0, 0.3);
+}
+
+.modal-btn-send:hover {
+    background: linear-gradient(135deg, #a00000 0%, #800000 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(139, 0, 0, 0.4);
+}
+
+.modal-btn-send:active {
+    transform: translateY(0);
+}
+
+/* =====================================================
+   JOB SEARCH MODAL (Nested)
+   ===================================================== */
+
+.job-search-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10001;
+    animation: modalFadeIn 0.15s ease-out;
+}
+
+.job-search-modal {
+    background: white;
+    border-radius: 16px;
+    width: 95%;
+    max-width: 520px;
+    max-height: 70vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+    animation: modalSlideIn 0.2s ease-out;
+    overflow: hidden;
+}
+
+.job-search-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(to bottom, #fafbfc, #f8fafc);
+}
+
+.job-search-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.job-search-modal-title svg {
+    color: #8B0000;
+}
+
+.job-search-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.job-search-modal-close:hover {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.job-search-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.25rem;
+}
+
+/* Job Search Input */
+.job-search-input-container {
+    position: relative;
+    margin-bottom: 0.75rem;
+}
+
+.job-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.job-search-input {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    padding-left: 2.75rem;
+    padding-right: 2.5rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.9375rem;
+    color: #1e293b;
+    background: #f8fafc;
+    transition: all 0.15s ease;
+}
+
+.job-search-input:focus {
+    outline: none;
+    border-color: #8B0000;
+    background: white;
+    box-shadow: 0 0 0 4px rgba(139, 0, 0, 0.1);
+}
+
+.job-search-input::placeholder {
+    color: #94a3b8;
+}
+
+.job-search-spinner {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #8B0000;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.job-search-spinner.htmx-request {
+    opacity: 1;
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Search Hint */
+.job-search-hint {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: #f1f5f9;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    color: #64748b;
+    margin-bottom: 1rem;
+}
+
+.job-search-hint svg {
+    flex-shrink: 0;
+    color: #94a3b8;
+}
+
+/* Job Search Results */
+.job-search-results {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.job-search-results:empty::after {
+    content: 'Start typing to search for jobs...';
+    display: block;
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.job-result-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.875rem 1rem;
+    background: white;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.job-result-item:hover {
+    background: linear-gradient(135deg, rgba(139, 0, 0, 0.05), rgba(139, 0, 0, 0.02));
+    border-color: #8B0000;
+    transform: translateX(4px);
+}
+
+.job-result-number {
+    font-weight: 700;
+    color: #8B0000;
+    font-size: 0.9375rem;
+    flex-shrink: 0;
+}
+
+.job-result-details {
+    flex: 1;
+    font-size: 0.8125rem;
+    color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-result-arrow {
+    color: #cbd5e1;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, color 0.15s ease;
+}
+
+.job-result-item:hover .job-result-arrow {
+    color: #8B0000;
+    transform: translateX(4px);
+}
+
+/* No results state */
+.job-search-no-results {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #94a3b8;
+}
+
+.job-search-no-results svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: 0.75rem;
+    opacity: 0.5;
+}
+
+.job-search-no-results p {
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Success Toast */
+.notification-success-toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+    border-radius: 12px;
+    font-weight: 600;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    z-index: 10002;
+    animation: toastSlideIn 0.3s ease-out;
+}
+
+@keyframes toastSlideIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<script>
+// =====================================================
+// VOICE INPUT (Web Speech API)
+// =====================================================
+let recognition = null;
+let isListening = false;
+
+// Initialize Speech Recognition
+function initSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+        // Browser doesn't support speech recognition
+        const btn = document.getElementById('voiceInputBtn');
+        btn.classList.add('not-supported');
+        btn.title = 'Voice input not supported in this browser. Try Chrome or Edge.';
+        document.getElementById('voiceStatus').textContent = 'Voice not supported';
+        document.getElementById('voiceStatus').classList.add('error');
+        return false;
+    }
+    
+    recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    
+    recognition.onstart = function() {
+        isListening = true;
+        const btn = document.getElementById('voiceInputBtn');
+        btn.classList.add('listening');
+        btn.title = 'Click to stop';
+        
+        const status = document.getElementById('voiceStatus');
+        status.innerHTML = '<span class="voice-status-dot"></span> Listening...';
+        status.classList.add('listening');
+        status.classList.remove('error');
+    };
+    
+    recognition.onend = function() {
+        isListening = false;
+        const btn = document.getElementById('voiceInputBtn');
+        btn.classList.remove('listening');
+        btn.title = 'Click to speak';
+        
+        const status = document.getElementById('voiceStatus');
+        status.innerHTML = '';
+        status.classList.remove('listening');
+    };
+    
+    recognition.onresult = function(event) {
+        const textarea = document.getElementById('notificationMessage');
+        let finalTranscript = '';
+        let interimTranscript = '';
+        
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                finalTranscript += transcript;
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+        
+        if (finalTranscript) {
+            // Add a space if there's existing content
+            const currentValue = textarea.value;
+            if (currentValue && !currentValue.endsWith(' ') && !currentValue.endsWith('\n')) {
+                textarea.value += ' ';
+            }
+            textarea.value += finalTranscript;
+            
+            // Update character count
+            updateCharCount();
+            
+            // Show brief confirmation
+            const status = document.getElementById('voiceStatus');
+            status.innerHTML = '<span class="voice-status-dot"></span> Listening...';
+        }
+    };
+    
+    recognition.onerror = function(event) {
+        console.error('Speech recognition error:', event.error);
+        isListening = false;
+        
+        const btn = document.getElementById('voiceInputBtn');
+        btn.classList.remove('listening');
+        btn.title = 'Click to speak';
+        
+        const status = document.getElementById('voiceStatus');
+        status.classList.remove('listening');
+        status.classList.add('error');
+        
+        switch (event.error) {
+            case 'not-allowed':
+                status.textContent = 'Microphone access denied';
+                break;
+            case 'no-speech':
+                status.textContent = 'No speech detected';
+                setTimeout(() => { status.textContent = ''; status.classList.remove('error'); }, 2000);
+                break;
+            case 'network':
+                status.textContent = 'Network error';
+                break;
+            default:
+                status.textContent = 'Error: ' + event.error;
+        }
+    };
+    
+    return true;
+}
+
+function toggleVoiceInput() {
+    const btn = document.getElementById('voiceInputBtn');
+    
+    // Check if not supported
+    if (btn.classList.contains('not-supported')) {
+        alert('Voice input is not supported in this browser.\n\nPlease use Chrome, Edge, or Safari for voice input.');
+        return;
+    }
+    
+    // Initialize if needed
+    if (!recognition) {
+        if (!initSpeechRecognition()) {
+            return;
+        }
+    }
+    
+    if (isListening) {
+        recognition.stop();
+    } else {
+        try {
+            recognition.start();
+        } catch (e) {
+            // Recognition might already be running
+            recognition.stop();
+            setTimeout(() => recognition.start(), 100);
+        }
+    }
+}
+
+function updateCharCount() {
+    const textarea = document.getElementById('notificationMessage');
+    const count = textarea.value.length;
+    const counter = document.getElementById('charCount');
+    counter.textContent = count;
+    
+    if (count > 500) {
+        counter.style.color = '#ef4444';
+    } else {
+        counter.style.color = '#94a3b8';
+    }
+}
+
+// Initialize speech recognition on modal load
+initSpeechRecognition();
+
+// Cleanup function for when modal closes
+function cleanupNotificationModal() {
+    if (recognition && isListening) {
+        recognition.stop();
+    }
+    document.getElementById('sendNotificationModal')?.remove();
+}
+
+// =====================================================
+// JOB SEARCH MODAL FUNCTIONS
+// =====================================================
+
+// Job Search Modal Functions
+function openJobSearchModal() {
+    const modal = document.getElementById('jobSearchModal');
+    modal.style.display = 'flex';
+    // Focus the search input after a brief delay
+    setTimeout(() => {
+        document.getElementById('jobSearchInput').focus();
+    }, 100);
+}
+
+function closeJobSearchModal() {
+    const modal = document.getElementById('jobSearchModal');
+    modal.style.display = 'none';
+    // Clear search input and results
+    document.getElementById('jobSearchInput').value = '';
+    document.getElementById('jobSearchResults').innerHTML = '';
+}
+
+// Job selection functions
+function selectJob(jobId, jobNumber, jobDetails) {
+    document.getElementById('selectedJobId').value = jobId;
+    document.getElementById('addJobBtn').style.display = 'none';
+    
+    const display = document.getElementById('selectedJobDisplay');
+    display.querySelector('.selected-job-number').textContent = 'Job ' + jobNumber;
+    display.querySelector('.selected-job-details').textContent = jobDetails;
+    display.style.display = 'flex';
+    
+    // Close the job search modal
+    closeJobSearchModal();
+}
+
+function clearSelectedJob() {
+    document.getElementById('selectedJobId').value = '';
+    document.getElementById('addJobBtn').style.display = 'flex';
+    document.getElementById('selectedJobDisplay').style.display = 'none';
+}
+
+// Event delegation for job results (handles dynamic content)
+document.getElementById('jobSearchResults').addEventListener('click', function(e) {
+    const resultItem = e.target.closest('.job-result-item');
+    if (resultItem && resultItem.dataset.jobId) {
+        selectJob(
+            resultItem.dataset.jobId,
+            resultItem.dataset.jobNumber,
+            resultItem.dataset.jobDetails
+        );
+    }
+});
+
+// Recipient mode selection
+function selectRecipientMode(mode) {
+    document.getElementById('recipientMode').value = mode;
+    
+    // Update button states
+    document.querySelectorAll('.quick-select-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.closest('.quick-select-btn').classList.add('active');
+    
+    // Show/hide user selection
+    const container = document.getElementById('userSelectionContainer');
+    if (mode === 'select') {
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
+}
+
+// Toggle all user checkboxes
+function toggleAllUsers(checked) {
+    document.querySelectorAll('.user-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+
+// Character counter
+document.getElementById('notificationMessage').addEventListener('input', updateCharCount);
+
+// Close modals on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const jobSearchModal = document.getElementById('jobSearchModal');
+        if (jobSearchModal && jobSearchModal.style.display === 'flex') {
+            closeJobSearchModal();
+        } else {
+            cleanupNotificationModal();
+        }
+    }
+});
+
+// Handle form submission success
+document.body.addEventListener('dashboardNotificationSent', function() {
+    // Stop voice recognition if running
+    if (recognition && isListening) {
+        recognition.stop();
+    }
+    document.getElementById('sendNotificationModal')?.remove();
+    
+    // Show success toast
+    const toast = document.createElement('div');
+    toast.className = 'notification-success-toast';
+    toast.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg> Notification sent successfully!';
+    document.body.appendChild(toast);
+    
+    setTimeout(function() {
+        toast.style.animation = 'toastSlideIn 0.3s ease-out reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+});
+</script>

@@ -1,0 +1,570 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ category.name }} - Part Category Settings - Spring Garden Repair{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'settings_app/settings.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="category-detail-page">
+    <!-- Header -->
+    <div class="category-header">
+        <div class="category-header-left">
+            <a href="{% url 'settings_app:settings_index' %}?tab=part_categories" class="back-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+                Back to Categories
+            </a>
+            <div class="category-title-section">
+                <h1 class="category-title">{{ category.name }}</h1>
+                <code class="category-slug">{{ category.slug }}</code>
+            </div>
+        </div>
+        <div class="category-header-actions">
+            <button type="button" 
+                    class="btn btn-primary"
+                    hx-get="{% url 'settings_app:part_attribute_create_modal' category.pk %}"
+                    hx-target="body"
+                    hx-swap="beforeend">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                Add Field
+            </button>
+            <button type="button" 
+                    class="btn btn-outline"
+                    hx-get="{% url 'settings_app:part_category_edit_modal' category.pk %}"
+                    hx-target="body"
+                    hx-swap="beforeend">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
+                Edit Category
+            </button>
+        </div>
+    </div>
+
+    <!-- Attributes Table -->
+    <div class="category-section">
+        <div class="section-header">
+            <h2 class="section-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+                Category Fields
+                <span class="count-badge">{{ attributes|length }}</span>
+            </h2>
+        </div>
+        
+        <div id="attributes-table-container"
+             hx-get="{% url 'settings_app:part_category_detail' category.pk %}"
+             hx-select="#attributes-content"
+             hx-target="#attributes-content"
+             hx-swap="outerHTML"
+             hx-trigger="attributeUpdated from:body">
+            <div id="attributes-content">
+                {% if attributes %}
+                <table class="settings-table">
+                    <thead>
+                        <tr>
+                            <th>Field Name</th>
+                            <th>Code</th>
+                            <th>Data Type</th>
+                            <th>Unit</th>
+                            <th>Required</th>
+                            <th>Sort Order</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for attribute in attributes %}
+                        <tr>
+                            <td>
+                                <strong>{{ attribute.name }}</strong>
+                                {% if attribute.help_text %}
+                                <p class="help-text">{{ attribute.help_text }}</p>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <code class="code-badge">{{ attribute.code }}</code>
+                            </td>
+                            <td>
+                                <span class="type-badge type-{{ attribute.data_type }}">
+                                    {{ attribute.get_data_type_display }}
+                                </span>
+                            </td>
+                            <td>{{ attribute.unit|default:"—" }}</td>
+                            <td>
+                                {% if attribute.is_required %}
+                                <span class="required-badge">Required</span>
+                                {% else %}
+                                <span class="optional-badge">Optional</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ attribute.sort_order }}</td>
+                            <td>
+                                <div class="table-actions">
+                                    <button type="button" 
+                                            class="btn-icon"
+                                            hx-get="{% url 'settings_app:part_attribute_edit_modal' category.pk attribute.pk %}"
+                                            hx-target="body"
+                                            hx-swap="beforeend"
+                                            title="Edit">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                                        </svg>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn-icon btn-icon-danger"
+                                            hx-post="{% url 'settings_app:part_attribute_delete' category.pk attribute.pk %}"
+                                            hx-confirm="Are you sure you want to delete the field '{{ attribute.name }}'?"
+                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                            title="Delete">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="3 6 5 6 21 6"></polyline>
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% if attribute.data_type == 'choice' %}
+                        <tr class="choices-row">
+                            <td colspan="7">
+                                <div class="choices-section">
+                                    <div class="choices-header">
+                                        <h4>Choices for "{{ attribute.name }}"</h4>
+                                        <button type="button" 
+                                                class="btn btn-sm btn-outline"
+                                                hx-get="{% url 'settings_app:part_attribute_choice_create_modal' category.pk attribute.pk %}"
+                                                hx-target="body"
+                                                hx-swap="beforeend">
+                                            + Add Choice
+                                        </button>
+                                    </div>
+                                    {% if attribute.choices.exists %}
+                                    <table class="choices-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Value</th>
+                                                <th>Label</th>
+                                                <th>Sort Order</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for choice in attribute.choices.all %}
+                                            <tr>
+                                                <td><code>{{ choice.value }}</code></td>
+                                                <td>{{ choice.label }}</td>
+                                                <td>{{ choice.sort_order }}</td>
+                                                <td>
+                                                    <button type="button" 
+                                                            class="btn-icon btn-icon-danger"
+                                                            hx-post="{% url 'settings_app:part_attribute_choice_delete' category.pk attribute.pk choice.pk %}"
+                                                            hx-confirm="Delete this choice?"
+                                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                                                            title="Delete">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                                                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                                                        </svg>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                    {% else %}
+                                    <p class="empty-choices">No choices defined yet. Add choices for users to select from.</p>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                    </svg>
+                    <h3>No Fields Yet</h3>
+                    <p>Add fields to this category to define custom specifications for parts.</p>
+                    <button type="button" 
+                            class="btn btn-primary"
+                            hx-get="{% url 'settings_app:part_attribute_create_modal' category.pk %}"
+                            hx-target="body"
+                            hx-swap="beforeend">
+                        Add First Field
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.category-detail-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
+}
+
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: white;
+    padding: 1.5rem;
+    margin: -2rem -1rem 1.5rem -1rem;
+    border-bottom: 1px solid var(--gray-200);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: var(--shadow-sm);
+}
+
+.category-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--gray-600);
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.15s;
+}
+
+.back-link:hover {
+    color: var(--primary);
+}
+
+.category-title-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    margin: 0;
+}
+
+.category-slug {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+}
+
+.category-header-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.category-section {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 1rem 1.5rem;
+    background: var(--gray-50);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 0;
+}
+
+.section-title svg {
+    color: var(--gray-500);
+}
+
+.count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 0.375rem;
+    background: var(--gray-200);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.settings-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.settings-table th,
+.settings-table td {
+    padding: 0.875rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.settings-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.settings-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.settings-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.help-text {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    margin: 0.25rem 0 0 0;
+}
+
+.code-badge {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.type-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.type-text { background: #dbeafe; color: #1e40af; }
+.type-int { background: #d1fae5; color: #065f46; }
+.type-dec { background: #fef3c7; color: #92400e; }
+.type-bool { background: #fce7f3; color: #9d174d; }
+.type-date { background: #e0e7ff; color: #3730a3; }
+.type-choice { background: #f3e8ff; color: #6b21a8; }
+
+.required-badge {
+    padding: 0.25rem 0.5rem;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.optional-badge {
+    padding: 0.25rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-600);
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+}
+
+.table-actions {
+    display: flex;
+    gap: 0.375rem;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.25rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-icon:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.btn-icon-danger:hover {
+    background: #fef2f2;
+    border-color: var(--error);
+    color: var(--error);
+}
+
+.choices-row {
+    background: var(--gray-50) !important;
+}
+
+.choices-section {
+    padding: 1rem;
+    background: white;
+    border-radius: 0.375rem;
+    border: 1px solid var(--gray-200);
+}
+
+.choices-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.choices-header h4 {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin: 0;
+}
+
+.choices-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.choices-table th,
+.choices-table td {
+    padding: 0.5rem 0.75rem;
+    text-align: left;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.choices-table th {
+    font-weight: 600;
+    color: var(--gray-600);
+}
+
+.choices-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.empty-choices {
+    text-align: center;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    font-style: italic;
+    margin: 0;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-500);
+}
+
+.empty-state svg {
+    margin-bottom: 1rem;
+    color: var(--gray-400);
+}
+
+.empty-state h3 {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+}
+
+.empty-state p {
+    margin-bottom: 1.5rem;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--gray-800);
+}
+
+@media (max-width: 768px) {
+    .category-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .category-header-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+</style>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% if parts %}
+<div class="results-list">
+    {% for part in parts %}
+    <div class="result-item clickable-row"
+         hx-post="{% url 'jobs:job_part_add' job.pk part.pk %}"
+         hx-target="#job-parts-section"
+         hx-swap="outerHTML"
+         hx-on::after-request="if(event.detail.successful) document.getElementById('part-add-modal').remove()">
+        <div class="result-content">
+            <div class="result-name"><strong>{{ part.name }}</strong></div>
+            <div class="result-details">
+                <span>Part #: {{ part.part_number }}</span>
+            </div>
+        </div>
+        <div class="result-arrow">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% elif query %}
+<div class="empty-results">
+    <p>No parts found for "{{ query }}".</p>
+</div>
+{% else %}
+<div class="loading-placeholder">
+    <p>Search for parts by name or part number...</p>
+</div>
+{% endif %}
+
+<style>
+.results-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #f9f9f9;
+    transition: all 0.2s ease;
+}
+
+.clickable-row {
+    cursor: pointer;
+}
+
+.clickable-row:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.result-content {
+    flex: 1;
+}
+
+.result-name {
+    font-size: 0.875rem;
+    margin-bottom: 0.125rem;
+}
+
+.result-details {
+    font-size: 0.75rem;
+    color: #666;
+    display: flex;
+    gap: 0.75rem;
+}
+
+.result-arrow {
+    color: #999;
+    margin-left: 0.75rem;
+}
+
+.clickable-row:hover .result-arrow {
+    color: #2196f3;
+}
+
+.empty-results {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.loading-placeholder {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+</style>
+

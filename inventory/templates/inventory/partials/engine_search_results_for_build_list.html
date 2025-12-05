@@ -1,42 +1,49 @@
 {% if engines %}
     {% for engine in engines %}
-        <div class="engine-result-row"
+        <div class="po-result-row"
              hx-post="{% url 'inventory:build_list_engine_add' build_list.id %}"
              hx-vals='{"engine_id": {{ engine.id }}}'
-             hx-target="#engines-table-container"
-             hx-swap="innerHTML"
+             hx-target="#build-list-engines-section"
+             hx-swap="outerHTML"
              hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-             hx-on::after-request="if(event.detail.successful) this.closest('.modal-overlay').remove();">
-            <div class="result-title">
-                {{ engine.engine_make }} {{ engine.engine_model }}
+             hx-on::after-request="if(event.detail.successful) document.getElementById('engine-search-modal').remove();">
+            <div class="po-result-info">
+                <div class="po-result-title">
+                    {{ engine.engine_make }} {{ engine.engine_model }}
+                    {% if engine.status %}
+                        <span class="po-result-badge">{{ engine.status }}</span>
+                    {% endif %}
+                </div>
+                <div class="po-result-subtitle">
+                    {% if engine.serial_number %}
+                        S/N: {{ engine.serial_number }}
+                    {% endif %}
+                    {% if engine.sg_engine %}
+                        {% if engine.serial_number %} • {% endif %}
+                        SG: {{ engine.sg_engine.sg_make }} {{ engine.sg_engine.sg_model }}
+                    {% endif %}
+                </div>
             </div>
-            <div class="result-details">
-                {% if engine.serial_number %}
-                    <span><strong>S/N:</strong> {{ engine.serial_number }}</span>
-                {% endif %}
-                {% if engine.status %}
-                    <span class="result-badge">{{ engine.status }}</span>
-                {% endif %}
-                {% if engine.sg_engine %}
-                    <span><strong>SG:</strong> {{ engine.sg_engine.sg_make }} {{ engine.sg_engine.sg_model }}</span>
-                {% endif %}
+            <div class="po-result-action">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"></line>
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
             </div>
         </div>
     {% endfor %}
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <p class="empty-state-text">
+    <div class="po-search-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>
             {% if request.GET.q %}
-                No engines found matching your search.
+                No engines found matching "{{ request.GET.q }}"
             {% else %}
                 Start typing to search for engines...
             {% endif %}
         </p>
     </div>
 {% endif %}
-
-
-
-
-

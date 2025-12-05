@@ -1,366 +1,287 @@
 {% load static %}
 
-<!-- Vendors Content Wrapper -->
-<div id="vendors-content">
+<div id="part-vendors-section">
     <!-- Stock Summary -->
-    <div class="stock-summary">
-        <h3>Total Stock Available</h3>
-        <div class="stock-total">{{ total_stock }} units</div>
-    </div>
-
-<!-- Tab Navigation -->
-<div class="tabs">
-    <div class="tab active" onclick="switchTab('vendors')">Vendor List</div>
-    <div class="tab" onclick="switchTab('primary')">Primary Vendor</div>
-</div>
-
-<!-- Vendors Tab Content -->
-<div id="vendors-tab" class="tab-content active">
-    {% if part_vendors %}
-        <table class="related-table">
-                <thead>
-                    <tr>
-                        <th>Vendor</th>
-                        <th>Vendor SKU</th>
-                        <th>Cost</th>
-                        <th>Stock Qty</th>
-                        <th>Lead Time (Days)</th>
-                        <th>Notes</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for part_vendor in part_vendors %}
-                        <tr>
-                            <td>
-                                <strong>
-                                    <a href="{% url 'inventory:vendor_detail' part_vendor.vendor.id %}" class="link-primary">
-                                        {{ part_vendor.vendor.name }}
-                                    </a>
-                                </strong>
-                                {% if part_vendor.vendor == part.primary_vendor %}
-                                    <span class="vendor-badge">Primary</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ part_vendor.vendor_sku|default:"—" }}</td>
-                            <td>{% if part_vendor.cost %}${{ part_vendor.cost }}{% else %}—{% endif %}</td>
-                            <td>{{ part_vendor.stock_qty }}</td>
-                            <td>{{ part_vendor.lead_time_days|default:"—" }}</td>
-                            <td>{{ part_vendor.notes|default:"—"|truncatechars:50 }}</td>
-                            <td>
-                                <div class="action-buttons">
-                                    {% if part_vendor.vendor != part.primary_vendor %}
-                                        <button class="btn btn-sm btn-primary" 
-                                                hx-post="{% url 'inventory:part_vendor_set_primary' part.id part_vendor.id %}"
-                                                hx-target="#vendors-section"
-                                                hx-swap="innerHTML"
-                                                hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-                                            Set Primary Vendor
-                                        </button>
-                                    {% endif %}
-                                    <button class="btn btn-sm btn-secondary" 
-                                            onclick="editPartVendor({{ part_vendor.id }})">
-                                        Edit
-                                    </button>
-                                    <button class="btn btn-sm btn-danger" 
-                                            hx-post="{% url 'inventory:part_vendor_delete' part.id part_vendor.id %}"
-                                            hx-target="#vendors-section"
-                                            hx-swap="innerHTML"
-                                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                                            hx-confirm="Are you sure you want to remove this vendor?">
-                                        Remove
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-        </table>
-    {% else %}
-        <div class="empty-message">
-            This part is not associated with any vendors.
+    {% if total_stock > 0 %}
+    <div class="part-stock-summary">
+        <div class="part-stock-info">
+            <span class="part-stock-label">Total Stock</span>
+            <span class="part-stock-value">{{ total_stock }} units</span>
         </div>
+    </div>
     {% endif %}
-    
-    <!-- Add Vendor Button -->
-    <div class="mt-3">
-        <button class="add-button"
-                hx-get="{% url 'inventory:vendor_search_modal_for_part' part.id %}"
-                hx-target="#modal-container"
-                hx-swap="innerHTML">
-            Add Vendor
-        </button>
-    </div>
-</div>
-</div>
 
-<!-- Primary Vendor Tab Content -->
-<div id="primary-tab" class="tab-content">
-    <div class="field-row">
-        <span class="field-label">Current Primary Vendor:</span>
-        <span class="field-value {% if not part.primary_vendor %}empty{% endif %}">
-            {% if part.primary_vendor %}
-                <a href="{% url 'inventory:vendor_detail' part.primary_vendor.id %}" class="link-primary">
-                    {{ part.primary_vendor.name }}
-                </a>
-            {% else %}
-                No primary vendor set
-            {% endif %}
-        </span>
-    </div>
-    
-    {% if part.primary_vendor %}
-        <div class="field-grid" style="margin-top: 1rem;">
-            <div class="field-row">
-                <span class="field-label">Contact Name:</span>
-                <span class="field-value {% if not part.primary_vendor.contact_name %}empty{% endif %}">
-                    {{ part.primary_vendor.contact_name|default:"Not specified" }}
-                </span>
-            </div>
-            
-            <div class="field-row">
-                <span class="field-label">Email:</span>
-                <span class="field-value {% if not part.primary_vendor.email %}empty{% endif %}">
-                    {{ part.primary_vendor.email|default:"Not specified" }}
-                </span>
-            </div>
-            
-            <div class="field-row">
-                <span class="field-label">Phone:</span>
-                <span class="field-value {% if not part.primary_vendor.phone %}empty{% endif %}">
-                    {{ part.primary_vendor.phone|default:"Not specified" }}
-                </span>
-            </div>
-            
-            <div class="field-row">
-                <span class="field-label">Address:</span>
-                <span class="field-value {% if not part.primary_vendor.address %}empty{% endif %}">
-                    {{ part.primary_vendor.address|default:"Not specified"|linebreaks }}
-                </span>
-            </div>
-        </div>
-    {% endif %}
-</div>
-
-<!-- Edit Vendor Modal -->
-<div id="edit-vendor-modal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Edit Vendor</h3>
-            <span class="close" onclick="closeEditModal()">&times;</span>
-        </div>
-        <div class="modal-body">
-            <form id="edit-vendor-form">
-                <div class="form-group">
-                    <label for="edit_vendor_sku">Vendor SKU</label>
-                    <input type="text" name="vendor_sku" id="edit_vendor_sku">
-                </div>
-                <div class="form-group">
-                    <label for="edit_cost">Cost</label>
-                    <input type="number" name="cost" id="edit_cost" step="0.01" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="edit_stock_qty">Stock Quantity</label>
-                    <input type="number" name="stock_qty" id="edit_stock_qty" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="edit_lead_time_days">Lead Time (Days)</label>
-                    <input type="number" name="lead_time_days" id="edit_lead_time_days" min="0">
-                </div>
-                <div class="form-group">
-                    <label for="edit_notes">Notes</label>
-                    <textarea name="notes" id="edit_notes" rows="3"></textarea>
-                </div>
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Save Changes</button>
-                    <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
-                </div>
-            </form>
-        </div>
-    </div>
+    <table class="part-table">
+        <thead>
+            <tr>
+                <th>Vendor</th>
+                <th>Vendor SKU</th>
+                <th>Cost</th>
+                <th>Stock</th>
+                <th>Lead Time</th>
+                <th style="width: 150px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for part_vendor in part_vendors %}
+            <tr class="part-clickable-row" data-href="{% url 'inventory:vendor_detail' part_vendor.vendor.id %}">
+                <td>
+                    <span class="part-vendor-name">{{ part_vendor.vendor.name }}</span>
+                    {% if part_vendor.vendor == part.primary_vendor %}
+                        <span class="part-primary-badge">Primary</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if part_vendor.vendor_sku %}
+                        <code class="part-sku">{{ part_vendor.vendor_sku }}</code>
+                    {% else %}
+                        <span class="part-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if part_vendor.cost %}
+                        <span class="part-cost">${{ part_vendor.cost }}</span>
+                    {% else %}
+                        <span class="part-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span class="part-stock-badge {% if part_vendor.stock_qty > 0 %}in-stock{% else %}no-stock{% endif %}">
+                        {{ part_vendor.stock_qty|default:0 }}
+                    </span>
+                </td>
+                <td>
+                    {% if part_vendor.lead_time_days %}
+                        {{ part_vendor.lead_time_days }} days
+                    {% else %}
+                        <span class="part-text-muted">—</span>
+                    {% endif %}
+                </td>
+                <td class="part-actions-cell" onclick="event.stopPropagation();">
+                    <div class="part-action-buttons">
+                        {% if part_vendor.vendor != part.primary_vendor %}
+                        <form hx-post="{% url 'inventory:part_vendor_set_primary' part.id part_vendor.id %}"
+                              hx-target="#part-vendors-section"
+                              hx-swap="outerHTML"
+                              style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-outline" title="Set as Primary">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path>
+                                </svg>
+                            </button>
+                        </form>
+                        {% endif %}
+                        <form hx-post="{% url 'inventory:part_vendor_delete' part.id part_vendor.id %}"
+                              hx-target="#part-vendors-section"
+                              hx-swap="outerHTML"
+                              hx-confirm="Are you sure you want to remove this vendor?"
+                              style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-xs btn-danger-outline">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="3 6 5 6 21 6"></polyline>
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                </svg>
+                            </button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="part-empty-row">
+                    <div class="part-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <span>No vendors associated with this part</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
 </div>
 
 <style>
-.vendor-badge {
-    background: #10b981;
-    color: white;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
+.part-stock-summary {
+    display: flex;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.part-stock-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.part-stock-label {
     font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.part-stock-value {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.part-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.part-table th,
+.part-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.part-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.part-clickable-row {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.part-clickable-row:hover {
+    background: var(--gray-50);
+}
+
+.part-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.part-vendor-name {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.part-primary-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
     margin-left: 0.5rem;
+}
+
+.part-sku {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.part-cost {
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.part-stock-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
     font-weight: 600;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    flex-wrap: wrap;
+.part-stock-badge.in-stock {
+    background: #d1fae5;
+    color: #065f46;
 }
 
-.add-button {
+.part-stock-badge.no-stock {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.part-text-muted {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+}
+
+.part-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.part-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.part-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.part-action-buttons {
+    display: flex;
+    gap: 0.25rem;
+    justify-content: center;
+}
+
+.btn-xs {
     display: inline-flex;
     align-items: center;
-    gap: 0.375rem;
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    background: white;
-    color: var(--gray-700);
-    border: 1px solid var(--gray-300);
-    border-radius: var(--border-radius);
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s ease;
 }
 
-.add-button:hover {
+.btn-outline {
+    background: white;
+    color: var(--gray-600);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
     background: var(--gray-50);
     border-color: var(--gray-400);
 }
 
-.add-button::before {
-    content: '+';
-    font-weight: 700;
-    font-size: 1rem;
-}
-
-
-
-.form-group {
-    display: flex;
-    flex-direction: column;
-}
-
-.form-group label {
-    font-weight: 600;
-    margin-bottom: 0.5rem;
-    color: var(--gray-700);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-    padding: 0.5rem;
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
     border: 1px solid var(--gray-300);
-    border-radius: 0.25rem;
-    font-size: 0.875rem;
 }
 
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-    outline: none;
-    border-color: var(--red-600);
-    box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
 }
 
-.form-actions {
-    display: flex;
-    gap: 1rem;
-    justify-content: flex-end;
-}
-
-.modal {
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-}
-
-.modal-content {
-    background-color: white;
-    margin: 5% auto;
-    padding: 0;
-    border-radius: var(--border-radius);
-    width: 90%;
-    max-width: 600px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-}
-
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--gray-200);
-}
-
-.modal-header h3 {
-    margin: 0;
-    color: var(--gray-900);
-}
-
-.close {
-    color: var(--gray-400);
-    font-size: 1.5rem;
-    font-weight: bold;
-    cursor: pointer;
-}
-
-.close:hover {
-    color: var(--gray-600);
-}
-
-.modal-body {
-    padding: 1.5rem;
+.part-actions-cell {
+    text-align: center;
 }
 </style>
-
-<script>
-function editPartVendor(partVendorId) {
-    // Get the current row data
-    const row = event.target.closest('tr');
-    const vendorSku = row.cells[1].textContent.trim();
-    const cost = row.cells[2].textContent.replace('$', '').trim();
-    const stockQty = row.cells[3].textContent.trim();
-    const leadTime = row.cells[4].textContent.trim();
-    const notes = row.cells[5].textContent.trim();
-    
-    // Populate the modal form
-    document.getElementById('edit_vendor_sku').value = vendorSku === '—' ? '' : vendorSku;
-    document.getElementById('edit_cost').value = cost === '—' ? '' : cost;
-    document.getElementById('edit_stock_qty').value = stockQty === '—' ? '' : stockQty;
-    document.getElementById('edit_lead_time_days').value = leadTime === '—' ? '' : leadTime;
-    document.getElementById('edit_notes').value = notes === '—' ? '' : notes;
-    
-    // Set up the form submission
-    const form = document.getElementById('edit-vendor-form');
-    form.onsubmit = function(e) {
-        e.preventDefault();
-        
-        const formData = new FormData(form);
-        fetch(`/inventory/parts/{{ part.id }}/vendors/${partVendorId}/edit/`, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-            }
-        })
-        .then(response => response.text())
-        .then(html => {
-            document.getElementById('vendors-section').innerHTML = html;
-            closeEditModal();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('An error occurred while updating the vendor.');
-        });
-    };
-    
-    // Show the modal
-    document.getElementById('edit-vendor-modal').style.display = 'block';
-}
-
-function closeEditModal() {
-    document.getElementById('edit-vendor-modal').style.display = 'none';
-}
-
-// Close modal when clicking outside
-window.onclick = function(event) {
-    const modal = document.getElementById('edit-vendor-modal');
-    if (event.target === modal) {
-        closeEditModal();
-    }
-}
-</script>

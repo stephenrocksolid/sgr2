@@ -1,29 +1,34 @@
 {% load static %}
 
 {% if engines %}
-<table class="related-table">
+<table class="kit-table">
     <thead>
         <tr>
             <th>Engine</th>
             <th>Type</th>
+            <th>Serial Number</th>
             <th style="width: 80px; text-align: right;">Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for engine in engines %}
-            <tr onclick="window.location='{% url 'inventory:engine_detail' engine.pk %}';">
-                <td><strong>{{ engine }}</strong></td>
+            <tr class="kit-clickable-row" data-href="{% url 'inventory:engine_detail' engine.pk %}">
+                <td><strong>{{ engine.engine_make }} {{ engine.engine_model }}</strong></td>
                 <td>{{ engine.get_engine_type_display|default:"—" }}</td>
-                <td style="text-align: right;" onclick="event.stopPropagation();">
-                    <button 
-                        class="btn-icon btn-danger"
-                        hx-post="{% url 'inventory:kit_engine_remove' kit.pk engine.pk %}"
-                        hx-target="#kit-engines-table-container"
-                        hx-swap="innerHTML"
-                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                        onclick="return confirm('Remove this engine from the kit?');"
-                        title="Remove">
-                        ✕
+                <td style="color: var(--gray-600);">{{ engine.serial_number|default:"—" }}</td>
+                <td class="kit-actions-cell" style="text-align: right;">
+                    <button type="button"
+                            class="kit-action-btn kit-action-btn-danger"
+                            hx-post="{% url 'inventory:kit_engine_remove' kit.pk engine.pk %}"
+                            hx-target="#kit-engines-section"
+                            hx-swap="innerHTML"
+                            hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                            hx-confirm="Remove this engine from the kit?"
+                            title="Remove">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
                     </button>
                 </td>
             </tr>
@@ -31,9 +36,108 @@
     </tbody>
 </table>
 {% else %}
-<div class="empty-state">
-    <p>No engines assigned yet.</p>
-    <p style="font-size: 0.875rem; color: var(--gray-500);">Click "Add Engine" to assign this kit to engines.</p>
+<div class="kit-empty-state">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+    <p class="kit-empty-title">No engines assigned</p>
+    <p class="kit-empty-subtitle">Click "Add Engine" to assign this kit to engines.</p>
 </div>
 {% endif %}
 
+<style>
+/* Kit Table Styles */
+.kit-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.kit-table th,
+.kit-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.kit-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.kit-table tbody tr {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.kit-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.kit-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Action Buttons */
+.kit-action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    background: transparent;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.25rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-left: 0.25rem;
+}
+
+.kit-action-btn:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+    color: var(--gray-700);
+}
+
+.kit-action-btn-danger:hover {
+    background: #fef2f2;
+    border-color: var(--error);
+    color: var(--error);
+}
+
+/* Empty State */
+.kit-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.kit-empty-state svg {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.kit-empty-title {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    margin: 0 0 0.25rem 0;
+}
+
+.kit-empty-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin: 0;
+}
+</style>

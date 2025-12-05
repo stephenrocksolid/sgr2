@@ -1,60 +1,68 @@
 {% if machines %}
     {% for machine in machines %}
-    <div class="machine-result-row"
+    <div class="po-result-row"
          hx-post="{% url 'inventory:engine_machine_add' engine.pk %}"
          hx-vals='{"machine_id": "{{ machine.pk }}", "is_primary": false, "notes": ""}'
          hx-target="#engine-machines-section"
          hx-swap="innerHTML"
-         hx-on::after-request="if(event.detail.successful) document.getElementById('machine-search-modal').remove()"
-         style="cursor: pointer;">
-        <div class="machine-info">
-            <div class="machine-title">
+         hx-on::after-request="if(event.detail.successful) document.getElementById('machine-search-modal').remove()">
+        <div class="po-result-info">
+            <div class="po-result-title">
                 {{ machine.year }} {{ machine.make }} {{ machine.model }}
                 {% if machine.machine_type %}
-                    <span class="machine-badge">{{ machine.machine_type }}</span>
+                    <span class="po-result-badge">{{ machine.machine_type }}</span>
                 {% endif %}
             </div>
-            <div class="machine-details">
+            <div class="po-result-subtitle">
                 {% if machine.market_type %}
                     Market: {{ machine.market_type }}
                 {% endif %}
             </div>
         </div>
-        <div class="select-indicator">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7.5 10L9.16667 11.6667L12.5 8.33333M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="po-result-action">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
             </svg>
-            <span style="font-size: 0.8125rem; color: var(--gray-600);">Click to add</span>
         </div>
     </div>
     {% endfor %}
     
     {% if machines|length >= 100 %}
-    <div style="text-align: center; padding: 1rem; color: var(--gray-600); font-size: 0.875rem; border-top: 1px solid var(--gray-200);">
+    <div class="po-search-limit">
         Showing first 100 results. Refine your search for more specific results.
     </div>
     {% endif %}
 {% elif query %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <div class="empty-state-text">
-            No machines found matching "<strong>{{ query }}</strong>"
-            <br><br>
-            <span style="font-size: 0.8125rem; color: var(--gray-400);">
-                Try adjusting your search terms
-            </span>
-        </div>
+    <div class="po-empty-state">
+        <div class="po-empty-state-icon">🔍</div>
+        <p>No machines found matching "<strong>{{ query }}</strong>"</p>
+        <span class="po-empty-state-hint">Try adjusting your search terms</span>
     </div>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🚜</div>
-        <div class="empty-state-text">
-            Start typing to search for machines...
-            <br><br>
-            <span style="font-size: 0.8125rem; color: var(--gray-400);">
-                Search by make, model, year, or machine type
-            </span>
-        </div>
+    <div class="po-search-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect>
+            <rect x="9" y="9" width="6" height="6"></rect>
+            <line x1="9" y1="1" x2="9" y2="4"></line>
+            <line x1="15" y1="1" x2="15" y2="4"></line>
+        </svg>
+        <p>Start typing to search for machines...</p>
     </div>
 {% endif %}
 
+<style>
+.po-search-limit {
+    text-align: center;
+    padding: 1rem;
+    color: var(--gray-600);
+    font-size: 0.875rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-empty-state-hint {
+    font-size: 0.8125rem;
+    color: var(--gray-400);
+    display: block;
+    margin-top: 0.5rem;
+}
+</style>

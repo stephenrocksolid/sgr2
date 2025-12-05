@@ -22,20 +22,23 @@ from django.contrib.auth.views import LogoutView
 
 from django.shortcuts import redirect
 from django.contrib.auth.decorators import login_required
+from jobs import views as jobs_views
 
 @login_required
-def redirect_to_machines(request):
-    return redirect('inventory:machines_list')
+def redirect_to_home(request):
+    return redirect('jobs:home')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),  # Add authentication URLs
     path("accounts/logout/", LogoutView.as_view(next_page="login"), name="logout"),
-    path('', redirect_to_machines),  # Redirect root to machines
+    path('', redirect_to_home),  # Redirect root to home
     path('core/', include('core.urls')),  # Core app URLs
     path('inventory/', include('inventory.urls')),  # Add back for sidebar navigation
     path('imports/', include('imports.urls')),
     path('sg-vendors/', include('sgvendors.urls')),
+    path('jobs/', include('jobs.urls')),
+    path('settings/', include('settings_app.urls')),
 ]
 
 # Serve static and media files during development

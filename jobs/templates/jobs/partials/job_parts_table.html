@@ -1,0 +1,169 @@
+<div id="job-parts-section">
+    <table class="job-table">
+        <thead>
+            <tr>
+                <th>Qty</th>
+                <th>Part #</th>
+                <th>Part Name</th>
+                <th>Notes</th>
+                <th style="width: 60px; text-align: center;">Select</th>
+                <th style="width: 100px;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for jpart in job_parts %}
+            <tr>
+                <td>
+                    <span class="job-qty-badge">{{ jpart.quantity }}</span>
+                </td>
+                <td>
+                    <code class="job-part-number">{{ jpart.part_number }}</code>
+                </td>
+                <td>{{ jpart.name }}</td>
+                <td>
+                    <span class="job-text-muted">{{ jpart.notes|truncatewords:5|default:"—" }}</span>
+                </td>
+                <td style="text-align: center;">
+                    <input type="checkbox" class="job-checkbox" 
+                           {% if jpart.selected %}checked{% endif %}
+                           hx-post="{% url 'jobs:job_part_toggle_select' job.pk jpart.pk %}"
+                           hx-target="#job-parts-section"
+                           hx-swap="outerHTML">
+                </td>
+                <td>
+                    <form method="post" action="{% url 'jobs:job_part_remove' job.pk jpart.pk %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-xs btn-danger-outline" onclick="return confirm('Remove this part?')">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Remove
+                        </button>
+                    </form>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" class="job-empty-row">
+                    <div class="job-empty-state-inline">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+                        </svg>
+                        <span>No parts added</span>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<style>
+.job-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.job-table th,
+.job-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+}
+
+.job-table th {
+    background: var(--gray-50);
+    font-weight: 600;
+    color: var(--gray-600);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.job-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
+.job-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.job-qty-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 24px;
+    padding: 0 0.5rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.job-part-number {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    background: var(--gray-100);
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    color: var(--gray-700);
+}
+
+.job-text-muted {
+    color: var(--gray-500);
+    font-size: 0.8125rem;
+}
+
+.job-checkbox {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.job-empty-row {
+    text-align: center !important;
+    padding: 2rem 1rem !important;
+}
+
+.job-empty-state-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--gray-500);
+}
+
+.job-empty-state-inline svg {
+    color: var(--gray-400);
+}
+
+.btn-xs {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-danger-outline {
+    background: white;
+    color: #dc3545;
+    border: 1px solid var(--gray-300);
+}
+
+.btn-danger-outline:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+}
+</style>

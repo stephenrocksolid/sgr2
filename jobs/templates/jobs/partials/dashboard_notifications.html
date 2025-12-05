@@ -1,0 +1,107 @@
+<!-- Dashboard Notifications Partial - Loaded via HTMX polling -->
+<div id="notifications-section"
+     hx-get="{% url 'jobs:dashboard_notifications' %}?show={{ show_filter }}"
+     hx-trigger="every 30s"
+     hx-swap="outerHTML">
+    <div class="dashboard-card-header">
+        <h2 class="dashboard-card-title">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+            </svg>
+            Notifications
+            {% if unread_count > 0 %}<span class="dashboard-card-badge">{{ unread_count }}</span>{% endif %}
+        </h2>
+        <div class="notification-filters">
+            <a href="?show=unread" class="notification-filter-btn {% if show_filter == 'unread' %}active{% endif %}"
+               hx-get="{% url 'jobs:dashboard_notifications' %}?show=unread"
+               hx-target="#notifications-section"
+               hx-swap="outerHTML">Unread</a>
+            <a href="?show=all" class="notification-filter-btn {% if show_filter == 'all' %}active{% endif %}"
+               hx-get="{% url 'jobs:dashboard_notifications' %}?show=all"
+               hx-target="#notifications-section"
+               hx-swap="outerHTML">All</a>
+        </div>
+    </div>
+    <div class="dashboard-card-body no-padding">
+        <div class="notification-list-main">
+            {% for notification in notifications|slice:":8" %}
+            <div class="notification-item-main {% if not notification.read_at %}unread{% endif %}">
+                <div class="notification-avatar">{{ notification.created_by.username|default:"S"|slice:":1"|upper }}</div>
+                <div class="notification-content">
+                    <div class="notification-header">
+                        <span class="notification-from">{{ notification.created_by.username|default:"System" }}</span>
+                        <span class="notification-time">{{ notification.created_at|timesince }} ago</span>
+                    </div>
+                    <div class="notification-message-main">{{ notification.message|truncatewords:20 }}</div>
+                    {% if notification.job %}
+                    <a href="{% url 'jobs:job_detail' notification.job.pk %}" class="notification-job-link">
+                        {{ notification.job.job_number|default:"View Job" }}{% if notification.job.engine_make or notification.job.engine_model %} · {{ notification.job.engine_make }} {{ notification.job.engine_model }}{% endif %}
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="notification-actions">
+                    {% if not notification.read_at %}
+                    <form method="post" action="{% url 'jobs:notification_mark_read' notification.pk %}" style="display: contents;"
+                          hx-post="{% url 'jobs:notification_mark_read' notification.pk %}"
+                          hx-target="#notifications-section"
+                          hx-swap="outerHTML">
+                        {% csrf_token %}
+                        <button type="submit" class="notification-action-btn" title="Mark as read">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="20 6 9 17 4 12"></polyline>
+                            </svg>
+                        </button>
+                    </form>
+                    {% else %}
+                    <form method="post" action="{% url 'jobs:notification_mark_unread' notification.pk %}" style="display: contents;"
+                          hx-post="{% url 'jobs:notification_mark_unread' notification.pk %}"
+                          hx-target="#notifications-section"
+                          hx-swap="outerHTML">
+                        {% csrf_token %}
+                        <button type="submit" class="notification-action-btn" title="Mark as unread">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <circle cx="12" cy="12" r="3" fill="currentColor"></circle>
+                            </svg>
+                        </button>
+                    </form>
+                    {% endif %}
+                    <button type="button" class="notification-action-btn" onclick="openReplyModal({{ notification.pk }}, '{{ notification.created_by.username|default:'System' }}')" title="Reply">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            {% empty %}
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <p>{% if show_filter == 'unread' %}No unread notifications{% else %}No notifications{% endif %}</p>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% if include_sidebar_oob %}
+<!-- OOB Swap: Immediately update sidebar Home link when marking read/unread -->
+<a href="{% url 'jobs:home' %}" 
+   id="sidebar-home-link"
+   hx-swap-oob="true"
+   hx-get="{% url 'jobs:sidebar_notification_indicator' %}"
+   hx-trigger="every 30s"
+   hx-swap="outerHTML"
+   class="sidebar-nav-link {% if unread_count > 0 %}has-notifications{% endif %}">
+    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        <polyline points="9 22 9 12 15 12 15 22"></polyline>
+    </svg>
+    <span class="sidebar-nav-text">Home</span>
+    {% if unread_count > 0 %}<span class="nav-notification-badge">{{ unread_count }}</span>{% endif %}
+</a>
+{% endif %}
+

@@ -1,20 +1,19 @@
 {% if parts %}
     {% for part in parts %}
-    <div class="part-result-row"
+    <div class="po-result-row"
          hx-post="{% url 'inventory:machine_part_add' machine.pk %}"
          hx-vals='{"part_id": "{{ part.pk }}", "is_primary": false, "notes": ""}'
          hx-target="#machine-parts-section"
          hx-swap="innerHTML"
-         hx-on::after-request="if(event.detail.successful) document.getElementById('part-search-modal').remove()"
-         style="cursor: pointer;">
-        <div class="part-info">
-            <div class="part-title">
+         hx-on::after-request="if(event.detail.successful) document.getElementById('part-search-modal').remove()">
+        <div class="po-result-info">
+            <div class="po-result-title">
                 {{ part.part_number }}{% if part.name %} - {{ part.name }}{% endif %}
                 {% if part.category %}
-                    <span class="part-badge">{{ part.category }}</span>
+                    <span class="po-result-badge">{{ part.category }}</span>
                 {% endif %}
             </div>
-            <div class="part-details">
+            <div class="po-result-subtitle">
                 {% if part.manufacturer %}
                     Manufacturer: {{ part.manufacturer }}
                 {% endif %}
@@ -28,41 +27,122 @@
                 {% endif %}
             </div>
         </div>
-        <div class="select-indicator">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M7.5 10L9.16667 11.6667L12.5 8.33333M17.5 10C17.5 14.1421 14.1421 17.5 10 17.5C5.85786 17.5 2.5 14.1421 2.5 10C2.5 5.85786 5.85786 2.5 10 2.5C14.1421 2.5 17.5 5.85786 17.5 10Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <div class="po-result-action">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
             </svg>
-            <span style="font-size: 0.8125rem; color: var(--gray-600);">Click to add</span>
         </div>
     </div>
     {% endfor %}
     
     {% if parts|length >= 100 %}
-    <div style="text-align: center; padding: 1rem; color: var(--gray-600); font-size: 0.875rem; border-top: 1px solid var(--gray-200);">
+    <div class="po-search-limit-notice">
         Showing first 100 results. Refine your search for more specific results.
     </div>
     {% endif %}
 {% elif query %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔍</div>
-        <div class="empty-state-text">
-            No parts found matching "<strong>{{ query }}</strong>"
-            <br><br>
-            <span style="font-size: 0.8125rem; color: var(--gray-400);">
-                Try adjusting your search terms
-            </span>
-        </div>
+    <div class="po-search-placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <p>No parts found matching "<strong>{{ query }}</strong>"</p>
+        <span style="font-size: 0.8125rem;">Try adjusting your search terms</span>
     </div>
 {% else %}
-    <div class="empty-state">
-        <div class="empty-state-icon">🔧</div>
-        <div class="empty-state-text">
-            Start typing to search for parts...
-            <br><br>
-            <span style="font-size: 0.8125rem; color: var(--gray-400);">
-                Search by part number, name, manufacturer, type, or category
-            </span>
-        </div>
+    <div class="po-search-placeholder">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"></path>
+        </svg>
+        <p>Start typing to search for parts...</p>
+        <span style="font-size: 0.8125rem;">Search by part number, name, manufacturer, type, or category</span>
     </div>
 {% endif %}
 
+<style>
+.po-result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 0.25rem;
+}
+
+.po-result-row:hover {
+    background: var(--gray-50);
+}
+
+.po-result-row:last-child {
+    margin-bottom: 0;
+}
+
+.po-result-info {
+    flex: 1;
+}
+
+.po-result-title {
+    font-weight: 600;
+    color: var(--gray-900);
+    font-size: 0.9375rem;
+    margin-bottom: 0.125rem;
+}
+
+.po-result-subtitle {
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+}
+
+.po-result-badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    background: var(--gray-100);
+    color: var(--gray-700);
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: 0.5rem;
+}
+
+.po-result-action {
+    color: var(--gray-400);
+    transition: all 0.15s ease;
+}
+
+.po-result-row:hover .po-result-action {
+    color: var(--primary);
+    transform: translateX(2px);
+}
+
+.po-search-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: var(--gray-400);
+}
+
+.po-search-placeholder svg {
+    margin-bottom: 0.75rem;
+}
+
+.po-search-placeholder p {
+    margin: 0 0 0.25rem 0;
+    font-size: 0.9375rem;
+}
+
+.po-search-limit-notice {
+    text-align: center;
+    padding: 1rem;
+    color: var(--gray-500);
+    font-size: 0.8125rem;
+    border-top: 1px solid var(--gray-200);
+    margin-top: 0.5rem;
+}
+</style>

@@ -1,0 +1,395 @@
+<!-- Part Attribute Modal -->
+<div class="po-modal-overlay" id="attribute-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                </svg>
+                {{ title }}
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('attribute-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form hx-post="{% if is_create %}{% url 'settings_app:part_attribute_create' category.pk %}{% else %}{% url 'settings_app:part_attribute_update' category.pk attribute.pk %}{% endif %}"
+              hx-target="#attribute-modal"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="po-modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="attr_name">Field Name <span class="required">*</span></label>
+                        <input type="text" 
+                               name="name" 
+                               id="attr_name" 
+                               class="form-control"
+                               value="{% if attribute %}{{ attribute.name }}{% endif %}"
+                               placeholder="e.g., Bore Size, Thread Pitch"
+                               required
+                               autofocus>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="attr_code">Code</label>
+                        <input type="text" 
+                               name="code" 
+                               id="attr_code" 
+                               class="form-control"
+                               value="{% if attribute %}{{ attribute.code }}{% endif %}"
+                               placeholder="auto-generated">
+                        <p class="form-help">Leave blank to auto-generate</p>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="attr_data_type">Data Type <span class="required">*</span></label>
+                        <select name="data_type" id="attr_data_type" class="form-control" required>
+                            <option value="text" {% if attribute.data_type == 'text' %}selected{% endif %}>Text</option>
+                            <option value="int" {% if attribute.data_type == 'int' %}selected{% endif %}>Integer</option>
+                            <option value="dec" {% if attribute.data_type == 'dec' %}selected{% endif %}>Decimal</option>
+                            <option value="bool" {% if attribute.data_type == 'bool' %}selected{% endif %}>Boolean (Yes/No)</option>
+                            <option value="date" {% if attribute.data_type == 'date' %}selected{% endif %}>Date</option>
+                            <option value="choice" {% if attribute.data_type == 'choice' %}selected{% endif %}>Choice (Dropdown)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="attr_unit">Unit</label>
+                        <input type="text" 
+                               name="unit" 
+                               id="attr_unit" 
+                               class="form-control"
+                               value="{% if attribute %}{{ attribute.unit|default:'' }}{% endif %}"
+                               placeholder="e.g., mm, kg, V, psi">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="attr_sort_order">Sort Order</label>
+                        <input type="number" 
+                               name="sort_order" 
+                               id="attr_sort_order" 
+                               class="form-control"
+                               value="{% if attribute %}{{ attribute.sort_order }}{% else %}0{% endif %}"
+                               min="0">
+                        <p class="form-help">Lower numbers appear first</p>
+                    </div>
+                    <div class="form-group form-group-checkbox">
+                        <label class="checkbox-label">
+                            <input type="checkbox" 
+                                   name="is_required" 
+                                   {% if attribute.is_required %}checked{% endif %}>
+                            <span>Required Field</span>
+                        </label>
+                        <p class="form-help">Users must fill in this field</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="attr_help_text">Help Text</label>
+                    <textarea name="help_text" 
+                              id="attr_help_text" 
+                              class="form-control"
+                              rows="2"
+                              placeholder="Optional instructions for users">{% if attribute %}{{ attribute.help_text|default:'' }}{% endif %}</textarea>
+                </div>
+                
+                {% if attribute.data_type == 'choice' %}
+                <div class="info-box">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="16" x2="12" y2="12"></line>
+                        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                    </svg>
+                    <p>After saving, you can add choices to this field from the category detail page.</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="po-modal-footer">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('attribute-modal').remove()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    {% if is_create %}Add Field{% else %}Save Changes{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+.po-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-group-checkbox {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.required {
+    color: var(--error);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    transition: all 0.15s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.form-help {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    margin-top: 0.25rem;
+    margin-bottom: 0;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.checkbox-label span {
+    font-weight: 500;
+    color: var(--gray-700);
+}
+
+.info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem;
+    background: var(--blue-50);
+    border: 1px solid var(--blue-200);
+    border-radius: 0.375rem;
+    margin-top: 1rem;
+}
+
+.info-box svg {
+    flex-shrink: 0;
+    color: var(--blue-600);
+    margin-top: 2px;
+}
+
+.info-box p {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--blue-800);
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--gray-800);
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Auto-generate code from name
+document.getElementById('attr_name').addEventListener('input', function() {
+    const codeField = document.getElementById('attr_code');
+    if (!codeField.value || codeField.dataset.auto === 'true') {
+        const code = this.value.toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, '')
+            .replace(/\s+/g, '_')
+            .replace(/_+/g, '_')
+            .trim('_');
+        codeField.value = code;
+        codeField.dataset.auto = 'true';
+    }
+});
+
+document.getElementById('attr_code').addEventListener('input', function() {
+    this.dataset.auto = 'false';
+});
+
+// Handle escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('attribute-modal');
+        if (modal) modal.remove();
+    }
+});
+
+// Close modal when attribute is successfully created/updated
+document.body.addEventListener('attributeUpdated', function() {
+    const modal = document.getElementById('attribute-modal');
+    if (modal) modal.remove();
+});
+</script>

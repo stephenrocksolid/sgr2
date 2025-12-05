@@ -73,6 +73,7 @@ CSRF_TRUSTED_ORIGINS = os.getenv(
 # Application definition
 
 INSTALLED_APPS = [
+    # Django core
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -80,10 +81,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
-    # Local apps
+    # Your apps
+    'core',
     'inventory',
     'imports',
     'sgvendors',
+    'jobs',
+    'settings_app',
 ]
 
 MIDDLEWARE = [
@@ -109,6 +113,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'settings_app.context_processors.user_permissions',
             ],
         },
     },
@@ -189,7 +194,7 @@ AUTH_USER_MODEL = 'auth.User'
 
 # Authentication settings
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/inventory/machines/'
+LOGIN_REDIRECT_URL = '/jobs/home/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Celery Configuration

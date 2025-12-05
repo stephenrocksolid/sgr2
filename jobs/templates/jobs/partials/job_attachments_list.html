@@ -1,0 +1,148 @@
+<div id="attachments-list">
+    {% if attachments %}
+    <div class="job-attachments-grid">
+        {% for attachment in attachments %}
+        <div class="job-attachment-item">
+            <div class="job-attachment-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                </svg>
+            </div>
+            <div class="job-attachment-info">
+                <a href="{{ attachment.file.url }}" target="_blank" class="job-attachment-name">
+                    {{ attachment.original_name }}
+                </a>
+                <span class="job-attachment-size">{{ attachment.file.size|filesizeformat }}</span>
+            </div>
+            <form method="post" 
+                  action="{% url 'jobs:job_attachment_delete' job.pk attachment.pk %}" 
+                  hx-post="{% url 'jobs:job_attachment_delete' job.pk attachment.pk %}"
+                  hx-target="#attachments-list"
+                  hx-swap="outerHTML"
+                  hx-confirm="Delete this attachment?"
+                  class="job-attachment-action">
+                {% csrf_token %}
+                <button type="submit" class="job-attachment-delete">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3 6 5 6 21 6"></polyline>
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                    </svg>
+                </button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="job-no-attachments">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+        </svg>
+        <span>No attachments</span>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.job-attachments-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.job-attachment-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    transition: all 0.15s ease;
+}
+
+.job-attachment-item:hover {
+    background: var(--gray-100);
+    border-color: var(--gray-300);
+}
+
+.job-attachment-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.25rem;
+    flex-shrink: 0;
+}
+
+.job-attachment-icon svg {
+    color: var(--gray-500);
+}
+
+.job-attachment-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.job-attachment-name {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--primary);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.job-attachment-name:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+}
+
+.job-attachment-size {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+}
+
+.job-attachment-action {
+    flex-shrink: 0;
+}
+
+.job-attachment-delete {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.job-attachment-delete:hover {
+    background: #fef2f2;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+.job-no-attachments {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+}
+
+.job-no-attachments svg {
+    color: var(--gray-400);
+}
+</style>

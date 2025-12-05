@@ -1,6 +1,6 @@
 from django import forms
 from django.forms import inlineformset_factory
-from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, Kit, KitItem, PartAttribute, PartAttributeValue, Vendor, VendorContact, PartVendor, BuildList, BuildListItem, Casting
+from .models import SGEngine, MachineEngine, Engine, MachinePart, Part, EnginePart, Machine, Kit, KitItem, PartAttribute, PartAttributeValue, PartCategory, Vendor, VendorContact, PartVendor, BuildList, BuildListItem, Casting
 from decimal import Decimal, InvalidOperation
 
 
@@ -669,4 +669,26 @@ class CastingForm(forms.ModelForm):
             'casting_number': forms.TextInput(attrs={'placeholder': 'Casting number (optional)'}),
             'comments': forms.Textarea(attrs={'rows': 3, 'placeholder': 'Additional notes or comments'}),
         }
+
+
+class PartCategoryForm(forms.ModelForm):
+    """Form for Part Categories."""
+    class Meta:
+        model = PartCategory
+        fields = ['name', 'slug']
+        widgets = {
+            'name': forms.TextInput(attrs={'placeholder': 'Category name'}),
+            'slug': forms.TextInput(attrs={'placeholder': 'URL-friendly slug (auto-generated)'}),
+        }
+    
+    def clean_slug(self):
+        slug = self.cleaned_data.get('slug')
+        if not slug:
+            # Auto-generate from name
+            name = self.cleaned_data.get('name', '')
+            import re
+            slug = name.lower().replace(' ', '-')
+            slug = re.sub(r'[^a-z0-9-]', '', slug)
+            slug = re.sub(r'-+', '-', slug).strip('-')
+        return slug
 

@@ -1,0 +1,89 @@
+{% if entries_with_duration %}
+<div class="tt-table-wrapper">
+    <table class="tt-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Job</th>
+                <th>Build List</th>
+                <th>Build List Item</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in entries_with_duration %}
+            <tr hx-get="{% url 'jobs:time_entry_edit_modal' item.entry.pk %}"
+                hx-target="body"
+                hx-swap="beforeend">
+                <td>{{ item.entry.start_time|date:"M d, Y" }}</td>
+                <td>
+                    <a href="{% url 'jobs:job_detail' item.entry.job.pk %}" 
+                       class="tt-job-link"
+                       onclick="event.stopPropagation();">
+                        {{ item.entry.job.job_number }}
+                    </a>
+                    {% if item.entry.job.customer %}
+                    <div class="tt-job-customer">{{ item.entry.job.customer.name }}</div>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.entry.job_build_list %}
+                        {{ item.entry.job_build_list.name }}
+                    {% else %}
+                        <span style="color: var(--gray-400);">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if item.entry.job_build_list_item %}
+                        {{ item.entry.job_build_list_item.name }}
+                    {% else %}
+                        <span style="color: var(--gray-400);">—</span>
+                    {% endif %}
+                </td>
+                <td>{{ item.entry.start_time|date:"g:i A" }}</td>
+                <td>
+                    {% if item.entry.end_time %}
+                        {{ item.entry.end_time|date:"g:i A" }}
+                    {% else %}
+                        <span style="color: var(--gray-400);">—</span>
+                    {% endif %}
+                </td>
+                <td>
+                    <span style="font-weight: 500; font-family: monospace;">{{ item.duration }}</span>
+                </td>
+                <td>
+                    {% if item.entry.end_time %}
+                        <span class="tt-status-badge tt-status-completed">Completed</span>
+                    {% else %}
+                        <span class="tt-status-badge tt-status-active">Active</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="tt-table-wrapper">
+    <table class="tt-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Job</th>
+                <th>Build List</th>
+                <th>Build List Item</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Duration</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td colspan="8" class="tt-empty-row">No time entries found{% if employee %} for {{ employee.get_full_name|default:employee.username }}{% endif %}</td></tr>
+        </tbody>
+    </table>
+</div>
+{% endif %}

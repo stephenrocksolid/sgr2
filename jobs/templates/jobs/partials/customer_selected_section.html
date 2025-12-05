@@ -1,0 +1,361 @@
+<div id="customer-section">
+{% if ticket.customer %}
+<div class="po-vendor-card po-vendor-selected">
+    <a href="{% url 'jobs:customer_detail' ticket.customer.pk %}" class="po-vendor-icon po-vendor-icon-link" title="Edit customer details">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+    </a>
+    <div class="po-vendor-info">
+        <a href="{% url 'jobs:customer_detail' ticket.customer.pk %}" class="po-vendor-name po-vendor-name-link" title="Edit customer details">{{ ticket.customer.name }}</a>
+        <div class="po-vendor-details">
+            {% if ticket.customer.phone %}
+            <span class="po-vendor-detail">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                </svg>
+                {{ ticket.customer.phone }}
+            </span>
+            {% endif %}
+            {% if ticket.customer.email %}
+            <span class="po-vendor-detail">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                    <polyline points="22,6 12,13 2,6"></polyline>
+                </svg>
+                {{ ticket.customer.email }}
+            </span>
+            {% endif %}
+        </div>
+    </div>
+    <button type="button" class="po-vendor-change-btn"
+            hx-get="{% url 'jobs:customer_search_modal' ticket.pk %}"
+            hx-target="body"
+            hx-swap="beforeend">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        Change
+    </button>
+</div>
+
+<!-- Address Cards -->
+<div class="ticket-address-row">
+    <!-- Bill To -->
+    <div class="ticket-address-card">
+        <div class="ticket-address-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            Bill To
+        </div>
+        <div class="ticket-address-body">
+            {% if ticket.bill_to_name or ticket.bill_to_address %}
+            <div class="ticket-address-name">{{ ticket.bill_to_name|default:"—" }}</div>
+            {% if ticket.bill_to_address %}<div class="ticket-address-line">{{ ticket.bill_to_address }}</div>{% endif %}
+            <div class="ticket-address-line">
+                {{ ticket.bill_to_city|default:"" }}{% if ticket.bill_to_city and ticket.bill_to_state %},{% endif %}
+                {{ ticket.bill_to_state|default:"" }} {{ ticket.bill_to_zip|default:"" }}
+            </div>
+            {% else %}
+            <div class="ticket-address-empty">No bill-to address</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Ship To -->
+    <div class="ticket-address-card">
+        <div class="ticket-address-header">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+            </svg>
+            Ship To
+            <button type="button" class="ticket-address-change"
+                    hx-get="{% url 'jobs:customer_ship_to_list' ticket.customer.pk %}?ticket_id={{ ticket.pk }}"
+                    hx-target="body"
+                    hx-swap="beforeend">
+                Change
+            </button>
+        </div>
+        <div class="ticket-address-body" id="ship-to-addresses">
+            {% if ticket.ship_to_name or ticket.ship_to_address %}
+            <div class="ticket-address-name">{{ ticket.ship_to_name|default:"—" }}</div>
+            {% if ticket.ship_to_address %}<div class="ticket-address-line">{{ ticket.ship_to_address }}</div>{% endif %}
+            <div class="ticket-address-line">
+                {{ ticket.ship_to_city|default:"" }}{% if ticket.ship_to_city and ticket.ship_to_state %},{% endif %}
+                {{ ticket.ship_to_state|default:"" }} {{ ticket.ship_to_zip|default:"" }}
+            </div>
+            {% else %}
+            <div class="ticket-address-empty">No ship-to address</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<input type="hidden" name="customer" value="{{ ticket.customer.pk }}">
+{% else %}
+<div class="po-vendor-card po-vendor-empty">
+    <svg class="po-vendor-empty-icon-sm" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+    </svg>
+    <span class="po-vendor-empty-text-sm">No customer selected</span>
+    <button type="button" class="po-vendor-select-btn"
+            hx-get="{% url 'jobs:customer_search_modal' ticket.pk %}"
+            hx-target="body"
+            hx-swap="beforeend">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        Select Customer
+    </button>
+</div>
+{% endif %}
+</div>
+
+<style>
+.po-vendor-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 0.5rem;
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+}
+
+.po-vendor-selected {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.po-vendor-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: white;
+    border-radius: 0.5rem;
+    border: 1px solid #bbf7d0;
+    color: #16a34a;
+    flex-shrink: 0;
+}
+
+.po-vendor-icon-link {
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.po-vendor-icon-link:hover {
+    background: #f0fdf4;
+    border-color: #16a34a;
+    transform: scale(1.05);
+}
+
+.po-vendor-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.po-vendor-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+    margin-bottom: 0.25rem;
+}
+
+.po-vendor-name-link {
+    text-decoration: none;
+    color: var(--gray-900);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.po-vendor-name-link:hover {
+    color: var(--primary);
+}
+
+.po-vendor-name-link::after {
+    content: '';
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7'%3E%3C/path%3E%3Cpath d='M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z'%3E%3C/path%3E%3C/svg%3E");
+    background-size: contain;
+    background-repeat: no-repeat;
+    opacity: 0.5;
+    transition: opacity 0.15s ease;
+}
+
+.po-vendor-name-link:hover::after {
+    opacity: 1;
+}
+
+.po-vendor-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.po-vendor-detail {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+}
+
+.po-vendor-detail svg {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.po-vendor-change-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.5rem 0.875rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.po-vendor-change-btn:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+/* Empty State */
+.po-vendor-empty {
+    background: white;
+    border: 1px dashed var(--gray-300);
+    padding: 0.75rem 1rem;
+    gap: 0.75rem;
+}
+
+.po-vendor-empty-icon-sm {
+    color: var(--gray-400);
+    flex-shrink: 0;
+}
+
+.po-vendor-empty-text-sm {
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--gray-500);
+}
+
+.po-vendor-select-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    background: var(--primary);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+}
+
+.po-vendor-select-btn:hover {
+    background: var(--gray-700);
+}
+
+/* Address Cards */
+.ticket-address-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.ticket-address-card {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.ticket-address-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    background: white;
+    border-bottom: 1px solid var(--gray-200);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--gray-600);
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+}
+
+.ticket-address-header svg {
+    color: var(--gray-400);
+}
+
+.ticket-address-change {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: var(--primary);
+    font-size: 0.75rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-transform: none;
+    letter-spacing: normal;
+    padding: 0;
+}
+
+.ticket-address-change:hover {
+    text-decoration: underline;
+}
+
+.ticket-address-body {
+    padding: 0.75rem 0.875rem;
+}
+
+.ticket-address-name {
+    font-weight: 600;
+    font-size: 0.875rem;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+}
+
+.ticket-address-line {
+    font-size: 0.8125rem;
+    color: var(--gray-600);
+    line-height: 1.4;
+}
+
+.ticket-address-empty {
+    color: var(--gray-400);
+    font-size: 0.8125rem;
+    font-style: italic;
+}
+
+@media (max-width: 640px) {
+    .ticket-address-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>

@@ -16,6 +16,16 @@
             htmx.on('htmx:configRequest', function(evt) {
                 evt.detail.headers['X-CSRFToken'] = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
             });
+            
+            // Restore 'active' class on sidebar-home-link after HTMX swaps if on home page
+            htmx.on('htmx:afterSwap', function(evt) {
+                if (evt.detail.target && evt.detail.target.id === 'sidebar-home-link') {
+                    // Check if we're on the home page
+                    if (window.location.pathname === '/jobs/home/' || window.location.pathname === '/jobs/home') {
+                        evt.detail.target.classList.add('active');
+                    }
+                }
+            });
         });
     </script>
     
@@ -29,71 +39,172 @@
         <!-- Sidebar for authenticated users -->
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1 class="sidebar-title">SGR Part Manager</h1>
-            </div>
-            <nav class="sidebar-nav">
-                <ul class="sidebar-nav-list">
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:machines_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Machines</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:engines_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Engines</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:parts_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Parts</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:build_lists_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Build Lists</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:kits_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Kits</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item sidebar-divider">
-                        <a href="{% url 'inventory:sg_engines_list' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">SG Engines</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'inventory:vendor_index' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Vendors</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'sgvendors:index' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">SG Vendors</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item sidebar-divider">
-                        <a href="{% url 'imports:index' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Imports</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-nav-item">
-                        <a href="{% url 'imports:unmatched_index' %}" class="sidebar-nav-link">
-                            <span class="sidebar-nav-text">Unmatched</span>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
-            <div class="mt-auto">
-                <div class="sidebar-nav-item sidebar-divider">
-                    <form action="{% url 'logout' %}" method="post" style="margin: 0;">
-                        {% csrf_token %}
-                        <button type="submit" class="sidebar-nav-link" style="width: 100%; background: none; border: none; text-align: left; cursor: pointer; font-family: inherit; font-size: inherit; font-weight: inherit;">
-                            <span class="sidebar-nav-text">Logout</span>
-                        </button>
-                    </form>
+                <div class="sidebar-logo">
+                    <span class="logo-icon">⚙️</span>
+                    <h1 class="sidebar-title">SGR Manager</h1>
                 </div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <!-- Overview Section -->
+                <div class="nav-section">
+                    <!-- Home link with HTMX polling for notification indicator -->
+                    <a href="{% url 'jobs:home' %}" 
+                       id="sidebar-home-link"
+                       hx-get="{% url 'jobs:sidebar_notification_indicator' %}"
+                       hx-trigger="every 30s"
+                       hx-swap="outerHTML"
+                       class="sidebar-nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %} {% if unread_notification_count %}has-notifications{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <span class="sidebar-nav-text">Home</span>
+                        {% if unread_notification_count %}<span class="nav-notification-badge">{{ unread_notification_count }}</span>{% endif %}
+                    </a>
+                    <a href="{% url 'jobs:calendar' %}" class="sidebar-nav-link {% if request.resolver_match.url_name == 'calendar' %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                        <span class="sidebar-nav-text">Calendar</span>
+                    </a>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <!-- Work Management Section -->
+                <div class="nav-section">
+                    <span class="nav-section-label">Work Management</span>
+                    <a href="{% url 'jobs:ticket_list' %}" class="sidebar-nav-link {% if 'ticket' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <line x1="10" y1="9" x2="8" y2="9"></line>
+                        </svg>
+                        <span class="sidebar-nav-text">Job Tickets</span>
+                    </a>
+                    <a href="{% url 'jobs:job_list' %}" class="sidebar-nav-link {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        </svg>
+                        <span class="sidebar-nav-text">Jobs</span>
+                    </a>
+                    <a href="{% url 'jobs:purchase_order_list' %}" class="sidebar-nav-link {% if 'purchase_order' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                            <line x1="3" y1="6" x2="21" y2="6"></line>
+                            <path d="M16 10a4 4 0 0 1-8 0"></path>
+                        </svg>
+                        <span class="sidebar-nav-text">Purchase Orders</span>
+                    </a>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <!-- People Section -->
+                <div class="nav-section">
+                    <span class="nav-section-label">People</span>
+                    <a href="{% url 'jobs:customer_list' %}" class="sidebar-nav-link {% if 'customer' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                        <span class="sidebar-nav-text">Customers</span>
+                    </a>
+                    <a href="{% url 'inventory:vendor_index' %}" class="sidebar-nav-link {% if 'vendor' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <span class="sidebar-nav-text">Vendors</span>
+                    </a>
+                </div>
+
+                <div class="nav-divider"></div>
+
+                <!-- Inventory Section -->
+                <div class="nav-section">
+                    <span class="nav-section-label">Inventory</span>
+                    <a href="{% url 'inventory:machines_list' %}" class="sidebar-nav-link {% if 'machines' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
+                            <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+                        </svg>
+                        <span class="sidebar-nav-text">Machines</span>
+                    </a>
+                    <a href="{% url 'inventory:engines_list' %}" class="sidebar-nav-link {% if 'engines' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                        </svg>
+                        <span class="sidebar-nav-text">Engines</span>
+                    </a>
+                    <a href="{% url 'inventory:parts_list' %}" class="sidebar-nav-link {% if 'parts' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                            <polyline points="2 17 12 22 22 17"></polyline>
+                            <polyline points="2 12 12 17 22 12"></polyline>
+                        </svg>
+                        <span class="sidebar-nav-text">Parts</span>
+                    </a>
+                    <a href="{% url 'inventory:build_lists_list' %}" class="sidebar-nav-link {% if 'build_list' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="8" y1="6" x2="21" y2="6"></line>
+                            <line x1="8" y1="12" x2="21" y2="12"></line>
+                            <line x1="8" y1="18" x2="21" y2="18"></line>
+                            <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                            <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                            <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                        </svg>
+                        <span class="sidebar-nav-text">Build Lists</span>
+                    </a>
+                    <a href="{% url 'inventory:kits_list' %}" class="sidebar-nav-link {% if 'kits' in request.resolver_match.url_name %}active{% endif %}">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                            <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                            <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                        </svg>
+                        <span class="sidebar-nav-text">Kits</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Bottom Section -->
+            <div class="sidebar-footer">
+                <div class="nav-divider"></div>
+                <a href="{% url 'imports:index' %}" class="sidebar-nav-link {% if 'imports' in request.path %}active{% endif %}">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    <span class="sidebar-nav-text">Imports</span>
+                </a>
+                <a href="{% url 'settings_app:settings_index' %}" class="sidebar-nav-link {% if 'settings' in request.path %}active{% endif %}">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+                    </svg>
+                    <span class="sidebar-nav-text">Settings</span>
+                </a>
+                <form action="{% url 'logout' %}" method="post" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="sidebar-nav-link logout-btn">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
+                        <span class="sidebar-nav-text">Logout</span>
+                    </button>
+                </form>
             </div>
         </aside>
     {% endif %}

@@ -1,0 +1,43 @@
+{% if parts %}
+<div class="po-part-results-list">
+    {% for part in parts %}
+    <div class="po-part-result-item"
+         onclick="showAddPartForm({{ po.pk }}, {{ part.pk }}, '{{ part.part_number|default:"" }}', '{{ part.name|escapejs }}')">
+        <div class="po-part-result-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                <line x1="12" y1="22.08" x2="12" y2="12"></line>
+            </svg>
+        </div>
+        <div class="po-part-result-info">
+            <div class="po-part-result-number">{{ part.part_number|default:"No Part #" }}</div>
+            <div class="po-part-result-name">{{ part.name }}</div>
+        </div>
+        <div class="po-part-result-arrow">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+<div class="po-search-results-count">
+    {{ parts|length }} part{{ parts|length|pluralize }} found
+</div>
+{% else %}
+<div class="po-search-no-results">
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+        <line x1="7" y1="7" x2="17" y2="17"></line>
+    </svg>
+    <p class="po-no-results-title">
+        {% if query %}No parts found{% else %}Search for parts{% endif %}
+    </p>
+    <p class="po-no-results-subtitle">
+        {% if query %}Try a different search term{% else %}Enter a part number or name to search{% endif %}
+    </p>
+</div>
+{% endif %}
+
+

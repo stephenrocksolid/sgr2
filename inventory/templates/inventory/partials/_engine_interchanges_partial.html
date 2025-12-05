@@ -1,36 +1,51 @@
 {% if interchanges %}
-    <table class="related-table">
-        <thead>
-            <tr>
-                <th>Make</th>
-                <th>Model</th>
-                <th>Identifier</th>
-                <th style="width: 50px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for interchange in interchanges %}
-                <tr data-href="{% url 'inventory:engine_detail' interchange.pk %}" 
-                    onclick="window.location.href=this.dataset.href;">
-                    <td>{{ interchange.engine_make|default:"—" }}</td>
-                    <td>{{ interchange.engine_model|default:"—" }}</td>
-                    <td>{{ interchange.identifier|default:"—" }}</td>
-                    <td onclick="event.stopPropagation();">
-                        <form hx-post="{% url 'inventory:engine_interchange_remove' engine.pk interchange.pk %}"
-                              hx-target="#engine-interchanges-section"
-                              hx-swap="innerHTML"
-                              hx-confirm="Are you sure you want to remove this interchange relationship?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="engine-table">
+    <thead>
+        <tr>
+            <th>Make</th>
+            <th>Model</th>
+            <th>Identifier</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for interchange in interchanges %}
+        <tr class="engine-clickable-row" data-href="{% url 'inventory:engine_detail' interchange.pk %}">
+            <td>
+                <span class="engine-make-text">{{ interchange.engine_make|default:"—" }}</span>
+            </td>
+            <td>{{ interchange.engine_model|default:"—" }}</td>
+            <td>
+                <span class="engine-text-muted">{{ interchange.identifier|default:"—" }}</span>
+            </td>
+            <td class="engine-actions-cell">
+                <form hx-post="{% url 'inventory:engine_interchange_remove' engine.pk interchange.pk %}"
+                      hx-target="#engine-interchanges-section"
+                      hx-swap="innerHTML"
+                      hx-confirm="Are you sure you want to remove this interchange relationship?"
+                      style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-danger-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
-    <div class="empty-message">
-        <p>This engine has no interchange relationships yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 1l4 4-4 4"></path>
+        <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+        <path d="M7 23l-4-4 4-4"></path>
+        <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+    </svg>
+    <span>No interchange relationships</span>
+</div>
 {% endif %}

@@ -52,9 +52,25 @@ def machines_list(request):
     # Get search query and sorting parameters
     qtext = request.GET.get('q', '').strip()
     sort_param = request.GET.get('sort', 'make').strip()
+    type_filter = request.GET.get('type_filter', 'all').strip()
     
     # Base queryset
     machines = Machine.objects.all()
+    
+    # Calculate stats for all machines (before filtering)
+    stats = {
+        'crawler': Machine.objects.filter(machine_type__icontains='crawler').count(),
+        'wheel': Machine.objects.filter(machine_type__icontains='wheel').count(),
+        'skid_steer': Machine.objects.filter(machine_type__icontains='skid').count(),
+    }
+    
+    # Get unique machine types for filter tabs
+    machine_types = Machine.objects.values_list('machine_type', flat=True).distinct().order_by('machine_type')
+    unique_types = [t for t in machine_types if t][:5]  # Top 5 types for tabs
+    
+    # Apply type filter if specified
+    if type_filter and type_filter != 'all':
+        machines = machines.filter(machine_type__icontains=type_filter)
     
     # Apply advanced search if query provided
     if qtext:
@@ -81,7 +97,7 @@ def machines_list(request):
     machines = machines.order_by(*sort_fields)
     
     # Pagination
-    paginator = Paginator(machines, 200)
+    paginator = Paginator(machines, 100)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
@@ -110,6 +126,9 @@ def machines_list(request):
         'total_count': paginator.count,
         'q': qtext,
         'sort': sort_param,
+        'stats': stats,
+        'type_filter': type_filter,
+        'unique_types': unique_types,
     }
     
     return render(request, 'inventory/machines_list.html', context)
@@ -117,39 +136,81 @@ def machines_list(request):
 
 @login_required
 def machine_detail(request, machine_id):
-    """Display detailed information for a specific machine."""
-    machine = get_object_or_404(Machine, pk=machine_id)
+    """Redirect to machine edit page (combined view/edit)."""
+    return redirect("inventory:machine_edit", pk=machine_id)
+
+
+@login_required
+def machine_create(request):
+    """Create a new machine."""
+    if request.method == 'POST':
+        form = MachineForm(request.POST)
+        if form.is_valid():
+            machine = form.save()
+            return redirect('inventory:machine_edit', pk=machine.pk)
+    else:
+        form = MachineForm()
     
-    context = {
-        'machine': machine,
-    }
-    
-    return render(request, 'inventory/machine_detail.html', context)
+    return render(request, 'inventory/machines/edit.html', {
+        'form': form,
+        'machine': None,
+        'is_new': True,
+        'engine_count': 0,
+        'part_count': 0,
+    })
 
 
 @login_required
 @require_http_methods(["GET"])
-@login_required
 def machine_edit(request, pk):
-    """Display the machine edit form."""
+    """Display the machine edit form (combined view/edit page)."""
     machine = get_object_or_404(Machine, pk=pk)
     form = MachineForm(instance=machine)
-    return render(request, "inventory/machines/edit.html", {"machine": machine, "form": form})
+    
+    # Get related counts for quick stats
+    engine_count = MachineEngine.objects.filter(machine=machine).count()
+    part_count = MachinePart.objects.filter(machine=machine).count()
+    
+    context = {
+        "machine": machine,
+        "form": form,
+        "is_new": False,
+        "engine_count": engine_count,
+        "part_count": part_count,
+    }
+    return render(request, "inventory/machines/edit.html", context)
 
 
 @login_required
 @require_http_methods(["POST"])
-@login_required
 def machine_update(request, pk):
     """Handle machine update form submission."""
     machine = get_object_or_404(Machine, pk=pk)
     form = MachineForm(request.POST, instance=machine)
     if form.is_valid():
         form.save()
-        messages.success(request, "Machine updated successfully.")
-        return redirect("inventory:machine_detail", machine_id=machine.pk)
+        return redirect("inventory:machine_edit", pk=machine.pk)
     # on errors, re-render edit page with validation messages
-    return render(request, "inventory/machines/edit.html", {"machine": machine, "form": form}, status=400)
+    engine_count = MachineEngine.objects.filter(machine=machine).count()
+    part_count = MachinePart.objects.filter(machine=machine).count()
+    context = {
+        "machine": machine,
+        "form": form,
+        "engine_count": engine_count,
+        "part_count": part_count,
+    }
+    return render(request, "inventory/machines/edit.html", context, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def machine_delete(request, pk):
+    """Delete a machine."""
+    machine = get_object_or_404(Machine, pk=pk)
+    machine_name = f"{machine.year} {machine.make} {machine.model}"
+    machine.delete()
+    messages.success(request, f"Machine '{machine_name}' deleted successfully.")
+    return redirect("inventory:machines_list")
 
 
 @login_required
@@ -186,9 +247,19 @@ def engines_list(request):
     # Get search query and sorting parameters
     qtext = request.GET.get('q', '').strip()
     sort_param = request.GET.get('sort', 'engine_make').strip()
+    make_filter = request.GET.get('make_filter', 'all').strip()
     
     # Base queryset with select_related for performance
     engines = Engine.objects.select_related('sg_engine').all()
+    
+    # Get unique engine makes for filter tabs (top 5 by count)
+    engine_makes = (Engine.objects
+        .values_list('engine_make', flat=True)
+        .exclude(engine_make__isnull=True)
+        .exclude(engine_make='')
+        .distinct()
+        .order_by('engine_make'))
+    unique_makes = list(engine_makes)[:5]  # Top 5 makes for tabs
     
     # Apply advanced search if query provided
     if qtext:
@@ -217,6 +288,10 @@ def engines_list(request):
             expr &= g
         
         engines = engines.filter(expr).distinct()
+    
+    # Apply make filter
+    if make_filter and make_filter != 'all':
+        engines = engines.filter(engine_make__iexact=make_filter)
     
     # Multi-column sorting
     allowed_sort_fields = {
@@ -274,6 +349,8 @@ def engines_list(request):
         'total_count': paginator.count,
         'q': qtext,
         'sort': sort_param,
+        'make_filter': make_filter,
+        'unique_makes': unique_makes,
     }
     
     return render(request, 'inventory/engines_list.html', context)
@@ -281,43 +358,88 @@ def engines_list(request):
 
 @login_required
 def engine_detail(request, engine_id):
-    """Display detailed information for a specific engine."""
+    """Display the engine edit form (combined view/edit page)."""
     engine = get_object_or_404(Engine, pk=engine_id)
+    form = EngineForm(instance=engine)
+    
+    # Get related counts for quick stats
+    machine_count = MachineEngine.objects.filter(engine=engine).count()
+    part_count = EnginePart.objects.filter(engine=engine).count()
     
     context = {
         'engine': engine,
+        'form': form,
+        'is_new': False,
+        'machine_count': machine_count,
+        'part_count': part_count,
         'interchanges': engine.interchanges.all(),
         'compatibles': engine.compatibles.all(),
         'supersedes': engine.supersedes,
         'superseded_by': engine.superseded_by,
     }
     
-    return render(request, 'inventory/engine_detail.html', context)
+    return render(request, 'inventory/engines/edit.html', context)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def engine_create(request):
+    """Create a new engine."""
+    if request.method == 'POST':
+        form = EngineForm(request.POST)
+        if form.is_valid():
+            engine = form.save()
+            return redirect('inventory:engine_detail', engine_id=engine.pk)
+    else:
+        form = EngineForm()
+    
+    return render(request, 'inventory/engines/edit.html', {
+        'form': form,
+        'engine': None,
+        'is_new': True,
+        'machine_count': 0,
+        'part_count': 0,
+    })
 
 
 @login_required
 @require_http_methods(["GET"])
-@login_required
 def engine_edit(request, pk):
-    """Display the engine edit form."""
-    engine = get_object_or_404(Engine, pk=pk)
-    form = EngineForm(instance=engine)
-    return render(request, "inventory/engines/edit.html", {"engine": engine, "form": form})
+    """Redirect to engine_detail (which is now the edit page)."""
+    return redirect("inventory:engine_detail", engine_id=pk)
 
 
 @login_required
 @require_http_methods(["POST"])
-@login_required
 def engine_update(request, pk):
     """Handle engine update form submission."""
     engine = get_object_or_404(Engine, pk=pk)
     form = EngineForm(request.POST, instance=engine)
     if form.is_valid():
         form.save()
-        messages.success(request, "Engine updated successfully.")
         return redirect("inventory:engine_detail", engine_id=engine.pk)
     # on errors, re-render edit page with validation messages
-    return render(request, "inventory/engines/edit.html", {"engine": engine, "form": form}, status=400)
+    machine_count = MachineEngine.objects.filter(engine=engine).count()
+    part_count = EnginePart.objects.filter(engine=engine).count()
+    context = {
+        "engine": engine,
+        "is_new": False,
+        "form": form,
+        "machine_count": machine_count,
+        "part_count": part_count,
+    }
+    return render(request, "inventory/engines/edit.html", context, status=400)
+
+
+@login_required
+@require_http_methods(["POST"])
+def engine_delete(request, pk):
+    """Delete an engine."""
+    engine = get_object_or_404(Engine, pk=pk)
+    engine_name = f"{engine.engine_make} {engine.engine_model}"
+    engine.delete()
+    messages.success(request, f"Engine '{engine_name}' deleted successfully.")
+    return redirect("inventory:engines_list")
 
 
 @login_required
@@ -347,12 +469,25 @@ def parts_list(request):
         'primary_vendor__name__icontains',
     ]
     
-    # Get search query and sorting parameters
+    # Get search query, sorting, and filter parameters
     qtext = request.GET.get('q', '').strip()
     sort_param = request.GET.get('sort', 'part_number').strip()
+    category_filter = request.GET.get('category_filter', '').strip()
+    
+    # Get unique categories for filter tabs
+    unique_categories = list(
+        PartCategory.objects.filter(parts__isnull=False)
+        .distinct()
+        .order_by('name')
+        .values_list('name', flat=True)[:10]
+    )
     
     # Base queryset with select_related for performance
     parts = Part.objects.select_related('category', 'primary_vendor').prefetch_related('attribute_values__attribute', 'vendor_links__vendor').all()
+    
+    # Apply category filter
+    if category_filter and category_filter != 'all':
+        parts = parts.filter(category__name=category_filter)
     
     # Apply advanced search if query provided
     if qtext:
@@ -409,6 +544,8 @@ def parts_list(request):
         'total_count': paginator.count,
         'q': qtext,
         'sort': sort_param,
+        'category_filter': category_filter,
+        'unique_categories': unique_categories,
     }
     
     return render(request, 'inventory/parts_list.html', context)
@@ -416,73 +553,41 @@ def parts_list(request):
 
 @login_required
 def part_detail(request, part_id):
-    """Display detailed information for a specific part."""
-    part = get_object_or_404(Part, pk=part_id)
-    
-    # Get all categories for the dropdown
-    categories = PartCategory.objects.all().order_by('name')
-    
-    # Get attributes for the part's category
-    attributes = []
-    if part.category:
-        attributes = part.category.attributes.all()
-    
-    # Get current attribute values
-    attribute_values = part.attribute_values.select_related('attribute', 'choice').all()
-    
-    # Get part vendors for the vendors section
-    part_vendors = part.vendor_links.select_related('vendor').all()
-    total_stock = sum(pv.stock_qty for pv in part_vendors)
-    
-    # Get all vendors for the add form
-    vendors = Vendor.objects.all().order_by('name')
-    
-    context = {
-        'part': part,
-        'categories': categories,
-        'attributes': attributes,
-        'attribute_values': attribute_values,
-        'part_vendors': part_vendors,
-        'total_stock': total_stock,
-        'vendors': vendors,
-    }
-    
-    return render(request, 'inventory/part_detail.html', context)
+    """Redirect to the part edit page - view and edit are now combined."""
+    return redirect("inventory:part_edit", pk=part_id)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def part_create(request):
-    """Create a new part with vendor relationships."""
+    """Create a new part."""
     if request.method == 'POST':
         form = PartForm(request.POST)
-        vset = PartVendorFormSet(request.POST, prefix='vendors')
-        if form.is_valid() and vset.is_valid():
-            with transaction.atomic():
-                part = form.save()
-                vset.instance = part
-                vset.save()
-                # Auto-set primary vendor if only one vendor exists
-                part.auto_set_primary_vendor()
-            messages.success(request, "Part created successfully.")
-            return redirect('inventory:part_detail', part_id=part.id)
+        if form.is_valid():
+            part = form.save()
+            return redirect('inventory:part_edit', pk=part.id)
     else:
         form = PartForm()
-        vset = PartVendorFormSet(prefix='vendors')
     
     vendors = Vendor.objects.all().order_by('name')
-    return render(request, 'inventory/parts/part_form.html', {
-        'form': form, 
-        'vset': vset, 
-        'mode': 'create',
-        'title': 'Create New Part',
-        'vendors': vendors
+    categories = PartCategory.objects.all().order_by('name')
+    
+    return render(request, 'inventory/parts/edit.html', {
+        'form': form,
+        'part': None,
+        'is_new': True,
+        'vendors': vendors,
+        'categories': categories,
+        'engine_count': 0,
+        'machine_count': 0,
+        'kit_count': 0,
+        'vendor_count': 0,
+        'total_stock': 0,
     })
 
 
 @login_required
 @require_http_methods(["GET"])
-@login_required
 def part_edit(request, pk):
     """Display the part edit form with basic info, specifications, and vendor relationships."""
     part = get_object_or_404(Part, pk=pk)
@@ -490,12 +595,28 @@ def part_edit(request, pk):
     specs_form = PartSpecsForm(part=part)
     vset = PartVendorFormSet(instance=part, prefix='vendors')
     vendors = Vendor.objects.all().order_by('name')
+    categories = PartCategory.objects.all().order_by('name')
+    
+    # Get counts for stats
+    engine_count = EnginePart.objects.filter(part=part).count()
+    machine_count = MachinePart.objects.filter(part=part).count()
+    kit_count = KitItem.objects.filter(part=part).count()
+    vendor_count = PartVendor.objects.filter(part=part).count()
+    total_stock = PartVendor.objects.filter(part=part).aggregate(total=Sum('stock_qty'))['total'] or 0
+    
     return render(request, "inventory/parts/edit.html", {
         "part": part, 
-        "form": form, 
+        "form": form,
+        "is_new": False,
         "specs_form": specs_form,
         "vset": vset,
-        "vendors": vendors
+        "vendors": vendors,
+        "categories": categories,
+        "engine_count": engine_count,
+        "machine_count": machine_count,
+        "kit_count": kit_count,
+        "vendor_count": vendor_count,
+        "total_stock": total_stock,
     })
 
 
@@ -512,13 +633,29 @@ def part_update(request, pk):
     
     # Use the current (possibly changed) category to build specs_form
     # but guard confirmation.
+    vendors = Vendor.objects.all().order_by('name')
+    categories = PartCategory.objects.all().order_by('name')
+    engine_count = EnginePart.objects.filter(part=part).count()
+    machine_count = MachinePart.objects.filter(part=part).count()
+    kit_count = KitItem.objects.filter(part=part).count()
+    vendor_count = PartVendor.objects.filter(part=part).count()
+    total_stock = PartVendor.objects.filter(part=part).aggregate(total=Sum('stock_qty'))['total'] or 0
+    
     if not form.is_valid() or not vset.is_valid():
         specs_form = PartSpecsForm(request.POST, part=part)
         return render(request, "inventory/parts/edit.html", {
             "part": part, 
-            "form": form, 
+            "form": form,
+            "is_new": False,
             "specs_form": specs_form,
-            "vset": vset
+            "vset": vset,
+            "vendors": vendors,
+            "categories": categories,
+            "engine_count": engine_count,
+            "machine_count": machine_count,
+            "kit_count": kit_count,
+            "vendor_count": vendor_count,
+            "total_stock": total_stock,
         }, status=400)
 
     new_category = form.cleaned_data["category"].id
@@ -530,9 +667,17 @@ def part_update(request, pk):
         specs_form = PartSpecsForm(request.POST, part=part)
         return render(request, "inventory/parts/edit.html", {
             "part": part, 
-            "form": form, 
+            "form": form,
+            "is_new": False,
             "specs_form": specs_form,
-            "vset": vset
+            "vset": vset,
+            "vendors": vendors,
+            "categories": categories,
+            "engine_count": engine_count,
+            "machine_count": machine_count,
+            "kit_count": kit_count,
+            "vendor_count": vendor_count,
+            "total_stock": total_stock,
         }, status=400)
 
     # Save basic fields (including category)
@@ -549,9 +694,17 @@ def part_update(request, pk):
     if not specs_form.is_valid():
         return render(request, "inventory/parts/edit.html", {
             "part": part, 
-            "form": form, 
+            "form": form,
+            "is_new": False,
             "specs_form": specs_form,
-            "vset": vset
+            "vset": vset,
+            "vendors": vendors,
+            "categories": categories,
+            "engine_count": engine_count,
+            "machine_count": machine_count,
+            "kit_count": kit_count,
+            "vendor_count": vendor_count,
+            "total_stock": total_stock,
         }, status=400)
 
     # If changing: carry over values with the same code; drop the rest
@@ -599,7 +752,18 @@ def part_update(request, pk):
         pav.save()
 
     messages.success(request, "Part updated successfully.")
-    return redirect("inventory:part_detail", part_id=part.pk)
+    return redirect("inventory:parts_list")
+
+
+@login_required
+@require_http_methods(["POST"])
+def part_delete(request, pk):
+    """Delete a part."""
+    part = get_object_or_404(Part, pk=pk)
+    part_number = part.part_number
+    part.delete()
+    messages.success(request, f"Part '{part_number}' has been deleted.")
+    return redirect("inventory:parts_list")
 
 
 def _values_by_code(part):
@@ -3211,7 +3375,7 @@ def part_vendors_section(request, part_id):
     
     # Get part vendors for the vendors section
     part_vendors = part.vendor_links.select_related('vendor').all()
-    total_stock = sum(pv.stock_qty for pv in part_vendors)
+    total_stock = sum(pv.stock_qty or 0 for pv in part_vendors)
     
     # Get all vendors for the add form
     vendors = Vendor.objects.all().order_by('name')
@@ -4171,10 +4335,7 @@ def engine_supercession_remove(request, engine_id, superseded_id):
 def build_lists_list(request):
     """Display list of build lists with search and sorting."""
     from django.db.models import Count, Sum
-    
-    # Get search query and sorting parameters
-    search = request.GET.get('search', '').strip()
-    sort_param = request.GET.get('sort', 'name').strip()
+    from core.view_utils import get_list_context
     
     # Base queryset with annotations
     build_lists = BuildList.objects.annotate(
@@ -4182,67 +4343,60 @@ def build_lists_list(request):
         total_hours=Sum('items__hour_qty')
     ).all()
     
-    # Apply search
-    if search:
-        build_lists = build_lists.filter(
-            Q(name__icontains=search) | 
-            Q(notes__icontains=search)
-        )
+    # Get list context with search, sort, and pagination
+    context = get_list_context(
+        queryset=build_lists,
+        request=request,
+        search_fields=['name', 'notes'],
+        sort_fields={
+            'name', '-name', 'engines_count', '-engines_count',
+            'total_hours', '-total_hours', 'created_at', '-created_at'
+        },
+        default_sort=['name'],
+        per_page=200
+    )
     
-    # Multi-column sorting
-    allowed_sort_fields = {
-        'name', '-name', 'engines_count', '-engines_count',
-        'total_hours', '-total_hours', 'created_at', '-created_at'
-    }
-    sort_fields = []
-    for field in sort_param.split(','):
-        field = field.strip()
-        if field in allowed_sort_fields:
-            sort_fields.append(field)
-    
-    if not sort_fields:
-        sort_fields = ['name']
-    
-    build_lists = build_lists.order_by(*sort_fields)
-    
-    # Pagination
-    paginator = Paginator(build_lists, 200)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    context = {
-        'page_obj': page_obj,
-        'build_lists': page_obj.object_list,
-        'total_count': paginator.count,
-        'search': search,
-        'sort': sort_param,
-    }
+    # Add build_lists to context for template compatibility
+    context['build_lists'] = context['object_list']
     
     return render(request, 'inventory/build_lists_list.html', context)
 
 
 @login_required
 def build_list_detail(request, build_list_id):
-    """Display build list detail with items and engines."""
-    from django.db.models import Sum
-    
-    build_list = get_object_or_404(BuildList, pk=build_list_id)
-    
-    # Calculate total hours from all items
-    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
-    
-    context = {
-        'build_list': build_list,
-        'total_hours': total_hours,
-    }
-    
-    return render(request, 'inventory/build_list_detail.html', context)
+    """Redirect to edit page - there is no separate view page."""
+    return redirect('inventory:build_list_edit', build_list_id=build_list_id)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def build_list_create(request):
-    """Create new build list."""
+    """Create new build list - uses edit.html with is_new=True like vendor pattern."""
+    form = BuildListForm(request.POST or None)
+    
+    if request.method == "POST":
+        if form.is_valid():
+            build_list = form.save(commit=False)
+            if request.user.is_authenticated:
+                build_list.created_by = request.user
+            build_list.save()
+            return redirect("inventory:build_list_edit", build_list_id=build_list.id)
+    
+    return render(request, 'inventory/build_lists/edit.html', {
+        'form': form,
+        'build_list': None,
+        'is_new': True,
+        'items': [],
+        'engines': [],
+        'total_hours': 0,
+        'item_count': 0,
+        'engine_count': 0,
+    })
+
+
+@login_required
+def build_list_create_modal(request):
+    """HTMX endpoint to show/handle build list creation modal."""
     if request.method == "POST":
         form = BuildListForm(request.POST)
         if form.is_valid():
@@ -4250,21 +4404,31 @@ def build_list_create(request):
             if request.user.is_authenticated:
                 build_list.created_by = request.user
             build_list.save()
-            messages.success(request, "Build list created.")
-            return redirect("inventory:build_list_detail", build_list_id=build_list.id)
+            
+            # Return a script that closes the modal and redirects to the edit page
+            return HttpResponse(
+                f'<script>document.body.dispatchEvent(new Event("buildListCreated")); window.location.href = "/inventory/build-lists/{build_list.id}/edit/";</script>',
+                content_type='text/html'
+            )
+        else:
+            # Re-render the modal with errors
+            return render(request, 'inventory/modals/build_list_create_modal.html', {
+                'form': form,
+            })
     else:
+        # GET request - show empty form
         form = BuildListForm()
-    
-    return render(request, 'inventory/build_list_form.html', {
-        'form': form,
-        'is_create': True
-    })
+        return render(request, 'inventory/modals/build_list_create_modal.html', {
+            'form': form,
+        })
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def build_list_edit(request, build_list_id):
-    """Edit build list."""
+    """Edit build list - main edit page with all related items and engines."""
+    from django.db.models import Sum
+    
     build_list = get_object_or_404(BuildList, pk=build_list_id)
     
     if request.method == "POST":
@@ -4272,15 +4436,59 @@ def build_list_edit(request, build_list_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Build list updated.")
-            return redirect("inventory:build_list_detail", build_list_id=build_list.id)
+            return redirect("inventory:build_list_edit", build_list_id=build_list.id)
     else:
         form = BuildListForm(instance=build_list)
     
-    return render(request, 'inventory/build_list_form.html', {
+    # Get items and engines for display
+    items = build_list.items.all()
+    engines = build_list.engines.all()
+    
+    # Calculate total hours
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+    
+    context = {
         'form': form,
         'build_list': build_list,
-        'is_create': False
-    })
+        'items': items,
+        'engines': engines,
+        'total_hours': total_hours,
+        'item_count': items.count(),
+        'engine_count': engines.count(),
+    }
+    
+    return render(request, 'inventory/build_lists/edit.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def build_list_update(request, build_list_id):
+    """POST-only endpoint for updating build list via form."""
+    from django.db.models import Sum
+    
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    form = BuildListForm(request.POST, instance=build_list)
+    
+    if form.is_valid():
+        form.save()
+        return redirect("inventory:build_lists_list")
+    
+    # If form is invalid, re-render the edit page with errors
+    items = build_list.items.all()
+    engines = build_list.engines.all()
+    total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
+    
+    context = {
+        'form': form,
+        'build_list': build_list,
+        'items': items,
+        'engines': engines,
+        'total_hours': total_hours,
+        'item_count': items.count(),
+        'engine_count': engines.count(),
+    }
+    
+    return render(request, 'inventory/build_lists/edit.html', context, status=400)
 
 
 @login_required
@@ -4366,21 +4574,21 @@ def build_list_item_add(request, build_list_id):
         'items': items,
     }, request=request)
     
-    # Render the total hours (out-of-band swap)
+    # Render the total hours for out-of-band swap (header badge)
     total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
-    total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
-        'total_hours': total_hours,
-    }, request=request)
     
-    # Combine both with out-of-band swap for total hours
-    combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+    # Out-of-band swap for the hours badge in the header
+    oob_hours_badge = f'<span class="build-list-hours-badge" id="total-hours-display" hx-swap-oob="true">{total_hours} hrs</span>'
+    
+    # Combine both
+    combined_html = items_html + oob_hours_badge
     
     return HttpResponse(combined_html)
 
 
 @login_required
 def build_list_item_edit_form(request, build_list_id, item_id):
-    """HTMX form to edit item."""
+    """HTMX form to edit item (legacy inline form)."""
     build_list = get_object_or_404(BuildList, pk=build_list_id)
     item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
     form = BuildListItemForm(instance=item)
@@ -4392,6 +4600,22 @@ def build_list_item_edit_form(request, build_list_id, item_id):
     }
     
     return render(request, 'inventory/partials/_build_list_item_edit_form.html', context)
+
+
+@login_required
+def build_list_item_edit_modal(request, build_list_id, item_id):
+    """HTMX modal to edit item."""
+    build_list = get_object_or_404(BuildList, pk=build_list_id)
+    item = get_object_or_404(BuildListItem, pk=item_id, build_list=build_list)
+    form = BuildListItemForm(instance=item)
+    
+    context = {
+        'build_list': build_list,
+        'item': item,
+        'form': form,
+    }
+    
+    return render(request, 'inventory/partials/build_list_item_edit_modal.html', context)
 
 
 @login_required
@@ -4416,26 +4640,26 @@ def build_list_item_edit(request, build_list_id, item_id):
             'items': items,
         }, request=request)
         
-        # Render the total hours (out-of-band swap)
+        # Render the total hours for both out-of-band swaps (header badge and legacy display)
         total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
-        total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
-            'total_hours': total_hours,
-        }, request=request)
         
-        # Combine both with out-of-band swap for total hours
-        combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+        # Out-of-band swap for the hours badge in the header
+        oob_hours_badge = f'<span class="build-list-hours-badge" id="total-hours-display" hx-swap-oob="true">{total_hours} hrs</span>'
+        
+        # Combine both
+        combined_html = items_html + oob_hours_badge
         
         response = HttpResponse(combined_html)
         response['HX-Trigger'] = 'clearItemForm'
         return response
     
-    # Return form with errors
+    # Return form with errors - render the modal again with errors
     context = {
         'build_list': build_list,
         'item': item,
         'form': form,
     }
-    return render(request, 'inventory/partials/_build_list_item_edit_form.html', context, status=400)
+    return render(request, 'inventory/partials/build_list_item_edit_modal.html', context, status=400)
 
 
 @login_required
@@ -4457,14 +4681,14 @@ def build_list_item_delete(request, build_list_id, item_id):
         'items': items,
     }, request=request)
     
-    # Render the total hours (out-of-band swap)
+    # Render the total hours for out-of-band swap (header badge)
     total_hours = build_list.items.aggregate(total=Sum('hour_qty'))['total'] or 0
-    total_hours_html = render_to_string('inventory/partials/_build_list_total_hours.html', {
-        'total_hours': total_hours,
-    }, request=request)
     
-    # Combine both with out-of-band swap for total hours
-    combined_html = items_html + f'<div id="total-hours-display" class="detail-subtitle" hx-swap-oob="true">{total_hours_html}</div>'
+    # Out-of-band swap for the hours badge in the header
+    oob_hours_badge = f'<span class="build-list-hours-badge" id="total-hours-display" hx-swap-oob="true">{total_hours} hrs</span>'
+    
+    # Combine both
+    combined_html = items_html + oob_hours_badge
     
     return HttpResponse(combined_html)
 
@@ -4632,10 +4856,7 @@ def kits_list(request):
     """Display list of kits with search and sorting."""
     from django.db.models import Count
     from decimal import Decimal
-    
-    # Get search query and sorting parameters
-    search = request.GET.get('search', '').strip()
-    sort_param = request.GET.get('sort', 'name').strip()
+    from core.view_utils import get_list_context
     
     # Base queryset with annotations
     kits = Kit.objects.annotate(
@@ -4643,36 +4864,21 @@ def kits_list(request):
         parts_count=Count('items')
     ).prefetch_related('items__part__primary_vendor', 'items__part__vendor_links').all()
     
-    # Apply search
-    if search:
-        kits = kits.filter(
-            Q(name__icontains=search) | 
-            Q(notes__icontains=search)
-        )
+    # Get list context with search, sort, and pagination
+    context = get_list_context(
+        queryset=kits,
+        request=request,
+        search_fields=['name', 'notes'],
+        sort_fields={
+            'name', '-name', 'engines_count', '-engines_count',
+            'parts_count', '-parts_count', 'created_at', '-created_at'
+        },
+        default_sort=['name'],
+        per_page=200
+    )
     
-    # Multi-column sorting
-    allowed_sort_fields = {
-        'name', '-name', 'engines_count', '-engines_count',
-        'parts_count', '-parts_count', 'created_at', '-created_at'
-    }
-    sort_fields = []
-    for field in sort_param.split(','):
-        field = field.strip()
-        if field in allowed_sort_fields:
-            sort_fields.append(field)
-    
-    if not sort_fields:
-        sort_fields = ['name']
-    
-    kits = kits.order_by(*sort_fields)
-    
-    # Pagination
-    paginator = Paginator(kits, 200)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-    
-    # Calculate total cost for each kit
-    for kit in page_obj.object_list:
+    # Calculate total cost for each kit (kit-specific logic)
+    for kit in context['object_list']:
         total_cost = Decimal('0.00')
         for item in kit.items.all():
             if item.part.primary_vendor:
@@ -4684,27 +4890,23 @@ def kits_list(request):
                     pass
         kit.total_cost = total_cost
     
-    context = {
-        'page_obj': page_obj,
-        'kits': page_obj.object_list,
-        'total_count': paginator.count,
-        'search': search,
-        'sort': sort_param,
-    }
+    # Add kits to context for template compatibility
+    context['kits'] = context['object_list']
     
     return render(request, 'inventory/kits_list.html', context)
 
 
 @login_required
 def kit_detail(request, kit_id):
-    """Display kit detail with parts and engines."""
+    """Display kit edit page (unified view/edit page)."""
     from decimal import Decimal
     
     kit = get_object_or_404(Kit, pk=kit_id)
+    form = KitForm(instance=kit)
     
     # Calculate total cost from primary vendor prices
     total_cost = Decimal('0.00')
-    items = kit.items.select_related('part__primary_vendor').all()
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
     
     for item in items:
         if item.part.primary_vendor:
@@ -4718,16 +4920,81 @@ def kit_detail(request, kit_id):
     
     context = {
         'kit': kit,
+        'form': form,
         'total_cost': total_cost,
+        'item_count': kit.items.count(),
+        'engine_count': kit.engines.count(),
+        'is_new': False,
     }
     
-    return render(request, 'inventory/kit_detail.html', context)
+    return render(request, 'inventory/kit_edit.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def kit_update(request, kit_id):
+    """Handle kit form submission."""
+    kit = get_object_or_404(Kit, pk=kit_id)
+    form = KitForm(request.POST, instance=kit)
+    
+    if form.is_valid():
+        form.save()
+        return redirect("inventory:kits_list")
+    
+    # If form is invalid, re-render the edit page with errors
+    from decimal import Decimal
+    
+    total_cost = Decimal('0.00')
+    items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    
+    for item in items:
+        if item.part.primary_vendor:
+            try:
+                part_vendor = item.part.vendor_links.get(vendor=item.part.primary_vendor)
+                if part_vendor.cost:
+                    total_cost += part_vendor.cost * item.quantity
+            except:
+                pass
+    
+    context = {
+        'kit': kit,
+        'form': form,
+        'total_cost': total_cost,
+        'item_count': kit.items.count(),
+        'engine_count': kit.engines.count(),
+        'is_new': False,
+    }
+    
+    return render(request, 'inventory/kit_edit.html', context)
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
 def kit_create(request):
-    """Create new kit."""
+    """Create new kit (uses same template as edit)."""
+    form = KitForm(request.POST or None)
+    
+    if request.method == "POST":
+        if form.is_valid():
+            kit = form.save(commit=False)
+            if request.user.is_authenticated:
+                kit.created_by = request.user
+            kit.save()
+            return redirect("inventory:kit_detail", kit_id=kit.id)
+    
+    return render(request, 'inventory/kit_edit.html', {
+        'form': form,
+        'kit': None,
+        'is_new': True,
+        'total_cost': 0,
+        'item_count': 0,
+        'engine_count': 0,
+    })
+
+
+@login_required
+def kit_create_modal(request):
+    """HTMX endpoint to show/handle kit creation modal."""
     if request.method == "POST":
         form = KitForm(request.POST)
         if form.is_valid():
@@ -4735,37 +5002,29 @@ def kit_create(request):
             if request.user.is_authenticated:
                 kit.created_by = request.user
             kit.save()
-            messages.success(request, "Kit created.")
-            return redirect("inventory:kit_detail", kit_id=kit.id)
+            
+            # Return a script that closes the modal and reloads the page
+            return HttpResponse(
+                '<script>document.body.dispatchEvent(new Event("kitCreated")); window.location.href = "/inventory/kits/";</script>',
+                content_type='text/html'
+            )
+        else:
+            # Re-render the modal with errors
+            return render(request, 'inventory/modals/kit_create_modal.html', {
+                'form': form,
+            })
     else:
+        # GET request - show empty form
         form = KitForm()
-    
-    return render(request, 'inventory/kit_form.html', {
-        'form': form,
-        'is_create': True
-    })
+        return render(request, 'inventory/modals/kit_create_modal.html', {
+            'form': form,
+        })
 
 
 @login_required
-@require_http_methods(["GET", "POST"])
 def kit_edit(request, kit_id):
-    """Edit kit."""
-    kit = get_object_or_404(Kit, pk=kit_id)
-    
-    if request.method == "POST":
-        form = KitForm(request.POST, instance=kit)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Kit updated.")
-            return redirect("inventory:kit_detail", kit_id=kit.id)
-    else:
-        form = KitForm(instance=kit)
-    
-    return render(request, 'inventory/kit_form.html', {
-        'form': form,
-        'kit': kit,
-        'is_create': False
-    })
+    """Redirect to kit detail page (which is now the unified edit page)."""
+    return redirect("inventory:kit_detail", kit_id=kit_id)
 
 
 @login_required
@@ -4952,6 +5211,7 @@ def kit_item_add(request, kit_id):
     
     # Render the items table
     items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    item_count = items.count()
     
     # Attach primary vendor price to each item
     for item in items:
@@ -4972,7 +5232,7 @@ def kit_item_add(request, kit_id):
         'items': items,
     }, request=request)
     
-    # Calculate and render total cost (out-of-band swap)
+    # Calculate total cost
     total_cost = Decimal('0.00')
     for item in items:
         if item.part.primary_vendor:
@@ -4987,8 +5247,11 @@ def kit_item_add(request, kit_id):
         'total_cost': total_cost,
     }, request=request)
     
-    # Combine both with out-of-band swap for total cost
-    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    # Combine with out-of-band swaps for total cost, header badge, and item count
+    combined_html = items_html
+    combined_html += f'<span id="total-cost-display" hx-swap-oob="true">{total_cost_html}</span>'
+    combined_html += f'<span id="header-total-cost" class="kit-cost-badge" hx-swap-oob="true">{total_cost_html}</span>'
+    combined_html += f'<span id="header-item-count" class="kit-items-badge" hx-swap-oob="true">{item_count} Part{"s" if item_count != 1 else ""}</span>'
     
     return HttpResponse(combined_html)
 
@@ -5028,6 +5291,7 @@ def kit_item_edit(request, kit_id, item_id):
     
     # Render the items table
     items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    item_count = items.count()
     
     # Attach primary vendor price to each item
     for item in items:
@@ -5048,7 +5312,7 @@ def kit_item_edit(request, kit_id, item_id):
         'items': items,
     }, request=request)
     
-    # Calculate and render total cost (out-of-band swap)
+    # Calculate total cost
     total_cost = Decimal('0.00')
     for item in items:
         if item.part.primary_vendor:
@@ -5063,8 +5327,10 @@ def kit_item_edit(request, kit_id, item_id):
         'total_cost': total_cost,
     }, request=request)
     
-    # Combine both with out-of-band swap for total cost
-    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    # Combine with out-of-band swaps for total cost and header badge
+    combined_html = items_html
+    combined_html += f'<span id="total-cost-display" hx-swap-oob="true">{total_cost_html}</span>'
+    combined_html += f'<span id="header-total-cost" class="kit-cost-badge" hx-swap-oob="true">{total_cost_html}</span>'
     
     return HttpResponse(combined_html)
 
@@ -5083,6 +5349,7 @@ def kit_item_delete(request, kit_id, item_id):
     
     # Render the items table
     items = kit.items.select_related('part__primary_vendor').prefetch_related('part__vendor_links').all()
+    item_count = items.count()
     
     # Attach primary vendor price to each item
     for item in items:
@@ -5103,7 +5370,7 @@ def kit_item_delete(request, kit_id, item_id):
         'items': items,
     }, request=request)
     
-    # Calculate and render total cost (out-of-band swap)
+    # Calculate total cost
     total_cost = Decimal('0.00')
     for item in items:
         if item.part.primary_vendor:
@@ -5118,8 +5385,11 @@ def kit_item_delete(request, kit_id, item_id):
         'total_cost': total_cost,
     }, request=request)
     
-    # Combine both with out-of-band swap for total cost
-    combined_html = items_html + f'<p id="total-cost-display" class="detail-subtitle" hx-swap-oob="true">{total_cost_html}</p>'
+    # Combine with out-of-band swaps for total cost, header badge, and item count
+    combined_html = items_html
+    combined_html += f'<span id="total-cost-display" hx-swap-oob="true">{total_cost_html}</span>'
+    combined_html += f'<span id="header-total-cost" class="kit-cost-badge" hx-swap-oob="true">{total_cost_html}</span>'
+    combined_html += f'<span id="header-item-count" class="kit-items-badge" hx-swap-oob="true">{item_count} Part{"s" if item_count != 1 else ""}</span>'
     
     return HttpResponse(combined_html)
 
@@ -5574,12 +5844,9 @@ def engine_casting_add(request, engine_id):
         casting = form.save(commit=False)
         casting.engine = engine
         casting.save()
-        messages.success(request, "Casting added.")
         
-        # Clear the form and refresh the castings table
-        response = engine_castings_partial(request, engine_id)
-        response['HX-Trigger'] = 'clearCastingForm'
-        return response
+        # Refresh the castings table
+        return engine_castings_partial(request, engine_id)
     
     # Return form with errors
     context = {
@@ -5615,12 +5882,9 @@ def engine_casting_edit(request, engine_id, casting_id):
     
     if form.is_valid():
         form.save()
-        messages.success(request, "Casting updated.")
         
-        # Clear the form and refresh the castings table
-        response = engine_castings_partial(request, engine_id)
-        response['HX-Trigger'] = 'clearCastingForm'
-        return response
+        # Refresh the castings table
+        return engine_castings_partial(request, engine_id)
     
     # Return form with errors
     context = {
@@ -5638,7 +5902,6 @@ def engine_casting_delete(request, engine_id, casting_id):
     engine = get_object_or_404(Engine, pk=engine_id)
     casting = get_object_or_404(Casting, pk=casting_id, engine=engine)
     casting.delete()
-    messages.success(request, "Casting removed.")
     
     # Re-render castings partial
     return engine_castings_partial(request, engine_id)
@@ -5652,14 +5915,8 @@ def vendor_index(request):
     vendors = Vendor.objects.prefetch_related('contacts').all()
     
     # Apply filters
-    name_filter = request.GET.get('name', '').strip()
-    contact_filter = request.GET.get('contact', '').strip()
     search_filter = request.GET.get('search', '').strip()
     
-    if name_filter:
-        vendors = vendors.filter(name__icontains=name_filter)
-    if contact_filter:
-        vendors = vendors.filter(contact_name__icontains=contact_filter)
     if search_filter:
         vendors = vendors.filter(
             Q(name__icontains=search_filter) |
@@ -5671,39 +5928,36 @@ def vendor_index(request):
             Q(contacts__phone__icontains=search_filter)
         ).distinct()
     
-    # Apply sorting
-    sort_by = request.GET.get('sort', 'name')
-    sort_order = request.GET.get('order', 'asc')
+    # Apply multi-column sorting (comma-separated fields like "name,-created_at")
+    sort = request.GET.get('sort', 'name')
+    valid_sort_fields = ['name', '-name', 'contact_name', '-contact_name', 
+                         'email', '-email', 'phone', '-phone', 
+                         'created_at', '-created_at']
     
-    valid_sort_fields = ['name', 'contact_name', 'email', 'phone', 'created_at']
-    if sort_by in valid_sort_fields:
-        if sort_order == 'desc':
-            sort_by = f'-{sort_by}'
-        vendors = vendors.order_by(sort_by)
+    if sort:
+        sort_fields = [s.strip() for s in sort.split(',') if s.strip()]
+        # Filter to only valid sort fields
+        sort_fields = [f for f in sort_fields if f in valid_sort_fields]
+        if sort_fields:
+            vendors = vendors.order_by(*sort_fields)
+        else:
+            vendors = vendors.order_by('name')
     else:
         vendors = vendors.order_by('name')
     
     # Pagination
-    paginator = Paginator(vendors, 200)
+    paginator = Paginator(vendors, 50)  # Reduced from 200 for better UX
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
-    
-    # Get filter choices for dropdowns
-    all_vendors = Vendor.objects.all()
-    contact_names = all_vendors.exclude(contact_name='').values_list('contact_name', flat=True).distinct().order_by('contact_name')
     
     context = {
         'page_obj': page_obj,
         'vendors': page_obj.object_list,
         'total_count': paginator.count,
-        'contact_names': contact_names,
+        'sort': sort,
         'current_filters': {
-            'name': name_filter,
-            'contact': contact_filter,
             'search': search_filter,
         },
-        'current_sort': sort_by.lstrip('-'),
-        'current_order': sort_order,
     }
     
     return render(request, "inventory/vendors/index.html", context)
@@ -5711,7 +5965,6 @@ def vendor_index(request):
 
 @login_required
 @require_http_methods(["GET", "POST"])
-@login_required
 def vendor_create(request):
     """Create a new vendor."""
     form = VendorForm(request.POST or None)
@@ -5719,33 +5972,36 @@ def vendor_create(request):
     if request.method == "POST":
         if form.is_valid():
             vendor = form.save()
-            messages.success(request, "Vendor created.")
             return redirect("inventory:vendor_detail", vendor_id=vendor.id)
     
-    return render(request, "inventory/vendors/form.html", {
+    return render(request, "inventory/vendors/edit.html", {
         "form": form,
-        "is_create": True
+        "vendor": None,
+        "is_new": True,
+        "parts_count": 0,
     })
 
 
 @login_required
 @require_http_methods(["GET", "POST"])
-@login_required
 def vendor_edit(request, vendor_id):
-    """Edit an existing vendor."""
-    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    """Edit an existing vendor (combined view/edit page)."""
+    vendor = get_object_or_404(Vendor.objects.prefetch_related('contacts'), pk=vendor_id)
     form = VendorForm(request.POST or None, instance=vendor)
     
     if request.method == "POST":
         if form.is_valid():
             form.save()
-            messages.success(request, "Vendor updated.")
             return redirect("inventory:vendor_detail", vendor_id=vendor.id)
     
-    return render(request, "inventory/vendors/form.html", {
+    # Get parts count
+    parts_count = PartVendor.objects.filter(vendor=vendor).count()
+    
+    return render(request, "inventory/vendors/edit.html", {
         "form": form,
         "vendor": vendor, 
-        "is_create": False
+        "is_new": False,
+        "parts_count": parts_count,
     })
 
 
@@ -5773,7 +6029,7 @@ def vendor_contact_create(request, vendor_id):
             contact.vendor = vendor
             contact.save()
             messages.success(request, "Contact created.")
-            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+            return redirect("inventory:vendor_edit", vendor_id=vendor.id)
     
     return render(request, "inventory/vendors/contact_form.html", {
         "form": form,
@@ -5794,7 +6050,7 @@ def vendor_contact_edit(request, vendor_id, contact_id):
         if form.is_valid():
             form.save()
             messages.success(request, "Contact updated.")
-            return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+            return redirect("inventory:vendor_edit", vendor_id=vendor.id)
     
     return render(request, "inventory/vendors/contact_form.html", {
         "form": form,
@@ -5825,14 +6081,14 @@ def vendor_contact_delete(request, vendor_id, contact_id):
     contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
     contact.delete()
     messages.success(request, "Contact deleted.")
-    return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    return redirect("inventory:vendor_edit", vendor_id=vendor.id)
 
 
 @login_required
 @require_http_methods(["POST"])
 def vendor_contact_set_primary(request, vendor_id, contact_id):
     """Set a contact as the primary contact for a vendor."""
-    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    vendor = get_object_or_404(Vendor.objects.prefetch_related('contacts'), pk=vendor_id)
     contact = get_object_or_404(VendorContact, pk=contact_id, vendor=vendor)
     
     # Update vendor's primary contact fields
@@ -5841,15 +6097,101 @@ def vendor_contact_set_primary(request, vendor_id, contact_id):
     vendor.phone = contact.phone
     vendor.save()
     
+    # If HTMX request, return the contacts section partial
+    if request.headers.get('HX-Request'):
+        return render(request, "inventory/vendors/_contacts_section.html", {
+            "vendor": vendor
+        })
+    
     messages.success(request, f"{contact.full_name} set as primary contact.")
-    return redirect("inventory:vendor_detail", vendor_id=vendor.id)
+    return redirect("inventory:vendor_edit", vendor_id=vendor.id)
 
 
 @login_required
 def vendor_detail(request, vendor_id):
-    """Display vendor details."""
+    """Display vendor details (redirects to combined edit page)."""
+    return redirect("inventory:vendor_edit", vendor_id=vendor_id)
+
+
+@login_required
+def vendor_contact_create_modal(request, vendor_id):
+    """Render the contact creation modal."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    return render(request, "inventory/vendors/contact_create_modal.html", {
+        "vendor": vendor
+    })
+
+
+@login_required
+@require_http_methods(["POST"])
+def vendor_contact_create_ajax(request, vendor_id):
+    """Create a new contact for a vendor via AJAX."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    
+    full_name = request.POST.get('full_name', '').strip()
+    email = request.POST.get('email', '').strip()
+    phone = request.POST.get('phone', '').strip()
+    title = request.POST.get('title', '').strip()
+    notes = request.POST.get('notes', '').strip()
+    set_primary = request.POST.get('set_primary') == 'on'
+    
+    if full_name:
+        contact = VendorContact.objects.create(
+            vendor=vendor,
+            full_name=full_name,
+            email=email,
+            phone=phone,
+            title=title,
+            notes=notes
+        )
+        
+        # Set as primary if requested
+        if set_primary:
+            vendor.contact_name = contact.full_name
+            vendor.email = contact.email
+            vendor.phone = contact.phone
+            vendor.save()
+    
+    return render(request, "inventory/vendors/_contacts_section.html", {
+        "vendor": vendor
+    })
+
+
+@login_required
+def vendor_contacts_partial(request, vendor_id):
+    """Render the contacts section partial."""
     vendor = get_object_or_404(Vendor.objects.prefetch_related('contacts'), pk=vendor_id)
-    return render(request, "inventory/vendors/detail.html", {"vendor": vendor})
+    return render(request, "inventory/vendors/_contacts_section.html", {
+        "vendor": vendor
+    })
+
+
+@login_required
+def vendor_part_add_modal(request, vendor_id):
+    """Render the part add modal for a vendor."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    
+    # Get search query if provided
+    q = request.GET.get('q', '').strip()
+    
+    # Get parts that aren't already linked to this vendor
+    linked_ids = list(PartVendor.objects.filter(vendor=vendor).values_list('part_id', flat=True))
+    
+    parts = Part.objects.exclude(id__in=linked_ids)
+    if q:
+        parts = parts.filter(
+            Q(name__icontains=q) |
+            Q(part_number__icontains=q) |
+            Q(description__icontains=q)
+        )
+    parts = parts.order_by('name')[:50]
+    
+    return render(request, "inventory/vendors/part_add_modal.html", {
+        "vendor": vendor,
+        "parts": parts,
+        "q": q,
+        "linked_ids": linked_ids
+    })
 
 
 # ---------- Vendor detail: Parts supplied (HTMX partials) ----------
@@ -5943,8 +6285,13 @@ def vendor_part_add(request, vendor_id):
         msg = "Part added to vendor." if created else "Existing vendor-part link updated."
         messages.success(request, msg)
         
-        # Auto-set primary vendor if only one vendor exists
-        link.part.auto_set_primary_vendor()
+        # Set as primary vendor if requested
+        if request.POST.get('set_primary') == 'on':
+            link.part.primary_vendor = vendor
+            link.part.save()
+        else:
+            # Auto-set primary vendor if only one vendor exists
+            link.part.auto_set_primary_vendor()
     else:
         messages.error(request, "Please fix the errors in the form.")
 
@@ -5963,16 +6310,42 @@ def vendor_part_edit_form(request, vendor_id, link_id):
 
 
 @login_required
+def vendor_part_edit_modal(request, vendor_id, link_id):
+    """Render the part edit modal."""
+    vendor = get_object_or_404(Vendor, pk=vendor_id)
+    link = get_object_or_404(PartVendor.objects.select_related('part'), pk=link_id, vendor=vendor)
+    return render(request, "inventory/vendors/part_edit_modal.html", {"vendor": vendor, "link": link})
+
+
+@login_required
 @require_POST
 @login_required
 def vendor_part_edit(request, vendor_id, link_id):
     """HTMX endpoint to edit a part vendor link."""
     vendor = get_object_or_404(Vendor, pk=vendor_id)
     link = get_object_or_404(PartVendor, pk=link_id, vendor=vendor)
-    form = PartVendorForm(request.POST, instance=link)
-    if form.is_valid():
-        form.save()
-        messages.success(request, "Vendor part updated.")
+    
+    # Update text fields (use empty string for NOT NULL fields)
+    link.vendor_part_number = request.POST.get('vendor_part_number', '').strip()
+    link.vendor_sku = request.POST.get('vendor_sku', '').strip()
+    link.notes = request.POST.get('notes', '').strip()
+    
+    # Handle numeric fields (these can be NULL)
+    price = request.POST.get('price', '').strip()
+    link.price = float(price) if price else None
+    
+    cost = request.POST.get('cost', '').strip()
+    link.cost = float(cost) if cost else None
+    
+    stock_qty = request.POST.get('stock_qty', '').strip()
+    link.stock_qty = int(stock_qty) if stock_qty else None
+    
+    lead_time = request.POST.get('lead_time_days', '').strip()
+    link.lead_time_days = int(lead_time) if lead_time else None
+    
+    link.save()
+    messages.success(request, "Vendor part updated.")
+    
     return vendor_parts_partial(request, vendor_id)
 
 
@@ -6011,7 +6384,7 @@ def part_set_primary_vendor(request, part_id, vendor_id):
         from_vendor = request.POST.get("from_vendor") == "1"
         if from_vendor:
             return vendor_parts_partial(request, vendor_id)
-    return redirect("inventory:part_detail", part_id=part.id)
+    return redirect("inventory:part_edit", pk=part.id)
 
 
 # Inline Editing API Endpoints

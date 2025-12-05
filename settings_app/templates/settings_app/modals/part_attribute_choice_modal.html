@@ -1,0 +1,252 @@
+<!-- Part Attribute Choice Modal -->
+<div class="po-modal-overlay" id="choice-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 11 12 14 22 4"></polyline>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+                Add Choice to "{{ attribute.name }}"
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('choice-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <form hx-post="{% url 'settings_app:part_attribute_choice_create' category.pk attribute.pk %}"
+              hx-target="#choice-modal"
+              hx-swap="outerHTML">
+            {% csrf_token %}
+            
+            <div class="po-modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="choice_value">Value <span class="required">*</span></label>
+                    <input type="text" 
+                           name="value" 
+                           id="choice_value" 
+                           class="form-control"
+                           placeholder="e.g., standard, oversized"
+                           required
+                           autofocus>
+                    <p class="form-help">The internal value stored in the database</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="choice_label">Display Label <span class="required">*</span></label>
+                    <input type="text" 
+                           name="label" 
+                           id="choice_label" 
+                           class="form-control"
+                           placeholder="e.g., Standard, +0.020 Oversized"
+                           required>
+                    <p class="form-help">The text shown to users in the dropdown</p>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="choice_sort_order">Sort Order</label>
+                    <input type="number" 
+                           name="sort_order" 
+                           id="choice_sort_order" 
+                           class="form-control"
+                           value="0"
+                           min="0">
+                    <p class="form-help">Lower numbers appear first in the dropdown</p>
+                </div>
+            </div>
+            
+            <div class="po-modal-footer">
+                <button type="button" class="btn btn-outline" onclick="document.getElementById('choice-modal').remove()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    Add Choice
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-sm {
+    max-width: 420px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+}
+
+.po-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--gray-200);
+    background: var(--gray-50);
+}
+
+.form-group {
+    margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+    margin-bottom: 0;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.required {
+    color: var(--error);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    transition: all 0.15s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.form-help {
+    color: var(--gray-500);
+    font-size: 0.75rem;
+    margin-top: 0.375rem;
+    margin-bottom: 0;
+}
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-outline {
+    background: white;
+    color: var(--gray-700);
+    border: 1px solid var(--gray-300);
+}
+
+.btn-outline:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.btn-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    background: var(--gray-800);
+}
+</style>
+
+<script>
+// Handle escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('choice-modal');
+        if (modal) modal.remove();
+    }
+});
+</script>

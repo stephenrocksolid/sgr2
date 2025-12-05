@@ -1,42 +1,55 @@
 {% load static %}
 
 {% if build_lists %}
-    <table class="related-table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Notes</th>
-                <th>Items</th>
-                <th style="width: 50px;">Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for build_list in build_lists %}
-                <tr data-href="{% url 'inventory:build_list_detail' build_list.pk %}" 
-                    onclick="window.location.href=this.dataset.href;">
-                    <td>
-                        <strong>{{ build_list.name }}</strong>
-                    </td>
-                    <td>{{ build_list.notes|default:"—"|truncatewords:10 }}</td>
-                    <td>{{ build_list.items.count }}</td>
-                    <td onclick="event.stopPropagation();">
-                        <form method="post" 
-                              action="{% url 'inventory:engine_build_list_remove' engine.pk build_list.pk %}"
-                              hx-post="{% url 'inventory:engine_build_list_remove' engine.pk build_list.pk %}"
-                              hx-target="#engine-build-lists-container"
-                              hx-swap="innerHTML"
-                              hx-confirm="Remove this build list from engine?"
-                              style="display: inline;">
-                            {% csrf_token %}
-                            <button class="btn-icon btn-danger" type="submit" title="Remove">✕</button>
-                        </form>
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+<table class="engine-table">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Notes</th>
+            <th>Items</th>
+            <th style="width: 100px;">Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for build_list in build_lists %}
+        <tr class="engine-clickable-row" data-href="{% url 'inventory:build_list_detail' build_list.pk %}">
+            <td>
+                <span class="engine-make-text">{{ build_list.name }}</span>
+            </td>
+            <td>
+                <span class="engine-text-muted">{{ build_list.notes|default:"—"|truncatewords:10 }}</span>
+            </td>
+            <td>{{ build_list.items.count }}</td>
+            <td class="engine-actions-cell">
+                <form hx-post="{% url 'inventory:engine_build_list_remove' engine.pk build_list.pk %}"
+                      hx-target="#engine-build-lists-container"
+                      hx-swap="innerHTML"
+                      hx-confirm="Remove this build list from engine?"
+                      style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-xs btn-danger-outline">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                        Remove
+                    </button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
 {% else %}
-    <div class="empty-message">
-        <p>No build lists assigned to this engine yet.</p>
-    </div>
+<div class="engine-empty-state-inline">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"></line>
+        <line x1="8" y1="12" x2="21" y2="12"></line>
+        <line x1="8" y1="18" x2="21" y2="18"></line>
+        <line x1="3" y1="6" x2="3.01" y2="6"></line>
+        <line x1="3" y1="12" x2="3.01" y2="12"></line>
+        <line x1="3" y1="18" x2="3.01" y2="18"></line>
+    </svg>
+    <span>No build lists assigned to this engine</span>
+</div>
 {% endif %}

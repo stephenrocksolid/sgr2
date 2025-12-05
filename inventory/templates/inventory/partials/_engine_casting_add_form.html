@@ -1,38 +1,231 @@
 {% load static %}
 
-<div class="htmx-form">
-    <h4 style="margin-bottom: 1rem;">Add Casting</h4>
-    <form method="post" 
-          action="{% url 'inventory:engine_casting_add' engine.pk %}"
-          hx-post="{% url 'inventory:engine_casting_add' engine.pk %}"
-          hx-target="#casting-table-container"
-          hx-swap="innerHTML">
-        {% csrf_token %}
-        
-        <div class="form-group">
-            <label for="{{ form.casting_number.id_for_label }}">Casting Number</label>
-            {{ form.casting_number }}
-            {% if form.casting_number.errors %}
-                <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.casting_number.errors.0 }}</span>
-            {% endif %}
-        </div>
-        
-        <div class="form-group">
-            <label for="{{ form.comments.id_for_label }}">Comments</label>
-            {{ form.comments }}
-            {% if form.comments.errors %}
-                <span style="color: var(--red-600); font-size: 0.875rem;">{{ form.comments.errors.0 }}</span>
-            {% endif %}
-        </div>
-        
-        <div class="form-actions">
-            <button type="submit" class="btn btn-sm btn-primary">Add Casting</button>
-            <button type="button" 
-                    class="btn btn-sm btn-secondary"
-                    onclick="document.getElementById('casting-form-container').innerHTML = '';">
-                Cancel
+<!-- Modal for Adding Casting -->
+<div class="po-modal-overlay" id="casting-add-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                </svg>
+                Add Casting
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('casting-add-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
             </button>
         </div>
-    </form>
+
+        <div class="po-modal-body">
+            <form method="post" 
+                  action="{% url 'inventory:engine_casting_add' engine.pk %}"
+                  hx-post="{% url 'inventory:engine_casting_add' engine.pk %}"
+                  hx-target="#casting-table-container"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) document.getElementById('casting-add-modal').remove()">
+                {% csrf_token %}
+                
+                <div class="po-form-group">
+                    <label class="po-form-label" for="{{ form.casting_number.id_for_label }}">Casting Number</label>
+                    <input type="text" 
+                           name="casting_number" 
+                           id="{{ form.casting_number.id_for_label }}"
+                           class="po-form-input"
+                           placeholder="Enter casting number"
+                           value="{{ form.casting_number.value|default:'' }}"
+                           autofocus>
+                    {% if form.casting_number.errors %}
+                        <span class="po-form-error">{{ form.casting_number.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="po-form-group">
+                    <label class="po-form-label" for="{{ form.comments.id_for_label }}">Comments <span class="po-form-optional">(optional)</span></label>
+                    <textarea name="comments" 
+                              id="{{ form.comments.id_for_label }}"
+                              class="po-form-textarea"
+                              placeholder="Add any notes about this casting..."
+                              rows="3">{{ form.comments.value|default:'' }}</textarea>
+                    {% if form.comments.errors %}
+                        <span class="po-form-error">{{ form.comments.errors.0 }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="po-modal-actions">
+                    <button type="button" 
+                            class="btn btn-secondary"
+                            onclick="document.getElementById('casting-add-modal').remove()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Add Casting
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 500px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-sm {
+    max-width: 450px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--gray-500);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body {
+    padding: 1.5rem;
+}
+
+/* Form Styles */
+.po-form-group {
+    margin-bottom: 1.25rem;
+}
+
+.po-form-group:last-of-type {
+    margin-bottom: 1.5rem;
+}
+
+.po-form-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+    margin-bottom: 0.5rem;
+}
+
+.po-form-optional {
+    font-weight: 400;
+    color: var(--gray-400);
+}
+
+.po-form-input,
+.po-form-textarea {
+    width: 100%;
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.5rem;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    background: white;
+    transition: all 0.15s ease;
+}
+
+.po-form-input:focus,
+.po-form-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-form-input::placeholder,
+.po-form-textarea::placeholder {
+    color: var(--gray-400);
+}
+
+.po-form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.po-form-error {
+    display: block;
+    color: var(--red-600);
+    font-size: 0.8125rem;
+    margin-top: 0.375rem;
+}
+
+.po-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+.po-modal-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+</style>

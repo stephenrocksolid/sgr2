@@ -1,0 +1,360 @@
+<!-- Modal for Receiving Items -->
+<div class="po-modal-overlay" id="po-receive-modal" onclick="if(event.target === this) this.remove()">
+    <div class="po-modal po-modal-sm" onclick="event.stopPropagation()">
+        <div class="po-modal-header">
+            <div class="po-modal-title">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Receive Items
+            </div>
+            <button type="button" class="po-modal-close" onclick="document.getElementById('po-receive-modal').remove()">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="po-modal-body-scroll">
+            <!-- Part Info Summary -->
+            <div class="po-receive-summary">
+                <div class="po-receive-part-name">{{ item.part_name }}</div>
+                <div class="po-receive-part-number">{{ item.part_number }}</div>
+                <div class="po-receive-stats">
+                    <div class="po-receive-stat">
+                        <span class="po-receive-stat-label">Ordered</span>
+                        <span class="po-receive-stat-value">{{ item.quantity_ordered }}</span>
+                    </div>
+                    <div class="po-receive-stat">
+                        <span class="po-receive-stat-label">Received</span>
+                        <span class="po-receive-stat-value po-receive-stat-received">{{ item.quantity_received|default:"0" }}</span>
+                    </div>
+                    <div class="po-receive-stat">
+                        <span class="po-receive-stat-label">Remaining</span>
+                        <span class="po-receive-stat-value po-receive-stat-remaining">{{ item.quantity_remaining }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <form id="receive-form" hx-post="{% url 'jobs:po_item_receive_submit' po.pk item.pk %}"
+                  hx-target="#po-items-section"
+                  hx-swap="innerHTML">
+                {% csrf_token %}
+                
+                <div class="po-receive-form-grid">
+                    <div class="po-receive-field">
+                        <label class="po-receive-label">Quantity Received <span class="po-required">*</span></label>
+                        <input type="number" name="quantity_received" step="0.01" min="0.01" 
+                               max="{{ item.quantity_remaining }}" required
+                               class="po-receive-input" placeholder="Enter quantity"
+                               value="{{ item.quantity_remaining }}">
+                    </div>
+
+                    <div class="po-receive-field">
+                        <label class="po-receive-label">Condition <span class="po-required">*</span></label>
+                        <select name="condition" class="po-receive-select" required>
+                            <option value="good" selected>Good</option>
+                            <option value="damaged">Damaged</option>
+                            <option value="wrong_item">Wrong Item</option>
+                            <option value="incomplete">Incomplete</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="po-receive-field">
+                    <label class="po-receive-label">Received Location</label>
+                    <input type="text" name="location" class="po-receive-input" placeholder="e.g., Shelf A3, Warehouse B">
+                </div>
+
+                <div class="po-receive-field">
+                    <label class="po-receive-label">Notes</label>
+                    <textarea name="notes" class="po-receive-textarea" rows="3" placeholder="Any notes about this receiving..."></textarea>
+                </div>
+
+                <div class="po-modal-actions">
+                    <button type="button" class="po-btn-cancel" onclick="document.getElementById('po-receive-modal').remove()">
+                        Cancel
+                    </button>
+                    <button type="submit" class="po-btn-submit">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Receive Items
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<style>
+.po-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    animation: poModalFadeIn 0.2s ease-out;
+}
+
+@keyframes poModalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.po-modal {
+    background: white;
+    border-radius: 0.75rem;
+    width: 90%;
+    max-width: 700px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: poModalSlideIn 0.2s ease-out;
+}
+
+.po-modal-sm {
+    max-width: 500px;
+}
+
+@keyframes poModalSlideIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.po-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.po-modal-title {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--gray-900);
+}
+
+.po-modal-title svg {
+    color: var(--success);
+}
+
+.po-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    border-radius: 0.375rem;
+    color: var(--gray-400);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-modal-close:hover {
+    background: var(--gray-100);
+    color: var(--gray-600);
+}
+
+.po-modal-body-scroll {
+    padding: 1.5rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* Receive Summary */
+.po-receive-summary {
+    background: linear-gradient(135deg, var(--gray-50) 0%, white 100%);
+    border: 1px solid var(--gray-200);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.po-receive-part-name {
+    font-weight: 600;
+    font-size: 1rem;
+    color: var(--gray-900);
+    margin-bottom: 0.125rem;
+}
+
+.po-receive-part-number {
+    font-family: 'Monaco', 'Menlo', monospace;
+    font-size: 0.8125rem;
+    color: var(--gray-500);
+    margin-bottom: 0.75rem;
+}
+
+.po-receive-stats {
+    display: flex;
+    gap: 1.5rem;
+}
+
+.po-receive-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+}
+
+.po-receive-stat-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    color: var(--gray-500);
+}
+
+.po-receive-stat-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--gray-900);
+}
+
+.po-receive-stat-received {
+    color: var(--success);
+}
+
+.po-receive-stat-remaining {
+    color: var(--warning);
+}
+
+/* Form Fields */
+.po-receive-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.po-receive-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+}
+
+.po-receive-label {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.po-required {
+    color: var(--error);
+}
+
+.po-receive-input,
+.po-receive-select,
+.po-receive-textarea {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.9375rem;
+    color: var(--gray-900);
+    transition: all 0.15s ease;
+}
+
+.po-receive-input:focus,
+.po-receive-select:focus,
+.po-receive-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(74, 85, 104, 0.1);
+}
+
+.po-receive-input::placeholder,
+.po-receive-textarea::placeholder {
+    color: var(--gray-400);
+}
+
+.po-receive-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* Modal Actions */
+.po-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.po-btn-cancel {
+    padding: 0.625rem 1.25rem;
+    background: white;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--gray-700);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-btn-cancel:hover {
+    background: var(--gray-50);
+    border-color: var(--gray-400);
+}
+
+.po-btn-submit {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--success);
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.po-btn-submit:hover {
+    background: #2f855a;
+}
+
+@media (max-width: 480px) {
+    .po-receive-form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .po-receive-stats {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+// Close modal on successful submission
+document.body.addEventListener('htmx:afterSwap', function(event) {
+    if (event.detail.target.id === 'po-items-section') {
+        const modal = document.getElementById('po-receive-modal');
+        if (modal) {
+            modal.remove();
+        }
+    }
+});
+</script>
+
+
